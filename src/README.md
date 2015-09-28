@@ -1,4 +1,6 @@
-# CS165 Fall 2015
+# RUM system skeleton
+
+This is the skeleton of RUM system based on the initial CS165 skeleton code.
 
 ## Introduction
 
