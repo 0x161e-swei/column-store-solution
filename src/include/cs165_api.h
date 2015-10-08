@@ -21,6 +21,7 @@ SOFTWARE.
 #define CS165_H
 
 #include <stdlib.h>
+#include "uthash.h"
 
 /**
  * EXTRA
@@ -74,7 +75,7 @@ typedef struct column_index {
  * - data, this is the raw data for the column. Operations on the data should
  *       be persistent.
  * - index, this is an [opt] index built on top of the column's data.
- *
+ * - hh, this is the handler for column hash list 
  * NOTE: We do not track the column length in the column struct since all
  * columns in a table should share the same length. Instead, this is
  * tracked in the table (length).
@@ -83,6 +84,7 @@ typedef struct column {
     const char* name;
     int* data;
     column_index *index;
+    UT_hash_handle hh;
 } column;
 
 /**
@@ -95,14 +97,17 @@ typedef struct column {
  *     within a database, but tables from different databases can have the same
  *     name.
  * - col_count, the number of columns in the table
- * - col, this is the pointer to an array of columns contained in the table.
+ * - col, this is the pointer to an array of pointers to columns contained
+ *      in the table.
  * - length, the size of the columns in the table.
+ * - hh, this is the handler for table hash list in db struct.
  **/
 typedef struct table {
     const char* name;
     size_t col_count;
-    column* col;
+    column** cols;
     size_t length;
+    UT_hash_handle hh;
 } table;
 
 /**

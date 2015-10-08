@@ -80,7 +80,6 @@ status parse_dsl(char* str, dsl* d, db_operator* op)
         char* db_name = strtok(NULL, delimiter);
 
         log_info("create_db(%s)\n", db_name);
-
         // Here, we can create the DB using our parsed info!
         db* db1 = NULL;
         status s = create_db(db_name, &db1);
