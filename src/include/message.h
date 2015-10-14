@@ -3,10 +3,12 @@
 
 // mesage_status defines the status of the previous request.
 typedef enum message_status {
-    OK_DONE,
-    OK_WAIT_FOR_RESPONSE,
-    UNKNOWN_COMMAND,
-    INCORRECT_FORMAT
+	OK_DONE,
+	OK_WAIT_FOR_RESPONSE,
+	UNKNOWN_COMMAND,
+	INTERNAL_ERROR,
+	SERVER_QUIT,
+	INCORRECT_FORMAT,
 } message_status;
 
 // message is a single packet of information sent between client/server.

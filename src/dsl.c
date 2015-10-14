@@ -2,16 +2,22 @@
 
 // Create Commands
 // Matches: create(db, <db_name>);
-const char* create_db_command = "^create\\(db\\,[\\ ]*[a-zA-Z0-9_]+\\)";
+const char* create_db_command = "^create\\(db\\,\\\"[a-zA-Z0-9_]+\\\"\\)";
 
-// Matches: create(table, <table_name>, <db_name>, <col_count>);
-const char* create_table_command = "^create\\(table\\,[\t]*[a-zA-Z0-9_\\.]+\\,[\t]*[a-zA-Z0-9_\\.]+\\,[\t]*[0-9]+\\)";
+// Matches: create(tbl, <table_name>, <db_name>, <col_count>);
+const char* create_table_command = "^create\\(tbl\\,\\\"[a-zA-Z0-9_\\.]+\\\"\\,[a-zA-Z0-9_\\.]+\\,[0-9]+\\)";
 
 // Matches: create(col, <col_name>, <tbl_var>, sorted);
-const char* create_col_command_sorted = "^create\\(col\\,[\t]*[a-zA-Z0-9_\\.]+\\,[\t]*[a-zA-Z0-9_\\.]+\\,[\t]*sorted)";
+const char* create_col_command_sorted = "^create\\(col\\,\\\"[a-zA-Z0-9_\\.]+\\\"\\,[a-zA-Z0-9_\\.]+\\,sorted)";
 
 // Matches: create(col, <col_name>, <tbl_var>, unsorted);
-const char* create_col_command_unsorted = "^create\\(col\\,[\t]*[a-zA-Z0-9_\\.]+\\,[\t]*[a-zA-Z0-9_\\.]+\\,[\t]*unsorted)";
+const char* create_col_command_unsorted = "^create\\(col\\,\\\"[a-zA-Z0-9_\\.]+\\\"\\,[a-zA-Z0-9_\\.]+\\,unsorted)";
+
+// Mathes: quit
+const char* quit_command = "^quit";
+
+// Mathes: load(<filename>)
+const char* load_command = "^load\\(\\\"[a-zA-Z0-9_\\.]+\\\"\\)";
 
 
 // TODO(USER): You will need to update the commands here for every single command you add.
@@ -35,6 +41,12 @@ dsl** dsl_commands_init(void)
 
     commands[3]->c = create_col_command_unsorted;
     commands[3]->g = CREATE_COLUMN;
+
+    commands[4]->c = quit_command;
+    commands[4]->g = QUIT_CMD;    
+
+    commands[5]->c = load_command;
+    commands[5]->g = LOAD_FILE;
 
     return commands;
 }

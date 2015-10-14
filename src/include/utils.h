@@ -33,4 +33,10 @@ void log_err(const char *format, ...);
 // Usage: log_info("Command received: %s", command_string);
 void log_info(const char *format, ...);
 
+
+
+// count_file_lines(filename)
+// Count the number lines in a file fast
+size_t count_file_lines(const char* filename);
+
 #endif /* __UTILS_H__ */

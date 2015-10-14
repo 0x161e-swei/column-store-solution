@@ -14,7 +14,7 @@ O ?= 3
 # Flags and other libraries
 override CFLAGS += -Wall -Wextra -pedantic -pthread -O$(O) -I$(INCLUDES)
 LDFLAGS =
-LIBS =
+LIBS = -lcsv
 INCLUDES = include
 
 ####### Automatic dependency magic #######
@@ -54,11 +54,11 @@ $(DEPSDIR)/stamp $(BUILDSTAMP):
 client: client.o utils.o
 	$(CC) $(CFLAGS) $(DEPCFLAGS) -o $@ $^ $(LDFLAGS) $(LIBS)
 
-server: server.o db.o dsl.o parser.o utils.o table.o column.o
+server: server.o db.o dsl.o parser.o utils.o table.o column.o fileparser.o
 	$(CC) $(CFLAGS) $(DEPCFLAGS) -o $@ $^ $(LDFLAGS) $(LIBS)
 
 clean:
-	rm -f client server *.o *~ *.bak core *.core cs165_unix_socket
+	rm -f client server *.o *~ *.bak core *.core cs165_unix_socket dbinfo
 	rm -rf .deps
 
 distclean: clean

@@ -122,6 +122,9 @@ int main(void)
                         printf("%s\n", payload);
                     }
                 }
+                else if (recv_message.status == SERVER_QUIT) {
+                    break;
+                }
             }
             else {
                 if (len < 0) {

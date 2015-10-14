@@ -21,6 +21,8 @@ SOFTWARE.
 #define CS165_H
 
 #include <stdlib.h>
+#include <stdio.h>
+#include "utils.h"
 #include "uthash.h"
 
 /**
@@ -66,7 +68,7 @@ typedef struct column_index {
 } column_index;
 
 /**
- * column
+ * Column, Col_ptr
  * Defines a column structure, which is the building block of our column-store.
  * Operations can be performed on one or more columns.
  * - name, the string associated with the column. Column names must be unique
@@ -80,15 +82,15 @@ typedef struct column_index {
  * columns in a table should share the same length. Instead, this is
  * tracked in the table (length).
  **/
-typedef struct column {
+typedef struct _column {
     const char* name;
     int* data;
     column_index *index;
     UT_hash_handle hh;
-} column;
+} Column, *Col_ptr;
 
 /**
- * table
+ * Table
  * Defines a table structure, which is composed of multiple columns.
  * We do not require you to dynamically manage the size of your tables,
  * although you are free to append to the struct if you would like to (i.e.,
@@ -102,36 +104,43 @@ typedef struct column {
  * - length, the size of the columns in the table.
  * - hh, this is the handler for table hash list in db struct.
  **/
-typedef struct table {
+typedef struct _table {
     const char* name;
     size_t col_count;
-    column** cols;
     size_t length;
+    Col_ptr* cols;
     UT_hash_handle hh;
-} table;
+} /*__attribute__ ((aligned (16)))*/ Table;
 
 /**
- * db
+ * Db
  * Defines a database structure, which is composed of multiple tables.
  * - name: the name of the associated database.
  * - table_count: the number of tables in the database.
  * - tables: the pointer to the array of tables contained in the db.
  **/
-typedef struct db {
+typedef struct _db {
     const char* name;
     size_t table_count;
-    table* tables;
-} db;
+    Table* tables;
+} Db;
 
 /**
  * Error codes used to indicate the outcome of an API call
  **/
 typedef enum StatusCode {
-  /* The operation completed successfully */
-  OK,
-  /* There was an error with the call.
-  */
-  ERROR,
+    /* The operation completed successfully */
+    CMD_DONE,
+    /* The operation completed successfully 
+        with a string of result to follow 
+     */
+    OK,
+    /* A unknown command encoutered */
+    UNKNOWN_CMD,
+    /* There was an error with the call */
+    ERROR,
+    /* A quit command was executed */
+    QUIT,
 } StatusCode;
 
 // status declares an error code and associated message
@@ -181,7 +190,7 @@ typedef enum Junction {
  **/
 typedef struct comparator {
     int p_val;
-    column *col;
+    Column *col;
     ComparatorType type;
     struct comparator *next_comparator;
     Junction mode;
@@ -244,8 +253,8 @@ typedef struct db_operator {
     OperatorType type;
 
     // Used for every operator
-    table** tables;
-    column** columns;
+    Table** tables;
+    Column** columns;
 
     // Internmediaties used for PROJECT, DELETE, HASH_JOIN
     int *pos1;
@@ -284,7 +293,7 @@ typedef enum OpenFlags {
  * flags   : the flags indicating the create/load options
  * returns : a status of the operation.
  */
-status open_db(const char* filename, db** db, OpenFlags flags);
+status open_db(const char* filename, Db** db, OpenFlags flags);
 
 /**
  * drop_db(db)
@@ -294,7 +303,7 @@ status open_db(const char* filename, db** db, OpenFlags flags);
  * db       : the database to be dropped.
  * returns  : the status of the operation.
  **/
-status drop_db(db* db);
+status drop_db(Db* db);
 
 /**
  * sync_db(db)
@@ -303,7 +312,7 @@ status drop_db(db* db);
  * db       : the database to sync.
  * returns  : the status of the operation.
  **/
-status sync_db(db* db);
+status sync_db(Db* db __attribute__((unused)));
 
 /**
  * create_db(db_name, db)
@@ -322,7 +331,7 @@ status sync_db(db* db);
  *      // Something went wrong
  *  }
  **/
-status create_db(const char* db_name, db** db);
+status create_db(const char* db_name, Db** db);
 
 /**
  * create_table(db, name, num_columns, table)
@@ -345,7 +354,7 @@ status create_db(const char* db_name, db** db);
  *      // Something went wrong
  *  }
  **/
-status create_table(db* db, const char* name, size_t num_columns, table** table);
+status create_table(Db* db, const char* name, size_t num_columns, Table** table);
 
 /**
  * drop_table(db, table)
@@ -356,7 +365,7 @@ status create_table(db* db, const char* name, size_t num_columns, table** table)
  * table    : the table to be dropped.
  * returns  : the status of the operation.
  **/
-status drop_table(db* db, table* table);
+status drop_table(Db* db, Table* table);
 
 /**
  * create_column(table, name, col)
@@ -377,7 +386,7 @@ status drop_table(db* db, table* table);
  *      // Something went wrong
  *  }
  **/
-status create_column(table *table, const char* name, column** col);
+status create_column(Table *table, const char* name, Column** col);
 
 /**
  * create_index(col, type)
@@ -388,13 +397,13 @@ status create_column(table *table, const char* name, column** col);
  * type     : the enum representing the index type to be created.
  * returns  : the status of the operation.
  **/
-status create_index(column* col, IndexType type);
+status create_index(Column* col, IndexType type);
 
-status insert(column *col, int data);
-status delete(column *col, int *pos);
-status update(column *col, int *pos, int new_val);
-status col_scan(comparator *f, column *col, result **r);
-status index_scan(comparator *f, column *col, result **r);
+status insert(Column *col, int data);
+status delete(Column *col, int *pos);
+status update(Column *col, int *pos, int new_val);
+status col_scan(comparator *f, Column *col, result **r);
+status index_scan(comparator *f, Column *col, result **r);
 
 /* Query API */
 status query_prepare(const char* query, db_operator** op);

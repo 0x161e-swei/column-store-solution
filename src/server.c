@@ -26,6 +26,7 @@
 #include "cs165_api.h"
 #include "message.h"
 #include "parser.h"
+#include "db.h"
 #include "utils.h"
 
 #define DEFAULT_QUERY_BUFFER_SIZE 1024
@@ -39,7 +40,8 @@ dsl** dsl_commands;
  * status to send back.
  * Returns a db_operator.
  **/
-db_operator* parse_command(message* recv_message, message* send_message) {
+
+db_operator* parse_command(message* recv_message, message* send_message) { 
     send_message->status = OK_WAIT_FOR_RESPONSE;
     db_operator *dbo = malloc(sizeof(db_operator));
     // Here you parse the message and fill in the proper db_operator fields for
@@ -48,12 +50,46 @@ db_operator* parse_command(message* recv_message, message* send_message) {
 
     // Here, we give you a default parser, you are welcome to replace it with anything you want
     status parse_status = parse_command_string(recv_message->payload, dsl_commands, dbo);
-    if (parse_status.code != OK) {
-        // Something went wrong
-    }
 
+    switch (parse_status.code) {
+        case UNKNOWN_CMD: {
+            free(dbo);
+            dbo = NULL;
+            log_info("unknown command found!\n"); 
+            send_message->status = UNKNOWN_COMMAND;
+            break;    
+        }
+        case ERROR: {
+            free(dbo);
+            dbo = NULL;
+            log_info("unknown internal error!\n");
+            send_message->status = INTERNAL_ERROR;
+            break;
+        }
+        case QUIT: {
+            free(dbo);
+            dbo = NULL;
+            log_info("quit executed!\n");
+            send_message->status = SERVER_QUIT;
+            break;
+        }
+        case CMD_DONE: {
+            free(dbo);
+            dbo = NULL;
+            log_info("command done!\n");
+            send_message->status = OK_DONE;
+            break;
+        }
+        case OK:
+        default: {
+            break;
+        } 
+            
+    }
     return dbo;
 }
+
+
 
 /** execute_db_operator takes as input the db_operator and executes the query.
  * It should return the result (currently as a char*, although I'm not clear
@@ -103,10 +139,20 @@ void handle_client(int client_socket) {
             // 1. Parse command
             db_operator* query = parse_command(&recv_message, &send_message);
 
-            // 2. Handle request
-            char* result = execute_db_operator(query);
-            send_message.length = strlen(result);
 
+            // 2. Handle request
+            char* result;            
+            if (NULL != query && OK_WAIT_FOR_RESPONSE == send_message.status){
+                result = execute_db_operator(query);
+                send_message.length = strlen(result);
+            }
+            else {
+                if (send_message.status == SERVER_QUIT)
+                    done = 1;
+                send_message.length = 0;
+            }
+
+                        
             // 3. Send status of the received message (OK, UNKNOWN_QUERY, etc)
             if (send(client_socket, &(send_message), sizeof(message), 0) == -1) {
                 log_err("Failed to send message.");
@@ -114,10 +160,13 @@ void handle_client(int client_socket) {
             }
 
             // 4. Send response of request
-            if (send(client_socket, result, send_message.length, 0) == -1) {
-                log_err("Failed to send message.");
-                exit(1);
+            if (OK_WAIT_FOR_RESPONSE  == send_message.status) {
+                if (send(client_socket, result, send_message.length, 0) == -1) {
+                    log_err("Failed to send message.");
+                    exit(1);
+                }    
             }
+            
         }
     } while (!done);
 
@@ -184,6 +233,17 @@ int main(void)
     // Populate the global dsl commands
     dsl_commands = dsl_commands_init();
 
+    Db *default_db;
+    status s = open_db_default(&default_db);
+
+    if (ERROR == s.code) {
+        log_info("No database found on server\n");
+    }
+    else {
+        log_info("Database found on server\n");
+    }
+
+
     log_info("Waiting for a connection %d ...\n", server_socket);
 
     struct sockaddr_un remote;
@@ -197,6 +257,8 @@ int main(void)
 
     handle_client(client_socket);
 
+    if (NULL != default_db)
+        sync_db(default_db);
     return 0;
 }
 
