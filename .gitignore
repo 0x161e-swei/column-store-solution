@@ -29,3 +29,6 @@ Tags
 r*hs # vtune output
 .deps # makefile temps
 
+# runtime products
+dbinfo
+
