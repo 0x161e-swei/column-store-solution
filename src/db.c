@@ -93,7 +93,7 @@ status sync_db(Db* db __attribute__((unused))) {
             fwrite(&(tbl->length), sizeof(tbl->length), 1, dbinfo);
             fwrite(&(tbl->col_count), sizeof(tbl->col_count), 1, dbinfo);
 
-            for (unsigned int i = 0; i < tbl->col_count; i++) {
+            for (size_t i = 0; i < tbl->col_count; i++) {
                 if (NULL != tbl->cols[i]) {
 
                     log_info("\t\tsaving the column %s...\n", (tbl->cols[i])->name);
@@ -148,6 +148,49 @@ status sync_db(Db* db __attribute__((unused))) {
         s.code = QUIT;
     }
     return s;
+}
+
+char *show_db() {
+    if (NULL == database) {
+        return NULL;
+    }
+    else {
+        char *res = NULL;
+        // allocate the size of the char array, +2 for \n\0
+        size_t allocated_size = strlen(database->name) + 2;
+        // Write db name
+        res = malloc(allocated_size * sizeof(char));
+        strncpy(res, database->name, strlen(database->name) + 1);
+        strncat(res, "\n", 1);
+
+        // Find each table in db and write tbl name & tbl length
+        Table *tmp, *tbl;
+        HASH_ITER(hh, (database->tables), tbl, tmp) {
+            // reallocate the size of the char array, +1 for \t
+            allocated_size += strlen(tbl->name) + 1;
+            res = realloc(res, allocated_size * sizeof(char));
+            strncat(res, "\t", 1);
+            strncat(res, tbl->name, strlen(tbl->name));
+
+            char len_s[40];
+            sprintf(len_s, " length: %u", tbl->length);
+
+            // reallocate the size of the char array, +1 for \n
+            allocated_size += strlen(len_s) + 1;
+            res = realloc(res, allocated_size * sizeof(char));
+            strncat(res, len_s, strlen(len_s));
+            strncat(res, "\n", 1);
+
+            for (size_t i = 0; i < tbl->col_count; i++) {
+                // reallocate the size of the char array, +3 for \t\t & \n
+                allocated_size += strlen((tbl->cols[i])->name) + 3;
+                strncat(res, "\t\t", 2);
+                strncat(res, (tbl->cols[i])->name, strlen((tbl->cols[i])->name));
+                strncat(res, "\n", 1);
+            }
+        }
+        return res;
+    }
 }
 
 status open_db_default(Db** db) {

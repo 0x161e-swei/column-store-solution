@@ -122,6 +122,15 @@ int main(void)
                         printf("%s\n", payload);
                     }
                 }
+                else if (recv_message.status == OK_DONE) {
+                    log_info("Command Done!\n");
+                }
+                else if (recv_message.status == UNKNOWN_COMMAND) {
+                    log_err("Unknown Command\n");
+                }
+                else if (recv_message.status == INTERNAL_ERROR) {
+                    log_info("Server internal error!\n");
+                }
                 else if (recv_message.status == SERVER_QUIT) {
                     break;
                 }

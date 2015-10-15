@@ -13,7 +13,7 @@
 
 // Currently we have 4 DSL commands to parse.
 // TODO(USER): you will need to increase this to track the commands you support.
-#define NUM_DSL_COMMANDS (6)
+#define NUM_DSL_COMMANDS (7)
 
 // This helps group similar DSL commands together.
 // For example, some queries can be parsed together:
@@ -30,7 +30,8 @@ typedef enum DSLGroup {
     CREATE_TABLE,
     CREATE_COLUMN,
     QUIT_CMD,
-    LOAD_FILE
+    LOAD_FILE,
+    SHOW_DB
     // TODO(USER): Add more here...
 } DSLGroup;
 

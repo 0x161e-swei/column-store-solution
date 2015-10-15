@@ -210,6 +210,7 @@ typedef enum Aggr {
 } Aggr;
 
 typedef enum OperatorType {
+    SHOWDB,
     SELECT,
     PROJECT,
     HASH_JOIN,
@@ -304,6 +305,14 @@ status open_db(const char* filename, Db** db, OpenFlags flags);
  * returns  : the status of the operation.
  **/
 status drop_db(Db* db);
+
+/**
+ * show_db()
+ * Show the current catalog information
+ *
+ * returns  : the char array of shwo_db
+ **/
+char *show_db();
 
 /**
  * sync_db(db)

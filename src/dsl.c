@@ -19,6 +19,8 @@ const char* quit_command = "^quit";
 // Mathes: load(<filename>)
 const char* load_command = "^load\\(\\\"[a-zA-Z0-9_\\.]+\\\"\\)";
 
+// Mathes: show_db
+const char* show_command = "^show_db";
 
 // TODO(USER): You will need to update the commands here for every single command you add.
 dsl** dsl_commands_init(void)
@@ -47,6 +49,9 @@ dsl** dsl_commands_init(void)
 
     commands[5]->c = load_command;
     commands[5]->g = LOAD_FILE;
+
+    commands[6]->c = show_command;
+    commands[6]->g = SHOW_DB;
 
     return commands;
 }

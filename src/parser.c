@@ -87,8 +87,10 @@ status parse_dsl(char* str, dsl* d, db_operator* op)
         // Here, we can create the DB using our parsed info!
         Db* db1 = NULL;
         status s = create_db(full_name, &db1);
-        if (s.code != OK) {
+        if (OK != s.code) {
             // Something went wrong
+            log_err("fialed to create databse");
+            return s;
         }
 
         // TODO(USER): You must track your variable in a variable pool now!
@@ -156,7 +158,7 @@ status parse_dsl(char* str, dsl* d, db_operator* op)
         // TODO(USER): Uncomment this section after you're able to grab the db1
         Table* tbl1 = NULL;
         s = create_table(db1, full_name, count, &tbl1);
-        if (s.code != OK) {
+        if (OK != s.code) {
             // Something went wrong
             log_err("cannot create table");
             return s;
@@ -268,9 +270,16 @@ status parse_dsl(char* str, dsl* d, db_operator* op)
         ret = sync_db(NULL);
         return ret;
     }
+    else if (d->g == SHOW_DB) {
+        status ret;
+        ret.code = OK;
+        op->type = SHOWDB;
+        return ret;
+    }
     else {
         status ret;
         ret.code = UNKNOWN_CMD;
+        (void)op;
         return ret;
     }
 

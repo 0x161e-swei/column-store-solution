@@ -55,7 +55,7 @@ db_operator* parse_command(message* recv_message, message* send_message) {
         case UNKNOWN_CMD: {
             free(dbo);
             dbo = NULL;
-            log_info("unknown command found!\n"); 
+            log_info("unknown command!\n"); 
             send_message->status = UNKNOWN_COMMAND;
             break;    
         }
@@ -81,10 +81,11 @@ db_operator* parse_command(message* recv_message, message* send_message) {
             break;
         }
         case OK:
+            log_info("query to be executed!\n");
+            send_message->status = OK_WAIT_FOR_RESPONSE;
         default: {
             break;
-        } 
-            
+        }     
     }
     return dbo;
 }
@@ -97,8 +98,27 @@ db_operator* parse_command(message* recv_message, message* send_message) {
  * a serialization into a string message).
  **/
 char* execute_db_operator(db_operator* query) {
+    switch (query->type) {
+        case SHOWDB : {
+            char *res = show_db();
+            if (NULL == res) {
+                free(query);
+                res = malloc(sizeof(char) * (strlen("no info found!") + 1));
+                sprintf(res, "%s", "no info found!");
+                return res;
+            }
+            else {
+                free(query);
+                return res;    
+            }            
+        }
+        default : break;
+    }
     free(query);
-    return "165";
+    char *res;
+    res = malloc(sizeof(char) *(strlen("165") + 1));
+    sprintf(res, "165");
+    return res;
 }
 
 /**
@@ -141,14 +161,16 @@ void handle_client(int client_socket) {
 
 
             // 2. Handle request
-            char* result;            
+            char* res = NULL;            
             if (NULL != query && OK_WAIT_FOR_RESPONSE == send_message.status){
-                result = execute_db_operator(query);
-                send_message.length = strlen(result);
+                res = execute_db_operator(query);
+                send_message.length = strlen(res);
+                log_info("query result:\n%s", res);
             }
             else {
-                if (send_message.status == SERVER_QUIT)
+                if (send_message.status == SERVER_QUIT) {
                     done = 1;
+                }
                 send_message.length = 0;
             }
 
@@ -161,12 +183,13 @@ void handle_client(int client_socket) {
 
             // 4. Send response of request
             if (OK_WAIT_FOR_RESPONSE  == send_message.status) {
-                if (send(client_socket, result, send_message.length, 0) == -1) {
+                if (send(client_socket, res, send_message.length, 0) == -1) {
                     log_err("Failed to send message.");
                     exit(1);
-                }    
-            }
-            
+                }
+                // TODO: HOW TO FREE THIS STR
+                // free(res);   
+            }        
         }
     } while (!done);
 
