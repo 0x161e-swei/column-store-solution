@@ -5,9 +5,9 @@
 #define ANSI_COLOR_RED     "\x1b[31m"
 #define ANSI_COLOR_GREEN   "\x1b[32m"
 #define ANSI_COLOR_RESET   "\x1b[0m"
-#define LOG
-#define LOG_ERR
-#define LOG_INFO
+// #define LOG
+// #define LOG_ERR
+// #define LOG_INFO
 
 void cs165_log(FILE* out, const char *format, ...) {
 #ifdef LOG

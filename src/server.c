@@ -112,6 +112,10 @@ char* execute_db_operator(db_operator* query) {
                 return res;    
             }            
         }
+        case SELECT_COL: {
+            
+            break;
+        }
         default : break;
     }
     free(query);
@@ -165,7 +169,7 @@ void handle_client(int client_socket) {
             if (NULL != query && OK_WAIT_FOR_RESPONSE == send_message.status){
                 res = execute_db_operator(query);
                 send_message.length = strlen(res);
-                log_info("query result:\n%s", res);
+                log_info("query result:\n%s\n", res);
             }
             else {
                 if (send_message.status == SERVER_QUIT) {
@@ -257,7 +261,8 @@ int main(void)
     dsl_commands = dsl_commands_init();
 
     Db *default_db;
-    status s = open_db_default(&default_db);
+    OpenFlags flags = LOAD;
+    status s = open_db("dbinfo", &default_db, flags);
 
     if (ERROR == s.code) {
         log_info("No database found on server\n");

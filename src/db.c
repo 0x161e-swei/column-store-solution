@@ -150,7 +150,7 @@ status sync_db(Db* db __attribute__((unused))) {
     return s;
 }
 
-char *show_db() {
+char* show_db() {
     if (NULL == database) {
         return NULL;
     }
@@ -193,69 +193,77 @@ char *show_db() {
     }
 }
 
-status open_db_default(Db** db) {
+status open_db(const char* filename, Db** db, OpenFlags flags) {
     FILE *dbinfo;
     status s;
-    if (NULL == database && NULL != (dbinfo = fopen("dbinfo", "r+"))) {
-        database = malloc(sizeof(Db));
-        int len, num __attribute__((unused));
-        num = fread(&len, sizeof(len), 1, dbinfo);        // length of db name
-        char *db_name = malloc(len * sizeof(char) + 1);
-        num = fread(db_name, sizeof(char), len, dbinfo);
-        db_name[len] = '\0';
-        database->name = db_name;
+    if (LOAD == flags) {
+        if (NULL == database && NULL != (dbinfo = fopen(filename, "r+"))) {
+            database = malloc(sizeof(Db));
+            int len, num __attribute__((unused));
+            num = fread(&len, sizeof(len), 1, dbinfo);        // length of db name
+            char *db_name = malloc(len * sizeof(char) + 1);
+            num = fread(db_name, sizeof(char), len, dbinfo);
+            db_name[len] = '\0';
+            database->name = db_name;
 
-        log_info("database found: %s\n", database->name);
+            log_info("database found: %s\n", database->name);
 
-        /* Read the number of tables
-            Caution: sizeof(size_t) is different from sizeof(int) 
-         */
-        num = fread(&(database->table_count), sizeof(database->table_count), 1, dbinfo);
-
-        for (unsigned int i = 0; i < database->table_count; i++){
-            Table *t = malloc(sizeof(Table));
-            num = fread(&len, sizeof(len), 1, dbinfo);
-            char *tbl_name = malloc(sizeof(char) * len + 1);
-            num =  fread(tbl_name, sizeof(char), len, dbinfo);
-            tbl_name[len] = '\0';
-            t->name = tbl_name;
-            
-            log_info("\ttable found: %s\n", t->name);
-            /* Read the length of columns in the table
+            /* Read the number of tables
                 Caution: sizeof(size_t) is different from sizeof(int) 
              */
-            num = fread(&(t->length), sizeof(t->length), 1, dbinfo);
+            num = fread(&(database->table_count), sizeof(database->table_count), 1, dbinfo);
 
-            /* Read the number of columns in the table
-                Caution: sizeof(size_t) is different from sizeof(int) 
-             */
-            num = fread(&(t->col_count), sizeof(t->col_count), 1, dbinfo);
+            for (unsigned int i = 0; i < database->table_count; i++){
+                Table *t = malloc(sizeof(Table));
+                num = fread(&len, sizeof(len), 1, dbinfo);
+                char *tbl_name = malloc(sizeof(char) * len + 1);
+                num =  fread(tbl_name, sizeof(char), len, dbinfo);
+                tbl_name[len] = '\0';
+                t->name = tbl_name;
+                
+                log_info("\ttable found: %s\n", t->name);
+                /* Read the length of columns in the table
+                    Caution: sizeof(size_t) is different from sizeof(int) 
+                 */
+                num = fread(&(t->length), sizeof(t->length), 1, dbinfo);
 
-            t->cols = malloc(sizeof(Col_ptr) * t->col_count);
-            for (unsigned int j = 0; j < t->col_count; j++) {
-                int col_name_len;
-                num = fread(&col_name_len, sizeof(col_name_len), 1, dbinfo);
-                char *col_name = malloc(sizeof(char) * col_name_len + 1);
-                num = fread(col_name, sizeof(char), col_name_len, dbinfo);
-                col_name[col_name_len] = '\0';
-                Column* c = malloc(sizeof(Column));
-                c->name = col_name;
-                
-                // Add the ptr to the array in table struct
-                t->cols[j] = c;                         
-                
-                log_info("\t\tcolumn found: %s\n", c->name);
-                // Add the content of column into the global column hash list
-                HASH_ADD_KEYPTR(hh, col_hash_list, (c->name), strlen(c->name), c);
+                /* Read the number of columns in the table
+                    Caution: sizeof(size_t) is different from sizeof(int) 
+                 */
+                num = fread(&(t->col_count), sizeof(t->col_count), 1, dbinfo);
+
+                t->cols = malloc(sizeof(Col_ptr) * t->col_count);
+                for (unsigned int j = 0; j < t->col_count; j++) {
+                    int col_name_len;
+                    num = fread(&col_name_len, sizeof(col_name_len), 1, dbinfo);
+                    char *col_name = malloc(sizeof(char) * col_name_len + 1);
+                    num = fread(col_name, sizeof(char), col_name_len, dbinfo);
+                    col_name[col_name_len] = '\0';
+                    Column* c = malloc(sizeof(Column));
+                    c->name = col_name;
+                    
+                    // Add the ptr to the array in table struct
+                    t->cols[j] = c;                         
+                    
+                    log_info("\t\tcolumn found: %s\n", c->name);
+                    // Add the content of column into the global column hash list
+                    HASH_ADD_KEYPTR(hh, col_hash_list, (c->name), strlen(c->name), c);
+                }
+                // Add the contect of table into hash list in database
+                HASH_ADD_KEYPTR(hh, database->tables, (t->name), strlen(t->name), t);
             }
-            // Add the contect of table into hash list in database
-            HASH_ADD_KEYPTR(hh, database->tables, (t->name), strlen(t->name), t);
+            *db = database;
+            s.code = OK;
         }
-        *db = database;
-        s.code = OK;
+        else {
+            s.code = ERROR;                             // No database currently exists
+        }
     }
     else {
-        s.code = ERROR;                             // No database currently exists
+        // Not implemented yet
+        s.code = ERROR;
     }
+        
     return s;
+    
 }

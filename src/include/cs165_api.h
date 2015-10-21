@@ -24,6 +24,7 @@ SOFTWARE.
 #include <stdio.h>
 #include "utils.h"
 #include "uthash.h"
+#include "dsl.h"
 
 /**
  * EXTRA
@@ -35,9 +36,9 @@ SOFTWARE.
  **/
 /**
 typedef enum DataType {
-     INT,
-     LONG,
-     // Others??
+	 INT,
+	 LONG,
+	 // Others??
 } DataType;
 **/
 
@@ -48,8 +49,8 @@ typedef enum DataType {
  * Additonal types are encouraged as extra.
  **/
 typedef enum IndexType {
-    SORTED,
-    B_PLUS_TREE,
+	SORTED,
+	B_PLUS_TREE,
 } IndexType;
 
 /**
@@ -58,13 +59,13 @@ typedef enum IndexType {
  * index or a b+-tree index.
  * - type, the column index type (see enum index_type)
  * - index, a pointer to the index structure. For SORTED, this points to the
- *       start of the sorted array. For B+Tree, this points to the root node.
- *       You will need to cast this from void* to the appropriate type when
- *       working with the index.
+ *	   start of the sorted array. For B+Tree, this points to the root node.
+ *	   You will need to cast this from void* to the appropriate type when
+ *	   working with the index.
  **/
 typedef struct column_index {
-    IndexType type;
-    void* index;
+	IndexType type;
+	void* index;
 } column_index;
 
 /**
@@ -72,10 +73,10 @@ typedef struct column_index {
  * Defines a column structure, which is the building block of our column-store.
  * Operations can be performed on one or more columns.
  * - name, the string associated with the column. Column names must be unique
- *       within a table, but columns from different tables can have the same
- *       name.
+ *	   within a table, but columns from different tables can have the same
+ *	   name.
  * - data, this is the raw data for the column. Operations on the data should
- *       be persistent.
+ *	   be persistent.
  * - index, this is an [opt] index built on top of the column's data.
  * - hh, this is the handler for column hash list 
  * NOTE: We do not track the column length in the column struct since all
@@ -83,10 +84,10 @@ typedef struct column_index {
  * tracked in the table (length).
  **/
 typedef struct _column {
-    const char* name;
-    int* data;
-    column_index *index;
-    UT_hash_handle hh;
+	const char* name;
+	int* data;
+	column_index *index;
+	UT_hash_handle hh;
 } Column, *Col_ptr;
 
 /**
@@ -96,20 +97,20 @@ typedef struct _column {
  * although you are free to append to the struct if you would like to (i.e.,
  * in clude a size_t table_size).
  * name, the name associated with the table. Table names must be unique
- *     within a database, but tables from different databases can have the same
- *     name.
+ *	 within a database, but tables from different databases can have the same
+ *	 name.
  * - col_count, the number of columns in the table
  * - col, this is the pointer to an array of pointers to columns contained
- *      in the table.
+ *	  in the table.
  * - length, the size of the columns in the table.
  * - hh, this is the handler for table hash list in db struct.
  **/
 typedef struct _table {
-    const char* name;
-    size_t col_count;
-    size_t length;
-    Col_ptr* cols;
-    UT_hash_handle hh;
+	const char* name;
+	size_t col_count;
+	size_t length;
+	Col_ptr* cols;
+	UT_hash_handle hh;
 } /*__attribute__ ((aligned (16)))*/ Table;
 
 /**
@@ -120,40 +121,41 @@ typedef struct _table {
  * - tables: the pointer to the array of tables contained in the db.
  **/
 typedef struct _db {
-    const char* name;
-    size_t table_count;
-    Table* tables;
+	const char* name;
+	size_t table_count;
+	Table* tables;
 } Db;
 
 /**
  * Error codes used to indicate the outcome of an API call
  **/
 typedef enum StatusCode {
-    /* The operation completed successfully */
-    CMD_DONE,
-    /* The operation completed successfully 
-        with a string of result to follow 
-     */
-    OK,
-    /* A unknown command encoutered */
-    UNKNOWN_CMD,
-    /* There was an error with the call */
-    ERROR,
-    /* A quit command was executed */
-    QUIT,
+	/* The operation completed successfully */
+	CMD_DONE,
+	/* The operation completed successfully 
+		with a string of result to follow 
+	 */
+	OK,
+	/* A unknown command encoutered */
+	UNKNOWN_CMD,
+	/* There was an error with the call */
+	ERROR,
+	WRONG_FORMAT,
+	/* A quit command was executed */
+	QUIT,
 } StatusCode;
 
 // status declares an error code and associated message
 typedef struct status {
-    StatusCode code;
-    char* error_message;
+	StatusCode code;
+	char* error_message;
 } status;
 
 // Defines a comparator flag between two values.
 typedef enum ComparatorType {
-    LESS_THAN = 1,
-    GREATER_THAN = 2,
-    EQUAL = 4,
+	LESS_THAN = 1,
+	GREATER_THAN = 2,
+	EQUAL = 4,
 } ComparatorType;
 
 /**
@@ -162,25 +164,26 @@ typedef enum ComparatorType {
  * A NONE Junction defines the END of a comparator junction.
  *
  * Using the comparator struct defined below, we would represent our example using:
- *     // This represents the sub-component (A.b > 3)
- *     comparator f_b;
- *     f_b.p_val = 3; // Predicate values
- *     f_b.type = GREATER_THAN;
- *     f_b.mode = NONE;
+ *	 // This represents the sub-component (A.b > 3)
+ *	 comparator f_b;
+ *	 f_b.p_val = 3; // Predicate values
+ *	 f_b.type = GREATER_THAN;
+ *	 f_b.mode = NONE;
  *
- *     // This represents the entire comparator
- *     comparator f;
- *     f.value = 5;
- *     f.mode = LESS_THAN | EQUAL;
- *     f.next_comparator = &f_b;
+ *	 // This represents the entire comparator
+ *	 comparator f;
+ *	 f.value = 5;
+ *	 f.type = LESS_THAN | EQUAL;
+ *	 f.mode = AND;
+ *	 f.next_comparator = &f_b;
  * For chains of more than two Juntions, left associative: "a | b & c | d"
  * evaluated as "(((a | b) & c) | d)".
  **/
 
 typedef enum Junction {
-    NONE,
-    OR,
-    AND,
+	NONE,
+	OR,
+	AND,
 } Junction;
 
 /**
@@ -189,36 +192,50 @@ typedef enum Junction {
  * See the example in Junction
  **/
 typedef struct comparator {
-    int p_val;
-    Column *col;
-    ComparatorType type;
-    struct comparator *next_comparator;
-    Junction mode;
+	int p_val;
+	Column *col;
+	ComparatorType type;
+	struct comparator *next_comparator;
+	Junction mode;
 } comparator;
 
+typedef union payload{
+	int val;
+	size_t pos;
+} Payload;
+
 typedef struct result {
-    size_t num_tuples;
-    int *payload;
-} result;
+	const char* res_name; 
+	Payload* token;
+	size_t num_tuples;
+	UT_hash_handle hh;
+} Result, *Res_ptr;
 
 typedef enum Aggr {
-    MIN,
-    MAX,
-    SUM,
-    AVG,
-    CNT,
+	MIN,
+	MAX,
+	SUM,
+	AVG,
+	CNT,
 } Aggr;
 
 typedef enum OperatorType {
-    SHOWDB,
-    SELECT,
-    PROJECT,
-    HASH_JOIN,
-    INSERT,
-    DELETE,
-    UPDATE,
-    AGGREGATE,
+	SHOWDB,
+	SELECT_COL,
+	SELECT_PRE,
+	FETCH,
+	PROJECT,
+	HASH_JOIN,
+	INSERT,
+	DELETE,
+	UPDATE,
+	AGGREGATE,
 } OperatorType;
+
+typedef union _op_domain {
+	Column** cols;
+	Result** res;
+} Op_domain;
 
 /**
  * db_operator
@@ -242,40 +259,43 @@ typedef enum OperatorType {
  * op1.table1 = A;
  * op1.column1 = b;
  *
- * filter f;
+ * comparator f;
  * f.value = 100;
  * f.type = LESS_THAN;
  * f.mode = NONE;
  *
- * op1.comparator = f;
+ * op1.c = &f;
  **/
 typedef struct db_operator {
-    // Flag to choose operator
-    OperatorType type;
+	// Flag to choose operator
+	OperatorType type;
 
-    // Used for every operator
-    Table** tables;
-    Column** columns;
+	// Used for every operator
+	Table** tables;
+	Op_domain domain;
 
-    // Internmediaties used for PROJECT, DELETE, HASH_JOIN
-    int *pos1;
-    // Needed for HASH_JOIN
-    int *pos2;
+	// Internmediaties used for PROJECT, DELETE, HASH_JOIN
+	int* pos1;
+	// Needed for HASH_JOIN
+	int* pos2;
 
-    // For insert/delete operations, we only use value1;
-    // For update operations, we update value1 -> value2;
-    int *value1;
-    int *value2;
+	// For insert/delete operations, we only use value1;
+	// For update operations, we update value1 -> value2;
+	int* value1;
+	int* value2;
 
-    // This includes several possible fields that may be used in the operation.
-    Aggr agg;
-    comparator* c;
+	// For select and fetch operations only
+	char* res_name;
+
+	// This includes several possible fields that may be used in the operation.
+	Aggr agg;
+	comparator* c;
 
 } db_operator;
 
 typedef enum OpenFlags {
-    CREATE = 1,
-    LOAD = 2,
+	CREATE = 1,
+	LOAD = 2,
 } OpenFlags;
 
 /* OPERATOR API*/
@@ -290,7 +310,7 @@ typedef enum OpenFlags {
  * (if db != NULL). If not, then return an error.
  *
  * filename: the name associated with the DB file
- * db      : the pointer to db*
+ * db	  : the pointer to db*
  * flags   : the flags indicating the create/load options
  * returns : a status of the operation.
  */
@@ -301,7 +321,7 @@ status open_db(const char* filename, Db** db, OpenFlags flags);
  * Drops the database associated with db.  You should permanently delete
  * the db and all of its tables/columns.
  *
- * db       : the database to be dropped.
+ * db	   : the database to be dropped.
  * returns  : the status of the operation.
  **/
 status drop_db(Db* db);
@@ -312,13 +332,13 @@ status drop_db(Db* db);
  *
  * returns  : the char array of shwo_db
  **/
-char *show_db();
+char*  show_db();
 
 /**
  * sync_db(db)
  * Saves the current status of the database to disk.
  *
- * db       : the database to sync.
+ * db	   : the database to sync.
  * returns  : the status of the operation.
  **/
 status sync_db(Db* db __attribute__((unused)));
@@ -328,16 +348,16 @@ status sync_db(Db* db __attribute__((unused)));
  * Creates a database with the given database name, and stores the pointer in db
  *
  * db_name  : name of the database, must be unique.
- * db       : pointer to the db pointer. If *db == NULL, then create_db is
- *            responsible for allocating space for the db, else it should assume
- *            that *db points to pre-allocated space.
+ * db	   : pointer to the db pointer. If *db == NULL, then create_db is
+ *			responsible for allocating space for the db, else it should assume
+ *			that *db points to pre-allocated space.
  * returns  : the status of the operation.
  *
  * Usage:
  *  db *database = NULL;
  *  status s = create_db("db_cs165", &database)
  *  if (s.code != OK) {
- *      // Something went wrong
+ *	  // Something went wrong
  *  }
  **/
 status create_db(const char* db_name, Db** db);
@@ -347,20 +367,20 @@ status create_db(const char* db_name, Db** db);
  * Creates a table named @name in @db with @num_columns, and stores the pointer
  * in @table.
  *
- * db          : the database in which to create the table.
- * name        : the name of the new table, must be unique in the db.
+ * db		  : the database in which to create the table.
+ * name		: the name of the new table, must be unique in the db.
  * num_columns : the non-negative number of columns in the table.
- * table       : the pointer to the table pointer. If *table == NULL, then
- *               create_table is responsible for allocating space for a table,
- *               else it assume that *table points to pre-allocated space.
- * returns     : the status of the operation.
+ * table	   : the pointer to the table pointer. If *table == NULL, then
+ *			   create_table is responsible for allocating space for a table,
+ *			   else it assume that *table points to pre-allocated space.
+ * returns	 : the status of the operation.
  *
  * Usage:
  *  // Assume you have a valid db* 'database'
  *  table* tbl = NULL;
  *  status s = create_table(database, "tbl_cs165", 4, &tbl)
  *  if (s.code != OK) {
- *      // Something went wrong
+ *	  // Something went wrong
  *  }
  **/
 status create_table(Db* db, const char* name, size_t num_columns, Table** table);
@@ -370,8 +390,8 @@ status create_table(Db* db, const char* name, size_t num_columns, Table** table)
  * Drops the table from the db.  You should permanently delete
  * the table and all of its columns.
  *
- * db       : the database that contains the table.
- * table    : the table to be dropped.
+ * db	   : the database that contains the table.
+ * table	: the table to be dropped.
  * returns  : the status of the operation.
  **/
 status drop_table(Db* db, Table* table);
@@ -381,10 +401,10 @@ status drop_table(Db* db, Table* table);
  * Creates a column named @name in @table, and stores the pointer in @col.
  *
  * table   : the table in which to create the column.
- * name    : the name of the column, must be unique in the table.
- * col     : the pointer to the column pointer. If *col == NULL, then
- *           create_column is responsible for allocating space for a column*,
- *           else it should assume that *col points to pre-allocated space.
+ * name	: the name of the column, must be unique in the table.
+ * col	 : the pointer to the column pointer. If *col == NULL, then
+ *		   create_column is responsible for allocating space for a column*,
+ *		   else it should assume that *col points to pre-allocated space.
  * returns : the status of the operation.
  *
  * Usage:
@@ -392,7 +412,7 @@ status drop_table(Db* db, Table* table);
  *  column* col;
  *  status s = create_column(tbl, 'col_cs165', &col)
  *  if (s.code != OK) {
- *      // Something went wrong
+ *	  // Something went wrong
  *  }
  **/
 status create_column(Table *table, const char* name, Column** col);
@@ -402,8 +422,8 @@ status create_column(Table *table, const char* name, Column** col);
  * Creates an index for @col of the given IndexType. It stores the created index
  * in col->index.
  *
- * col      : the column for which to create the index.
- * type     : the enum representing the index type to be created.
+ * col	  : the column for which to create the index.
+ * type	 : the enum representing the index type to be created.
  * returns  : the status of the operation.
  **/
 status create_index(Column* col, IndexType type);
@@ -411,12 +431,12 @@ status create_index(Column* col, IndexType type);
 status insert(Column *col, int data);
 status delete(Column *col, int *pos);
 status update(Column *col, int *pos, int new_val);
-status col_scan(comparator *f, Column *col, result **r);
-status index_scan(comparator *f, Column *col, result **r);
+status col_scan(comparator *f, Column *col, Result **r);
+status index_scan(comparator *f, Column *col, Result **r);
 
 /* Query API */
-status query_prepare(const char* query, db_operator** op);
-status query_execute(db_operator* op, result** results);
+status query_prepare(const char* query, dsl* d, db_operator* op);
+status query_execute(db_operator* op, Result** results);
 
 
 #endif /* CS165_H */

@@ -37,3 +37,24 @@ status create_column(Table *table, const char* name, Column** col) {
 	
 	return s;
 }
+
+
+status grab_column(const char* column_name, Column **col) {
+	status s;
+	if (NULL == col_hash_list) {
+		*col = NULL;
+		s.code = ERROR;
+	}	
+	else {
+		Column *tmp = NULL;
+		HASH_FIND_STR(col_hash_list, column_name, tmp);
+		if (NULL != tmp) {
+			*col = tmp;
+			s.code = OK;
+		}
+		else {
+			s.code = ERROR;
+		}	
+	}
+	return s;
+}

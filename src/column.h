@@ -5,4 +5,6 @@
 
 extern Column *col_hash_list;
 
+status grab_column(const char* column_name, Column **col);
+
 #endif // COLUMN_H__
