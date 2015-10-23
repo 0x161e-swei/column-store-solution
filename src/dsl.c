@@ -31,6 +31,9 @@ const char* select_from_pre_command = "^[a-zA-Z0-9_]+\\=select\\([a-zA-Z0-9_]+\\
 // Matches: <vec_val>=fetch(<col_var>,<vec_pos>)
 const char* fetch_command = "^[a-zA-Z0-9_]+\\=fetch\\([a-zA-Z0-9_\\.]+\\,[a-zA-Z0-9_]+\\)";
 
+// Matches: tuple(<col_var>)
+const char* tuple_command = "^tuple\\([a-zA-Z0-9_\\.]+\\)";
+
 
 // TODO(USER): You will need to update the commands here for every single command you add.
 dsl** dsl_commands_init(void)
@@ -72,7 +75,7 @@ dsl** dsl_commands_init(void)
 	commands[9]->c = fetch_command;
 	commands[9]->g = FETCH_CMD;
 
-
-
+    commands[10]->c = tuple_command;
+    commands[10]->g = TUPLE_CMD;
 	return commands;
 }

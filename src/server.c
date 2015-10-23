@@ -49,7 +49,8 @@ db_operator* parse_command(message* recv_message, message* send_message) {
     cs165_log(stdout, recv_message->payload);
 
     // Here, we give you a default parser, you are welcome to replace it with anything you want
-    status parse_status = parse_command_string(recv_message->payload, dsl_commands, dbo);
+    status parse_status = parse_command_string(recv_message->payload, 
+        dsl_commands, dbo);
 
     switch (parse_status.code) {
         case UNKNOWN_CMD: {
@@ -100,29 +101,51 @@ db_operator* parse_command(message* recv_message, message* send_message) {
 char* execute_db_operator(db_operator* query) {
     switch (query->type) {
         case SHOWDB : {
-            char *res = show_db();
-            if (NULL == res) {
+            char *ret = show_db();
+            if (NULL == ret) {
                 free(query);
-                res = malloc(sizeof(char) * (strlen("no info found!") + 1));
-                sprintf(res, "%s", "no info found!");
-                return res;
+                ret = malloc(sizeof(char) * (strlen("no info found!") + 1));
+                sprintf(ret, "%s", "no info found!");
+                return ret;
             }
             else {
                 free(query);
-                return res;    
+                return ret;    
             }            
         }
-        case SELECT_COL: {
-            
+        case SELECT_COL: case SELECT_PRE: case FETCH: {
+            Result *res = NULL;
+            status s = query_execute(query, &res);
+            if (OK != s.code) {
+                
+            }
+            else {
+                // Serialize the result if it is a FETCH
+            }
             break;
+        }
+        case TUPLE: {
+            char* ret = tuple(query);
+            if (NULL != ret) {
+                free((query->domain).res);
+                free(query);
+                return ret;
+            }
+            else {
+                free((query->domain).res);
+                free(query);
+                ret = malloc(sizeof(char) * (strlen("no tuple found!") + 1));
+                sprintf(ret, "%s", "no tuple found!");
+                return ret;    
+            }
         }
         default : break;
     }
     free(query);
-    char *res;
-    res = malloc(sizeof(char) *(strlen("165") + 1));
-    sprintf(res, "165");
-    return res;
+    char *ret;
+    ret = malloc(sizeof(char) *(strlen("Command Done") + 1));
+    sprintf(ret, "Command Done");
+    return ret;
 }
 
 /**

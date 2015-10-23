@@ -59,7 +59,7 @@ server: server.o db.o dsl.o parser.o utils.o table.o column.o fileparser.o query
 	$(CC) $(CFLAGS) $(DEPCFLAGS) -o $@ $^ $(LDFLAGS) $(LIBS)
 
 clean:
-	rm -f client server *.o *~ *.bak core *.core cs165_unix_socket dbinfo
+	rm -f client server *.o *~ *.bak core *.core cs165_unix_socket
 	rm -rf .deps
 
 distclean: clean

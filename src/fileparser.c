@@ -81,7 +81,6 @@ void csv_process_fields(void *s,  size_t len __attribute__((unused)), void *data
 			char *tmp_name = malloc(sizeof(char) * (i + 1));
 			strncpy(tmp_name, name, i);	 // Only copy i bytes to skip second dot
 			tmp_name[i] = '\0';
-			printf("%s\n", tmp_name);
 
 			// Find the table according to the name
 			Table* tmp_tbl;

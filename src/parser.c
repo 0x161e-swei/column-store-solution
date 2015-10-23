@@ -274,90 +274,32 @@ status parse_dsl(char* str, dsl* d, db_operator* op)
 
 		return ret;
 	}
-	else if (d->g == SELECT_COL_CMD) {
-		status s = query_prepare(str, d, op);
-		if (OK != s.code) {
-			log_err("cannnot prepare the query for select column!");
+	else if (d->g == SELECT_COL_CMD || d->g == SELECT_PRE_CMD 
+            || d->g == FETCH_CMD || d->g == TUPLE_CMD) {
+        status s = query_prepare(str, d, op);
+        if (OK != s.code) {
+            switch (d->g) {
+                case SELECT_COL_CMD: {
+                    log_err("cannnot prepare the query for select column!");    
+                    break;
+                }
+                case SELECT_PRE_CMD: {
+					log_err("cannnot prepare the query for select previous!");       
+					break;
+                }
+                case FETCH_CMD: {
+					log_err("cannnot prepare the query for fetch!");
+					break;
+                }
+                case TUPLE_CMD: {
+					log_err("cannnot prepare the query for tuple!");
+                    break;	
+                }
+                default: break;
+            }
 			return s;
 		}
 		else return s;
-		// char* str_cpy = malloc(strlen(str) + 1);
-		// strncpy(str_cpy, str, strlen(str) + 1);
-		// char* pos_name = strtok(str_cpy, equal);
-
-		// char* pos_var = malloc(sizeof(char) * (strlen(pos_name) + 1));
-		// strncpy(pos_var, pos_name, strlen(pos_name) + 1); 
-		// strtok(NULL, open_paren);
-
-		// // This gives us everything inside the '(' ')'
-		// char* args = strtok(NULL, close_paren);
-
-		// // This gives us the column name specified
-		// char* col_name = strtok(args, comma);
-
-		// char* low_str = strtok(NULL, comma);
-		// int low = 0;
-		// if (NULL != low_str) {
-		//	 low = atoi(low_str);
-		// }
-		// (void) low;
-
-		// char* high_str  = strtok(NULL, comma);
-		// int high = 0;
-		// if (NULL != high_str) {
-		//	 high = atoi(high_str);
-		// }
-		// (void) high;
-		// log_info("%s=select(%s,%d,%d)", pos_var, col_name, low, high);
-
-		// // Grab the column
-		// status s;
-		// Column *tmp_col = NULL;
-		// s = grab_column(col_name, &tmp_col);
-
-		// if (OK != s.code) {
-		//	 log_err("cannot grab the column!\n");
-		//	 return s;
-		// }
-
-		// op->type = SELECT_COL;
-		// op->tables = NULL;
-
-		// op->columns = malloc(sizeof(Col_ptr));
-		// op->columns[0] = tmp_col;
-		
-		// op->pos1 = NULL;
-		// op->pos2 = NULL;
-
-		// // Keep track of the range
-		// op->value1 = malloc(sizeof(int));
-		// op->value2 = malloc(sizeof(int));
-		// op->value1 = low;
-		// op->value2 = high;
-
-		// // Keep track of the name for further refering
-		// op->res_name = pos_var;
-
-		// status ret; 
-		// ret.code = OK;
-		// return ret;
-
-	}
-	else if (d->g == SELECT_PRE_CMD) {
-		status s = query_prepare(str, d, op);
-		if (OK != s.code) {
-			log_err("cannnot prepare the query for select previous!");
-			return s;
-		}
-		else return s;
-	}
-	else if (d->g == FETCH_CMD) {
-		status s = query_prepare(str, d, op);
-		if (OK != s.code) {
-			log_err("cannnot prepare the query for getch!");
-			return s;
-		}
-		else return s;	
 	}
 	else if (d->g == QUIT_CMD) {
 		status ret;

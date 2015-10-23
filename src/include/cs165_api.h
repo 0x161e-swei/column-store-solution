@@ -111,7 +111,7 @@ typedef struct _table {
 	size_t length;
 	Col_ptr* cols;
 	UT_hash_handle hh;
-} /*__attribute__ ((aligned (16)))*/ Table;
+} Table, *Tbl_ptr;
 
 /**
  * Db
@@ -221,6 +221,7 @@ typedef enum Aggr {
 
 typedef enum OperatorType {
 	SHOWDB,
+    TUPLE,
 	SELECT_COL,
 	SELECT_PRE,
 	FETCH,
@@ -278,6 +279,8 @@ typedef struct db_operator {
 	int* pos1;
 	// Needed for HASH_JOIN
 	int* pos2;
+    // Needed for SELECT_PRE and FETCH
+    Result* position;
 
 	// For insert/delete operations, we only use value1;
 	// For update operations, we update value1 -> value2;
@@ -431,13 +434,15 @@ status create_index(Column* col, IndexType type);
 status insert(Column *col, int data);
 status delete(Column *col, int *pos);
 status update(Column *col, int *pos, int new_val);
-status col_scan(comparator *f, Column *col, Result **r);
+status col_scan(comparator *f, Column *col, size_t len, Result **r);
+status col_scan_with_pos(comparator *f, Column *col, Result *pos, Result **r);
 status index_scan(comparator *f, Column *col, Result **r);
 
 /* Query API */
 status query_prepare(const char* query, dsl* d, db_operator* op);
 status query_execute(db_operator* op, Result** results);
-
+status fetch_val(Column *col, Result *pos, Result **r);
+char* tuple(db_operator *query);
 
 #endif /* CS165_H */
 

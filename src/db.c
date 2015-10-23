@@ -173,7 +173,7 @@ char* show_db() {
             strncat(res, tbl->name, strlen(tbl->name));
 
             char len_s[40];
-            sprintf(len_s, " length: %u", tbl->length);
+            sprintf(len_s, " length: %zu", tbl->length);
 
             // reallocate the size of the char array, +1 for \n
             allocated_size += strlen(len_s) + 1;
