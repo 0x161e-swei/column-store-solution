@@ -28,6 +28,7 @@ bin/*
 server
 client
 .deps
+configure
 
 #ide stuff
 tags
