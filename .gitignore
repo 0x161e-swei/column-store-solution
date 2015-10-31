@@ -12,6 +12,7 @@ Makefile.in
 /autom4te.cache
 /build_aux
 aclocal.m4
+config.status
 
 # Libraries
 *.lib

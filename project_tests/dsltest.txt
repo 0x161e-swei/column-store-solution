@@ -1,0 +1,9 @@
+create(db,"awesomebase")
+create(tbl,"grades",awesomebase,6)
+create(col,"project",awesomebase.grades,unsorted)
+create(col,"midterm1",awesomebase.grades,unsorted)
+create(col,"midterm2",awesomebase.grades,unsorted)
+create(col,"class",awesomebase.grades,unsorted)
+create(col,"quizzes",awesomebase.grades,unsorted)
+create(col,"student_id",awesomebase.grades,unsorted)
+quit
