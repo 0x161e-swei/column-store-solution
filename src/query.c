@@ -1,6 +1,7 @@
 #include "query.h"
 
 Result *res_hash_list;
+// TODO: two hash table
 
 status grab_result(const char *res_name, Result **res) {
 	status s;

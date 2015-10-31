@@ -5,6 +5,14 @@ obj/*
 *.obj
 *.elf
 
+# Autotools
+
+Makefile.in
+
+/autom4te.cache
+/build_aux
+aclocal.m4
+
 # Libraries
 *.lib
 *.a
