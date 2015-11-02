@@ -31,7 +31,6 @@ stamp-h1
 bin/*
 /server
 /client
-.deps
 configure
 
 #ide stuff
@@ -40,9 +39,11 @@ Tags
 *.swp
 
 # other
-r*hs # vtune output
-.deps # makefile temps
-
+# vtune output
+r*hs 
+# makefile generated
+**/.deps/*
+ 
 # runtime products
 dbinfo
 foo.*

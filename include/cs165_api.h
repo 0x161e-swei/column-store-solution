@@ -34,14 +34,18 @@ SOFTWARE.
  * in place of int* in db_operator simliar to the way IndexType supports
  * additional types.
  **/
-/**
 typedef enum DataType {
-	 INT,
-	 LONG,
-	 // Others??
+	INT,
+	LONG,
+	// Others??
 } DataType;
-**/
 
+
+typedef union dataToken{
+	int IntVal;
+	long LongVal;
+	size_t PosVal;
+} Datatoken;
 
 /**
  * IndexType
