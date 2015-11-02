@@ -13,6 +13,10 @@ Makefile.in
 /build_aux
 aclocal.m4
 config.status
+config.log
+stamp-h1
+.dirstamp
+
 
 # Libraries
 *.lib
@@ -25,8 +29,8 @@ config.status
 # Executables
 *.out
 bin/*
-server
-client
+/server
+/client
 .deps
 configure
 

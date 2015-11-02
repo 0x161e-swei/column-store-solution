@@ -145,7 +145,7 @@ status sync_db(Db* db __attribute__((unused))) {
         free(database);
         database = NULL;
         fclose(dbinfo);
-        s.code = QUIT;
+        s.code = OK;
     }
     return s;
 }

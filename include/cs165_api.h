@@ -143,6 +143,8 @@ typedef enum StatusCode {
 	WRONG_FORMAT,
 	/* A quit command was executed */
 	QUIT,
+	/* A shutdown command was executed */
+	SHUTDOWN,
 } StatusCode;
 
 // status declares an error code and associated message

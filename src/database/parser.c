@@ -243,7 +243,7 @@ status parse_dsl(char* str, dsl* d, db_operator* op)
 		ret.code = CMD_DONE;
 		return ret;
 	}
-	else if (d->g == LOAD_FILE_CMD) {
+	else if (LOAD_FILE_CMD == d->g) {
 		status ret;
 		// Create a working copy, +1 for '\0'
 		char* str_cpy = malloc(strlen(str) + 1);
@@ -274,8 +274,8 @@ status parse_dsl(char* str, dsl* d, db_operator* op)
 
 		return ret;
 	}
-	else if (d->g == SELECT_COL_CMD || d->g == SELECT_PRE_CMD 
-            || d->g == FETCH_CMD || d->g == TUPLE_CMD) {
+	else if (SELECT_COL_CMD == d->g  || SELECT_PRE_CMD == d->g
+            || FETCH_CMD == d->g || TUPLE_CMD == d->g) {
         status s = query_prepare(str, d, op);
         if (OK != s.code) {
             switch (d->g) {
@@ -301,9 +301,15 @@ status parse_dsl(char* str, dsl* d, db_operator* op)
 		}
 		else return s;
 	}
-	else if (d->g == QUIT_CMD) {
+	else if (QUIT_CMD == d->g || SHUTDOWN_CMD == d->g) {
 		status ret;
 		ret = sync_db(NULL);
+		if (OK != ret.code) {
+			log_err("failed to sync database!");
+		}
+		else {
+			ret.code = (QUIT_CMD == d->g)? QUIT: SHUTDOWN;
+		}
 		return ret;
 	}
 	else if (d->g == SHOW_DB_CMD) {

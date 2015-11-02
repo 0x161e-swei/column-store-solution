@@ -13,7 +13,7 @@
 
 // Currently we have 4 DSL commands to parse.
 // TODO(USER): you will need to increase this to track the commands you support.
-#define NUM_DSL_COMMANDS (11)
+#define NUM_DSL_COMMANDS (12)
 
 // This helps group similar DSL commands together.
 // For example, some queries can be parsed together:
@@ -35,7 +35,8 @@ typedef enum DSLGroup {
     SELECT_COL_CMD,
     SELECT_PRE_CMD,
     FETCH_CMD,
-    TUPLE_CMD
+    TUPLE_CMD,
+    SHUTDOWN_CMD
     // TODO(USER): Add more here...
 } DSLGroup;
 
@@ -56,6 +57,7 @@ extern const char* create_table_command;
 extern const char* create_col_command_sorted;
 extern const char* create_col_command_unsorted;
 extern const char* quit_command;
+extern const char* shutdown_command;
 extern const char* load_command;
 extern const char* select_from_col_command;
 extern const char* select_from_pre_command;

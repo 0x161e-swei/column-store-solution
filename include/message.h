@@ -7,7 +7,8 @@ typedef enum message_status {
 	OK_WAIT_FOR_RESPONSE,
 	UNKNOWN_COMMAND,
 	INTERNAL_ERROR,
-	SERVER_QUIT,
+	SERVER_SHUTDOWN,
+	CLIENT_QUIT,
 	INCORRECT_FORMAT,
 } message_status;
 

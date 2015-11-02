@@ -16,6 +16,9 @@ const char* create_col_command_unsorted = "^create\\(col\\,\\\"[a-zA-Z0-9_\\.]+\
 // Matches: quit
 const char* quit_command = "^quit";
 
+// Matches: shutdown
+const char* shutdown_command = "^shutdown";
+
 // Matches: load(<filename>)
 const char* load_command = "^load\\(\\\"[a-zA-Z0-9_\\.]+\\\"\\)";
 
@@ -77,5 +80,9 @@ dsl** dsl_commands_init(void)
 
     commands[10]->c = tuple_command;
     commands[10]->g = TUPLE_CMD;
+
+    commands[11]->c = shutdown_command;
+    commands[11]->g = SHUTDOWN_CMD;
+
 	return commands;
 }

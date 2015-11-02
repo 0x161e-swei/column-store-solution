@@ -65,3 +65,12 @@ client_CFLAGS = $(AM_CFLAGS)
 client_CPPFLAGS = $(AM_CPPFLAGS)
 client_LDADD = lib/libutil.a
 client_SOURCES = src/client/client.c
+
+
+###########################################
+#
+# Clean files 
+#
+###########################################
+
+
