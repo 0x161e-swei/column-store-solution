@@ -100,7 +100,9 @@ void csv_process_fields(void *s,  size_t len __attribute__((unused)), void *data
 			HASH_FIND_STR(col_hash_list, (char *)s, tmp_col);
 			if (NULL != tmp_col) {
 				// TODO: better implementation of dynamic array  
-				tmp_col->data = malloc(sizeof(int) * info->line_count);
+				// tmp_col->data = malloc(sizeof(int) * info->line_count);
+				tmp_col->data = darray_create(info->line_count);
+
 				info->cols = realloc((info->cols), (info->cur_feild + 1) * sizeof(Column *));
 				if (NULL == info->cols) {
 					log_err("Mem alloc failed in loading\n");
@@ -116,7 +118,7 @@ void csv_process_fields(void *s,  size_t len __attribute__((unused)), void *data
 			}
 		}
 		else {							  // General case
-			(info->cols[info->cur_feild])->data[info->cur_row] = atoi((char *)s);
+			((info->cols[info->cur_feild])->data)->content[info->cur_row] = atoi((char *)s);
 			printf("catch data %d\n", atoi((char *)s));
 		}
 		info->cur_feild++;
@@ -184,7 +186,7 @@ status load_data4file(const char* filename, size_t line_count) {
 	for (size_t i = 0; i < parser_info.field_count; i++) {
 		for (size_t j = 0; j < parser_info.line_count; j++) {
 			// printf("%d\n", parser_info.cols[i][j]);
-			printf("%d ", (parser_info.cols[i])->data[j]);
+			printf("%d ", ((parser_info.cols[i])->data)->content[j]);
 		}
 		printf("\n");
 	}

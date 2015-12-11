@@ -7,7 +7,7 @@ bin_PROGRAMS = server client
 SRCDIR = src
 INCDIR = include
 
-noinst_LIBRARIES = lib/libutil.a lib/librum.a
+noinst_LIBRARIES = lib/libutil.a lib/librum.a lib/libdarray.a
 
 O ?= 3
 
@@ -25,6 +25,19 @@ UTIL = src/util/utils.c
 lib_libutil_a_CFLAGS = $(AM_CFLAGS)
 lib_libutil_a_CPPFLAGS = $(AM_CPPFLAGS)
 lib_libutil_a_SOURCES = $(UTIL)
+
+###########################################
+#
+# src/darray
+#
+###########################################
+
+DARRAY = \
+	src/darray/darray.c
+
+lib_libdarray_a_CFLAGS = $(AM_CFLAGS)
+lib_libdarray_a_CPPFLAGS = $(AM_CPPFLAGS)
+lib_libdarray_a_SOURCES = $(DARRAY)
 
 
 
@@ -46,6 +59,7 @@ RUM = \
 lib_librum_a_CFLAGS = $(AM_CFLAGS)
 lib_librum_a_CPPFLAGS = $(AM_CPPFLAGS)
 lib_librum_a_SOURCES = $(RUM)
+lib_librum_a_LIDADD = lib/libdarray.a
 
 
 
@@ -58,7 +72,8 @@ lib_librum_a_SOURCES = $(RUM)
 server_CFLAGS = $(AM_CFLAGS)
 server_CPPFLAGS = $(AM_CPPFLAGS)
 server_LDADD = lib/libutil.a \
-	lib/librum.a
+	lib/librum.a \
+	lib/libdarray.a
 server_SOURCES = src/server/server.c
 
 client_CFLAGS = $(AM_CFLAGS)

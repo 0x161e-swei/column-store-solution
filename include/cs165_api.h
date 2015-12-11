@@ -25,6 +25,7 @@ SOFTWARE.
 #include "utils.h"
 #include "uthash.h"
 #include "dsl.h"
+#include "darray.h"
 
 /**
  * EXTRA
@@ -35,8 +36,12 @@ SOFTWARE.
  * additional types.
  **/
 typedef enum DataType {
+	CHAR,
 	INT,
 	LONG,
+	FLOAT,
+	DOUBLE,
+	STR,
 	// Others??
 } DataType;
 
@@ -89,7 +94,13 @@ typedef struct column_index {
  **/
 typedef struct _column {
 	const char* name;
-	int* data;
+	// int* data;
+	DArray_INT *data;
+	
+	int partitionCount;
+	int *pivot;
+	int *p_pos;
+
 	column_index *index;
 	UT_hash_handle hh;
 } Column, *Col_ptr;
@@ -441,7 +452,7 @@ status insert(Column *col, int data);
 status delete(Column *col, int *pos);
 status update(Column *col, int *pos, int new_val);
 status col_scan(comparator *f, Column *col, size_t len, Result **r);
-status col_scan_with_pos(comparator *f, Column *col, Result *pos, Result **r);
+status col_scan_with_pos(comparator *f, Result *res, Result *pos, Result **r);
 status index_scan(comparator *f, Column *col, Result **r);
 
 /* Query API */

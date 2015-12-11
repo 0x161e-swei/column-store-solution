@@ -41,6 +41,8 @@ Tags
 # other
 # vtune output
 r*hs 
+# perf ouutput
+perf*
 # makefile generated
 **/.deps/*
  

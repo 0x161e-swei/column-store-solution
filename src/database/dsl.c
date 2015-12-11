@@ -20,7 +20,7 @@ const char* quit_command = "^quit";
 const char* shutdown_command = "^shutdown";
 
 // Matches: load(<filename>)
-const char* load_command = "^load\\(\\\"[a-zA-Z0-9_\\.]+\\\"\\)";
+const char* load_command = "^load\\(\\\"[a-zA-Z0-9_/\\.]+\\\"\\)";
 
 // Matches: show_db
 const char* show_command = "^show_db";

@@ -12,6 +12,9 @@ status create_column(Table *table, const char* name, Column** col) {
 		(*col)->name = name;
 		(*col)->data = NULL;
 		(*col)->index = NULL;
+		(*col)->partitionCount = 1;
+		(*col)->pivot = NULL;
+		(*col)->p_pos = NULL;
 
 		size_t i = 0;
 		for (; i < table->col_count; i++){

@@ -199,7 +199,7 @@ status query_prepare(const char* query, dsl* d, db_operator* op) {
 		}
 		(void) high;
 
-		log_info("%s=select(%s,%s,%d,%d)", pos_var, posn_vec, col_var, low, high);
+		log_info("%s=select(%s,%s,%d,%d)\n", pos_var, posn_vec, col_var, low, high);
 
 		// Grab the position list
 		Result *tmp_pos = NULL;
@@ -364,7 +364,7 @@ status query_execute(db_operator* op, Result** results) {
 			break;
 		}
 		case SELECT_PRE: {
-			s = col_scan_with_pos(op->c, (op->domain).cols[0], op->position, 
+			s = col_scan_with_pos(op->c, (op->domain).res[0], op->position, 
 				results);
 			if (OK != s.code) {
 				// Something Wroing
@@ -440,7 +440,8 @@ status col_scan(comparator *f, Column *col, size_t len, Result **r) {
 		(*r)->token = NULL;
 		(*r)->num_tuples = 0;
 		for (size_t i = 0; i < len; i++) {
-			if (compare(f, col->data[i])) {
+			if (compare(f, (col->data)->content[i])) {
+				// Results storing needs improving later
 				(*r)->num_tuples++;
 				(*r)->token = realloc((*r)->token, (*r)->num_tuples * sizeof(Payload));
 				(*r)->token[(*r)->num_tuples - 1].pos = i;
@@ -458,15 +459,17 @@ status col_scan(comparator *f, Column *col, size_t len, Result **r) {
 	return s;
 }
 
-status col_scan_with_pos(comparator *f, Column *col, Result *pos, Result **r) {
+status col_scan_with_pos(comparator *f, Result *res, Result *pos, Result **r) {
 	status s;
-	if (NULL != col && NULL != pos) {
+	if (NULL != res && NULL != pos) {
 		*r = malloc(sizeof(Result));
 		(*r)->token = NULL;
 		(*r)->num_tuples = 0;
 		size_t i = 0;
 		while (i < pos->num_tuples) {
-			if (compare(f, col->data[pos->token[i].pos])) {
+			// if (compare(f, (col->data)->content[pos->token[i].pos])) {
+			if (compare(f, res->token[i].val)) {	
+				// Results storing needs improving later
 				(*r)->num_tuples++;
 				(*r)->token = realloc(((*r)->token), (*r)->num_tuples * sizeof(Payload));
 				(*r)->token[(*r)->num_tuples - 1].pos = pos->token[i].pos;
@@ -474,7 +477,7 @@ status col_scan_with_pos(comparator *f, Column *col, Result *pos, Result **r) {
 			i++;
 		}
 		s.code = OK;
-		log_info("col_scan_with_pos %zu tuple qualified", (*r)->num_tuples);
+		log_info("col_scan_with_pos %zu tuple qualified\n", (*r)->num_tuples);
 		return s;
 	}
 
@@ -492,7 +495,7 @@ status fetch_val(Column *col, Result *pos, Result **r) {
 		(*r)->token	= malloc((*r)->num_tuples * sizeof(Payload));
 		log_info("fetched data:\n");
 		while (i < pos->num_tuples) {
-			(*r)->token[i].val = col->data[pos->token[i].pos];
+			(*r)->token[i].val = (col->data)->content[pos->token[i].pos];
 			log_info(" %d ", (*r)->token[i].val);
 			i++;
 		}

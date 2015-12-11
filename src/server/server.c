@@ -294,7 +294,7 @@ int main(void)
 
     Db *default_db;
     OpenFlags flags = LOAD;
-    status s = open_db("dbinfo", &default_db, flags);
+    status s = open_db("data/dbinfo", &default_db, flags);
 
     if (ERROR == s.code) {
         log_info("No database found on server\n");

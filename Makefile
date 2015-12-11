@@ -106,22 +106,27 @@ AM_V_AR = $(am__v_AR_$(V))
 am__v_AR_ = $(am__v_AR_$(AM_DEFAULT_VERBOSITY))
 am__v_AR_0 = @echo "  AR      " $@;
 am__v_AR_1 = 
+lib_libdarray_a_AR = $(AR) $(ARFLAGS)
+lib_libdarray_a_LIBADD =
+am__dirstamp = $(am__leading_dot)dirstamp
+am__objects_1 = src/darray/lib_libdarray_a-darray.$(OBJEXT)
+am_lib_libdarray_a_OBJECTS = $(am__objects_1)
+lib_libdarray_a_OBJECTS = $(am_lib_libdarray_a_OBJECTS)
 lib_librum_a_AR = $(AR) $(ARFLAGS)
 lib_librum_a_LIBADD =
-am__dirstamp = $(am__leading_dot)dirstamp
-am__objects_1 = src/database/lib_librum_a-db.$(OBJEXT) \
+am__objects_2 = src/database/lib_librum_a-db.$(OBJEXT) \
 	src/database/lib_librum_a-table.$(OBJEXT) \
 	src/database/lib_librum_a-column.$(OBJEXT) \
 	src/database/lib_librum_a-dsl.$(OBJEXT) \
 	src/database/lib_librum_a-fileparser.$(OBJEXT) \
 	src/database/lib_librum_a-parser.$(OBJEXT) \
 	src/database/lib_librum_a-query.$(OBJEXT)
-am_lib_librum_a_OBJECTS = $(am__objects_1)
+am_lib_librum_a_OBJECTS = $(am__objects_2)
 lib_librum_a_OBJECTS = $(am_lib_librum_a_OBJECTS)
 lib_libutil_a_AR = $(AR) $(ARFLAGS)
 lib_libutil_a_LIBADD =
-am__objects_2 = src/util/lib_libutil_a-utils.$(OBJEXT)
-am_lib_libutil_a_OBJECTS = $(am__objects_2)
+am__objects_3 = src/util/lib_libutil_a-utils.$(OBJEXT)
+am_lib_libutil_a_OBJECTS = $(am__objects_3)
 lib_libutil_a_OBJECTS = $(am_lib_libutil_a_OBJECTS)
 am__installdirs = "$(DESTDIR)$(bindir)"
 PROGRAMS = $(bin_PROGRAMS)
@@ -132,7 +137,7 @@ client_LINK = $(CCLD) $(client_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) \
 	$(LDFLAGS) -o $@
 am_server_OBJECTS = src/server/server-server.$(OBJEXT)
 server_OBJECTS = $(am_server_OBJECTS)
-server_DEPENDENCIES = lib/libutil.a lib/librum.a
+server_DEPENDENCIES = lib/libutil.a lib/librum.a lib/libdarray.a
 server_LINK = $(CCLD) $(server_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) \
 	$(LDFLAGS) -o $@
 AM_V_P = $(am__v_P_$(V))
@@ -167,10 +172,10 @@ AM_V_CCLD = $(am__v_CCLD_$(V))
 am__v_CCLD_ = $(am__v_CCLD_$(AM_DEFAULT_VERBOSITY))
 am__v_CCLD_0 = @echo "  CCLD    " $@;
 am__v_CCLD_1 = 
-SOURCES = $(lib_librum_a_SOURCES) $(lib_libutil_a_SOURCES) \
-	$(client_SOURCES) $(server_SOURCES)
-DIST_SOURCES = $(lib_librum_a_SOURCES) $(lib_libutil_a_SOURCES) \
-	$(client_SOURCES) $(server_SOURCES)
+SOURCES = $(lib_libdarray_a_SOURCES) $(lib_librum_a_SOURCES) \
+	$(lib_libutil_a_SOURCES) $(client_SOURCES) $(server_SOURCES)
+DIST_SOURCES = $(lib_libdarray_a_SOURCES) $(lib_librum_a_SOURCES) \
+	$(lib_libutil_a_SOURCES) $(client_SOURCES) $(server_SOURCES)
 am__can_run_installinfo = \
   case $$AM_UPDATE_INFO_DIR in \
     n|no|NO) false;; \
@@ -305,7 +310,7 @@ top_srcdir = .
 AUTOMAKE_OPTIONS = subdir-objects
 SRCDIR = src
 INCDIR = include
-noinst_LIBRARIES = lib/libutil.a lib/librum.a
+noinst_LIBRARIES = lib/libutil.a lib/librum.a lib/libdarray.a
 AM_CFLAGS = -std=c99 -g -ggdb3 -Wall -Wextra -pedantic -pthread -O$(O)
 AM_CPPFLAGS = -I$(INCDIR)
 
@@ -318,6 +323,18 @@ UTIL = src/util/utils.c
 lib_libutil_a_CFLAGS = $(AM_CFLAGS)
 lib_libutil_a_CPPFLAGS = $(AM_CPPFLAGS)
 lib_libutil_a_SOURCES = $(UTIL)
+
+###########################################
+#
+# src/darray
+#
+###########################################
+DARRAY = \
+	src/darray/darray.c
+
+lib_libdarray_a_CFLAGS = $(AM_CFLAGS)
+lib_libdarray_a_CPPFLAGS = $(AM_CPPFLAGS)
+lib_libdarray_a_SOURCES = $(DARRAY)
 
 ###########################################
 #
@@ -336,6 +353,7 @@ RUM = \
 lib_librum_a_CFLAGS = $(AM_CFLAGS)
 lib_librum_a_CPPFLAGS = $(AM_CPPFLAGS)
 lib_librum_a_SOURCES = $(RUM)
+lib_librum_a_LIDADD = lib/libdarray.a
 
 ###########################################
 #
@@ -345,7 +363,8 @@ lib_librum_a_SOURCES = $(RUM)
 server_CFLAGS = $(AM_CFLAGS)
 server_CPPFLAGS = $(AM_CPPFLAGS)
 server_LDADD = lib/libutil.a \
-	lib/librum.a
+	lib/librum.a \
+	lib/libdarray.a
 
 server_SOURCES = src/server/server.c
 client_CFLAGS = $(AM_CFLAGS)
@@ -408,6 +427,23 @@ distclean-hdr:
 
 clean-noinstLIBRARIES:
 	-test -z "$(noinst_LIBRARIES)" || rm -f $(noinst_LIBRARIES)
+src/darray/$(am__dirstamp):
+	@$(MKDIR_P) src/darray
+	@: > src/darray/$(am__dirstamp)
+src/darray/$(DEPDIR)/$(am__dirstamp):
+	@$(MKDIR_P) src/darray/$(DEPDIR)
+	@: > src/darray/$(DEPDIR)/$(am__dirstamp)
+src/darray/lib_libdarray_a-darray.$(OBJEXT):  \
+	src/darray/$(am__dirstamp) \
+	src/darray/$(DEPDIR)/$(am__dirstamp)
+lib/$(am__dirstamp):
+	@$(MKDIR_P) lib
+	@: > lib/$(am__dirstamp)
+
+lib/libdarray.a: $(lib_libdarray_a_OBJECTS) $(lib_libdarray_a_DEPENDENCIES) $(EXTRA_lib_libdarray_a_DEPENDENCIES) lib/$(am__dirstamp)
+	$(AM_V_at)-rm -f lib/libdarray.a
+	$(AM_V_AR)$(lib_libdarray_a_AR) lib/libdarray.a $(lib_libdarray_a_OBJECTS) $(lib_libdarray_a_LIBADD)
+	$(AM_V_at)$(RANLIB) lib/libdarray.a
 src/database/$(am__dirstamp):
 	@$(MKDIR_P) src/database
 	@: > src/database/$(am__dirstamp)
@@ -433,9 +469,6 @@ src/database/lib_librum_a-parser.$(OBJEXT):  \
 src/database/lib_librum_a-query.$(OBJEXT):  \
 	src/database/$(am__dirstamp) \
 	src/database/$(DEPDIR)/$(am__dirstamp)
-lib/$(am__dirstamp):
-	@$(MKDIR_P) lib
-	@: > lib/$(am__dirstamp)
 
 lib/librum.a: $(lib_librum_a_OBJECTS) $(lib_librum_a_DEPENDENCIES) $(EXTRA_lib_librum_a_DEPENDENCIES) lib/$(am__dirstamp)
 	$(AM_V_at)-rm -f lib/librum.a
@@ -524,6 +557,7 @@ server$(EXEEXT): $(server_OBJECTS) $(server_DEPENDENCIES) $(EXTRA_server_DEPENDE
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
 	-rm -f src/client/*.$(OBJEXT)
+	-rm -f src/darray/*.$(OBJEXT)
 	-rm -f src/database/*.$(OBJEXT)
 	-rm -f src/server/*.$(OBJEXT)
 	-rm -f src/util/*.$(OBJEXT)
@@ -532,6 +566,7 @@ distclean-compile:
 	-rm -f *.tab.c
 
 include src/client/$(DEPDIR)/client-client.Po
+include src/darray/$(DEPDIR)/lib_libdarray_a-darray.Po
 include src/database/$(DEPDIR)/lib_librum_a-column.Po
 include src/database/$(DEPDIR)/lib_librum_a-db.Po
 include src/database/$(DEPDIR)/lib_librum_a-dsl.Po
@@ -557,6 +592,20 @@ include src/util/$(DEPDIR)/lib_libutil_a-utils.Po
 #	$(AM_V_CC)source='$<' object='$@' libtool=no \
 #	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
 #	$(AM_V_CC_no)$(COMPILE) -c -o $@ `$(CYGPATH_W) '$<'`
+
+src/darray/lib_libdarray_a-darray.o: src/darray/darray.c
+	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(lib_libdarray_a_CPPFLAGS) $(CPPFLAGS) $(lib_libdarray_a_CFLAGS) $(CFLAGS) -MT src/darray/lib_libdarray_a-darray.o -MD -MP -MF src/darray/$(DEPDIR)/lib_libdarray_a-darray.Tpo -c -o src/darray/lib_libdarray_a-darray.o `test -f 'src/darray/darray.c' || echo '$(srcdir)/'`src/darray/darray.c
+	$(AM_V_at)$(am__mv) src/darray/$(DEPDIR)/lib_libdarray_a-darray.Tpo src/darray/$(DEPDIR)/lib_libdarray_a-darray.Po
+#	$(AM_V_CC)source='src/darray/darray.c' object='src/darray/lib_libdarray_a-darray.o' libtool=no \
+#	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
+#	$(AM_V_CC_no)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(lib_libdarray_a_CPPFLAGS) $(CPPFLAGS) $(lib_libdarray_a_CFLAGS) $(CFLAGS) -c -o src/darray/lib_libdarray_a-darray.o `test -f 'src/darray/darray.c' || echo '$(srcdir)/'`src/darray/darray.c
+
+src/darray/lib_libdarray_a-darray.obj: src/darray/darray.c
+	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(lib_libdarray_a_CPPFLAGS) $(CPPFLAGS) $(lib_libdarray_a_CFLAGS) $(CFLAGS) -MT src/darray/lib_libdarray_a-darray.obj -MD -MP -MF src/darray/$(DEPDIR)/lib_libdarray_a-darray.Tpo -c -o src/darray/lib_libdarray_a-darray.obj `if test -f 'src/darray/darray.c'; then $(CYGPATH_W) 'src/darray/darray.c'; else $(CYGPATH_W) '$(srcdir)/src/darray/darray.c'; fi`
+	$(AM_V_at)$(am__mv) src/darray/$(DEPDIR)/lib_libdarray_a-darray.Tpo src/darray/$(DEPDIR)/lib_libdarray_a-darray.Po
+#	$(AM_V_CC)source='src/darray/darray.c' object='src/darray/lib_libdarray_a-darray.obj' libtool=no \
+#	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
+#	$(AM_V_CC_no)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(lib_libdarray_a_CPPFLAGS) $(CPPFLAGS) $(lib_libdarray_a_CFLAGS) $(CFLAGS) -c -o src/darray/lib_libdarray_a-darray.obj `if test -f 'src/darray/darray.c'; then $(CYGPATH_W) 'src/darray/darray.c'; else $(CYGPATH_W) '$(srcdir)/src/darray/darray.c'; fi`
 
 src/database/lib_librum_a-db.o: src/database/db.c
 	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(lib_librum_a_CPPFLAGS) $(CPPFLAGS) $(lib_librum_a_CFLAGS) $(CFLAGS) -MT src/database/lib_librum_a-db.o -MD -MP -MF src/database/$(DEPDIR)/lib_librum_a-db.Tpo -c -o src/database/lib_librum_a-db.o `test -f 'src/database/db.c' || echo '$(srcdir)/'`src/database/db.c
@@ -956,6 +1005,8 @@ distclean-generic:
 	-rm -f lib/$(am__dirstamp)
 	-rm -f src/client/$(DEPDIR)/$(am__dirstamp)
 	-rm -f src/client/$(am__dirstamp)
+	-rm -f src/darray/$(DEPDIR)/$(am__dirstamp)
+	-rm -f src/darray/$(am__dirstamp)
 	-rm -f src/database/$(DEPDIR)/$(am__dirstamp)
 	-rm -f src/database/$(am__dirstamp)
 	-rm -f src/server/$(DEPDIR)/$(am__dirstamp)
@@ -973,7 +1024,7 @@ clean-am: clean-binPROGRAMS clean-generic clean-noinstLIBRARIES \
 
 distclean: distclean-am
 	-rm -f $(am__CONFIG_DISTCLEAN_FILES)
-	-rm -rf src/client/$(DEPDIR) src/database/$(DEPDIR) src/server/$(DEPDIR) src/util/$(DEPDIR)
+	-rm -rf src/client/$(DEPDIR) src/darray/$(DEPDIR) src/database/$(DEPDIR) src/server/$(DEPDIR) src/util/$(DEPDIR)
 	-rm -f Makefile
 distclean-am: clean-am distclean-compile distclean-generic \
 	distclean-hdr distclean-tags
@@ -1021,7 +1072,7 @@ installcheck-am:
 maintainer-clean: maintainer-clean-am
 	-rm -f $(am__CONFIG_DISTCLEAN_FILES)
 	-rm -rf $(top_srcdir)/autom4te.cache
-	-rm -rf src/client/$(DEPDIR) src/database/$(DEPDIR) src/server/$(DEPDIR) src/util/$(DEPDIR)
+	-rm -rf src/client/$(DEPDIR) src/darray/$(DEPDIR) src/database/$(DEPDIR) src/server/$(DEPDIR) src/util/$(DEPDIR)
 	-rm -f Makefile
 maintainer-clean-am: distclean-am maintainer-clean-generic
 

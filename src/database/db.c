@@ -68,7 +68,7 @@ status create_db(const char* db_name, Db** db) {
 status sync_db(Db* db __attribute__((unused))) {
     FILE *dbinfo;
     status s;
-    if (NULL != database && NULL != (dbinfo = fopen("dbinfo", "w+"))) {
+    if (NULL != database && NULL != (dbinfo = fopen("data/dbinfo", "w+"))) {
         log_info("saving the database %s...\n", database->name);
         /* Write length of database name, 
             database name and table count to dbinfo
@@ -110,7 +110,7 @@ status sync_db(Db* db __attribute__((unused))) {
                         FILE *fwp = fopen((tbl->cols[i])->name, "w+");
                         if (NULL != fwp) {
                             for (size_t k = 0; k < tbl->length; k++) {
-                                fprintf(fwp, "%d\n", (tbl->cols[i])->data[k]);    
+                                fprintf(fwp, "%d\n", ((tbl->cols[i])->data)->content[k]);    
                             }
                             fclose(fwp);
                         }
@@ -118,16 +118,21 @@ status sync_db(Db* db __attribute__((unused))) {
                             log_err("cannot open column file to store.\n");
                             
                         }
-                        free((tbl->cols[i])->data);
+                        // free((tbl->cols[i])->data);
+                        darray_destory((tbl->cols[i])->data);
                     }
-                        
+
                     if (NULL != (tbl->cols[i])->index) {
-                        // TODO: SAVE INDEX TO DISKS
+                        // TODO: SAVE INDEX TO DISKS ??
                         free ((tbl->cols[i])->index);
                     }
-                        
                     free((void *)(tbl->cols[i])->name);
-                    free(tbl->cols[i]);    
+                    if ((tbl->cols[i])->partitionCount > 1) {
+                        free((tbl->cols[i])->pivot);
+                        free((tbl->cols[i])->p_pos);
+                    }
+                    
+                    free(tbl->cols[i]);
                 }
                 else {
                     log_err("\t\tbroken table\n");

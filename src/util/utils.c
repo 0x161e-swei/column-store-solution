@@ -13,6 +13,7 @@ void cs165_log(FILE* out, const char *format, ...) {
 #ifdef LOG
     va_list v;
     va_start(v, format);
+    // fprintf(out, "[LOG] (%s:%d) ", __FILE__, __LINE__);
     vfprintf(out, format, v);
     va_end(v);
 #else
@@ -26,6 +27,7 @@ void log_err(const char *format, ...) {
     va_list v;
     va_start(v, format);
     fprintf(stderr, ANSI_COLOR_RED);
+    // fprintf(stderr, "[ERROR] (%s:%d) ", __FILE__, __LINE__);
     vfprintf(stderr, format, v);
     fprintf(stderr, ANSI_COLOR_RESET);
     va_end(v);
@@ -39,6 +41,7 @@ void log_info(const char *format, ...) {
     va_list v;
     va_start(v, format);
     fprintf(stdout, ANSI_COLOR_GREEN);
+    // fprintf(stdout, "[INFO] (%s:%d) ", __FILE__, __LINE__);
     vfprintf(stdout, format, v);
     fprintf(stdout, ANSI_COLOR_RESET);
     fflush(stdout);

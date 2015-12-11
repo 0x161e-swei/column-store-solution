@@ -257,6 +257,7 @@ status parse_dsl(char* str, dsl* d, db_operator* op)
 		const char* filename = strtok(args, quotes);
 		
 		log_info("load(\"%s\")", filename);
+		
 		size_t line_count = count_file_lines(filename);
 	
 		if (1 >= line_count) {
