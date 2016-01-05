@@ -284,7 +284,7 @@ typedef union _op_domain {
  *
  * op1.c = &f;
  **/
-typedef struct db_operator {
+typedef struct _db_operator {
 	// Flag to choose operator
 	OperatorType type;
 
@@ -460,6 +460,11 @@ status query_prepare(const char* query, dsl* d, db_operator* op);
 status query_execute(db_operator* op, Result** results);
 status fetch_val(Column *col, Result *pos, Result **r);
 char* tuple(db_operator *query);
+
+status scan_partition(Column *col, int part_id, Result **r);
+status scan_partition_greaterThan(Column *col, int val, int part_id, Result **r);
+status scan_partition_lessThan(Column *col, int val, int part_id, Result **r);
+status scan_partition_pointQuery(Column *col, int val, int part_id, Result **r);
 
 #endif /* CS165_H */
 

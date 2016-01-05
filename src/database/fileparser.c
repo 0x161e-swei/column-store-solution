@@ -47,7 +47,7 @@ char *readfile(const char *filename, size_t *len) {
 				return NULL;
 			} else if (feof(fp)) {
 				log_err("EOF encountered after %zu bytes (expected %zu)\n",
-					   read, *len);
+						read, *len);
 				*len = read;
 				break;
 			}
@@ -64,37 +64,45 @@ void csv_process_fields(void *s,  size_t len __attribute__((unused)), void *data
 	if (NULL != info) {
 		if (info->error) return;
 		if (1 == info->first_row) {		 // First row case
-			
-			// Figure out the table name
-			unsigned int i = 0, flag = 0;
-			char *name = (char *)s;
-			while ('\0' != name[i]) {
-				if ('.' == name[i]) {
-					flag++;
-					if (2 == flag) {		// Find the second '.'
-						break;
+			// All the data in the file shall belong to same table
+			if (0 == info->cur_feild){	
+				// Figure out the table name
+				unsigned int i = 0, flag = 0;
+				char *name = (char *)s;
+				while ('\0' != name[i]) {
+					if ('.' == name[i]) {
+						flag++;
+						if (2 == flag) {		// Find the second '.'
+							break;
+						}
 					}
+					i++;
 				}
-				i++;
-			}
-			// strncpy the name, +1 for index-diff and '\0'
-			char *tmp_name = malloc(sizeof(char) * (i + 1));
-			strncpy(tmp_name, name, i);	 // Only copy i bytes to skip second dot
-			tmp_name[i] = '\0';
+				// strncpy the name, +1 for index-diff and '\0'
+				char *tmp_name = malloc(sizeof(char) * (i + 1));
+				strncpy(tmp_name, name, i);	 // Only copy i bytes to skip second dot
+				tmp_name[i] = '\0';
 
-			// Find the table according to the name
-			Table* tmp_tbl;
-			HASH_FIND_STR(database->tables, tmp_name, tmp_tbl);
-			if (NULL != tmp_tbl) {
-				// Update the length of table according to the file loaded
-				tmp_tbl->length = info->line_count;
+				// Find the table according to the name
+				Table* tmp_tbl;
+				HASH_FIND_STR(database->tables, tmp_name, tmp_tbl);
+				// length == 0, in case of re-load
+				if (NULL != tmp_tbl && 0 == tmp_tbl->length) {
+					// Update the length of table according to the file loaded
+					tmp_tbl->length = info->line_count;
+				}
+				else{
+					if (NULL == tmp_tbl) {
+						log_err("Invalid table name!\n");
+					}
+					else {
+						log_err("Data already loaded!\nOriginal table has length of %zu", tmp_tbl->length);
+					}
+					info->error = 1;
+					return;
+				}	
 			}
-			else{
-				log_err("Invalid table name\n");
-				info->error = 1;
-				return;
-			}
-
+			
 			// Find the column according to the name
 			Column *tmp_col;
 			HASH_FIND_STR(col_hash_list, (char *)s, tmp_col);
@@ -103,6 +111,7 @@ void csv_process_fields(void *s,  size_t len __attribute__((unused)), void *data
 				// tmp_col->data = malloc(sizeof(int) * info->line_count);
 				tmp_col->data = darray_create(info->line_count);
 
+				// Record the number of columns to load
 				info->cols = realloc((info->cols), (info->cur_feild + 1) * sizeof(Column *));
 				if (NULL == info->cols) {
 					log_err("Mem alloc failed in loading\n");
@@ -149,6 +158,12 @@ void csv_process_row(int delim __attribute__((unused)), void *data)
 
 status load_data4file(const char* filename, size_t line_count) {
 	size_t length = 0;
+	if (NULL == database) {
+		status ret;
+		ret.code = ERROR;
+		log_err("no database exists!\n");
+		return ret;
+	}
 	char *contents = readfile(filename, &length);
 
 	if (NULL == contents) {

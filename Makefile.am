@@ -59,7 +59,7 @@ RUM = \
 lib_librum_a_CFLAGS = $(AM_CFLAGS)
 lib_librum_a_CPPFLAGS = $(AM_CPPFLAGS)
 lib_librum_a_SOURCES = $(RUM)
-lib_librum_a_LIDADD = lib/libdarray.a
+lib_librum_a_LIBADD = lib/libdarray.a
 
 
 

@@ -107,19 +107,28 @@ status sync_db(Db* db __attribute__((unused))) {
                     HASH_DEL(col_hash_list, tbl->cols[i]);
                     if (NULL != (tbl->cols[i])->data) {
                         // TODO: SAVE DATA BACK TO DISKS
-                        FILE *fwp = fopen((tbl->cols[i])->name, "w+");
+                        char *dataname;
+                        dataname = malloc(sizeof(char) * (len + 6));
+                        strncpy(dataname, "data/", 6);
+                        strncat(dataname, (tbl->cols[i])->name, len);
+                        printf("%s\n", dataname);
+                        // FILE *fwp = fopen((tbl->cols[i])->name, "w+");
+                        FILE *fwp = fopen(dataname, "w+");
                         if (NULL != fwp) {
-                            for (size_t k = 0; k < tbl->length; k++) {
-                                fprintf(fwp, "%d\n", ((tbl->cols[i])->data)->content[k]);    
-                            }
+                            // Write as a whole or do it one by one
+                            fwrite(((tbl->cols[i])->data)->content, sizeof(int), tbl->length, fwp);
+                            // for (size_t k = 0; k < tbl->length; k++) {
+                            //     fprintf(fwp, "%d\n", ((tbl->cols[i])->data)->content[k]);
+                            //     fwrite(&((tbl->cols[i])->data)->content[k], sizeof(int), 1, fwp);
+                            // }
                             fclose(fwp);
                         }
                         else {
                             log_err("cannot open column file to store.\n");
-                            
                         }
+                        free(dataname);
                         // free((tbl->cols[i])->data);
-                        darray_destory((tbl->cols[i])->data);
+                        darray_destory((tbl->cols[i])->data); (tbl->cols[i])->data = NULL;
                     }
 
                     if (NULL != (tbl->cols[i])->index) {

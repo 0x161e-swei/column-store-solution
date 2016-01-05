@@ -127,6 +127,11 @@ status query_prepare(const char* query, dsl* d, db_operator* op) {
 			return s;
 		}
 
+		// Data of the column might not be in main memory
+		if (NULL != tmp_tbl && NULL == tmp_col->data && 0 != tmp_tbl->length) {
+			load_column4disk(tmp_col, tmp_tbl->length);
+		}
+
 		op->type = SELECT_COL;
 		op->tables = malloc(sizeof(Tbl_ptr));
 		op->tables[0] = tmp_tbl;
@@ -250,7 +255,7 @@ status query_prepare(const char* query, dsl* d, db_operator* op) {
 		return s;
 	}
 	else if (FETCH_CMD == d->g) {
-		// TODO:
+		
 		char* str_cpy = malloc(strlen(query) + 1);
 		strncpy(str_cpy, query, strlen(query) + 1);
 		char* res_name = strtok(str_cpy, eq_sign);
@@ -270,11 +275,39 @@ status query_prepare(const char* query, dsl* d, db_operator* op) {
 
 		log_info("%s=fetch(%s,%s)",val_var, col_var, vec_pos);
 
+		unsigned int i =0, flag = 0;
+		while('\0' != col_var[i]) {
+			if ('.' == col_var[i]) {
+				flag++;
+				if (2 == flag) {		// Find the second '.'
+					break;
+				}
+			}
+			i++;
+		}
+
+		char* tbl_var = malloc(sizeof(char) * (i + 1));
+		strncpy(tbl_var, col_var, i);
+		tbl_var[i] = '\0';
+		printf("table name in fetch %s\n", tbl_var);
+		
+		Table* tmp_tbl = NULL;
+		s = grab_table(tbl_var, &tmp_tbl);
+		if (OK != s.code) {
+			log_err("cannot grab the table!");
+			return s;
+		}
+		free(tbl_var);
+
 		Column* tmp_col = NULL;
 		s = grab_column(col_var, &tmp_col);
 		if (OK != s.code) {
 			log_err("cannot grab the column!");
 			return s;
+		}
+
+		if (NULL == tmp_col->data) {
+			load_column4disk(tmp_col, tmp_tbl->length);
 		}
 
 		Result* tmp_res = NULL;
@@ -285,9 +318,7 @@ status query_prepare(const char* query, dsl* d, db_operator* op) {
 		}
 
 		op->type = FETCH;
-		op->tables = NULL;
-
-		
+		op->tables = NULL;			// no need to record table
 
 		(op->domain).cols = malloc(sizeof(Col_ptr));
 		(op->domain).cols[0] = tmp_col;
@@ -433,6 +464,73 @@ bool compare(comparator *f, int val){
 	return res;
 }
 
+status load_column4disk(Column *col, size_t len) {
+	status s;
+	static char dataprefix[] = "data/";
+	char *colfile = NULL;
+	int namelen = strlen(col->name);
+	colfile = malloc(sizeof(char) * (6 + namelen));
+	strncpy(colfile, dataprefix, 6);
+	strncat(colfile, col->name, namelen);
+	log_info("loading column %s from disks!\n", colfile);
+
+	col->data = darray_create(len);
+	FILE *fp = fopen(colfile, "rb");
+	free(colfile);
+
+	size_t read = len;
+	char *buffer = malloc(sizeof(int) * 1024);
+
+	// Try to read 1k integers at a time
+	for (size_t i = 0; i <= len / 1024; i++) {
+		if (read < 1024) {
+			size_t r = 0;
+			while(r < read) {
+				size_t t = fread(buffer + sizeof(int) * r, sizeof(int), read - r, fp);
+				if (0 == t) {
+					darray_destory(col->data); free(buffer); col->data = NULL;
+					if (ferror(fp) || feof(fp)) {
+						log_err("error loading from disks!\n");
+						darray_destory(col->data); free(buffer); col->data = NULL;
+						fclose(fp);
+						s.code = ERROR;
+						return s;
+					}
+				}
+				r += t;
+			}
+			fclose(fp);
+			// append data into column
+			darray_vec_push(col->data, buffer, read);
+			free(buffer);
+		}
+		else {
+			size_t r = 0;
+			while (r < 1024) {
+				size_t t = fread(buffer + sizeof(int) * r, sizeof(int), read - r, fp);
+				if (0 == t) {
+					darray_destory(col->data); free(buffer); col->data = NULL;
+					if (ferror(fp) || feof(fp)) {
+						log_err("error loading from disks!\n");
+						darray_destory(col->data); free(buffer); col->data = NULL;
+						fclose(fp);
+						s.code = ERROR;
+						return s;
+					}
+				}
+				r += t;
+				// append data into column
+
+			}
+			read -= 1024;
+			darray_vec_push(col->data, buffer, 1024);
+		}
+	}
+
+	s.code = OK;
+	return s;
+}
+
 status col_scan(comparator *f, Column *col, size_t len, Result **r) {
 	status s;
 	if (NULL != col) {
@@ -514,6 +612,7 @@ char* tuple(db_operator *query){
 		char *ret = NULL;
 		ret = realloc(ret, sizeof(char) * allocated_size);
 		ret[0] = '\0';
+		// TODO: reduce time to reallocate
 		for (i = 0; i < r->num_tuples; i++) {
 			char num[20];
 			sprintf(num, "%d\n", r->token[i].val);
@@ -524,4 +623,100 @@ char* tuple(db_operator *query){
 		return ret;		
 	}
 	return	NULL;
+}
+
+status scan_partition(Column *col, int part_id, Result **r) {
+	status s;
+	s.code = ERROR;
+	if (NULL != col && part_id < col->partitionCount) {
+		int pos_s = col->p_pos[part_id];
+		int pos_e = col->p_pos[part_id + 1]; 
+		*r = malloc(sizeof(Result));
+		(*r)->num_tuples = pos_e - pos_s;
+		int j = 0;
+		(*r)->token	= malloc((*r)->num_tuples * sizeof(Payload));
+		for (int i = pos_s; i < pos_e; i++) {
+			(*r)->token[j++].pos = i;
+		}
+		s.code = OK;
+	}
+	return s;
+}
+
+status scan_partition_greaterThan(Column *col, int val, int part_id, Result **r) {
+	status s;
+	s.code = ERROR;
+	if (NULL != col && part_id < col->partitionCount) {
+		int pos_s = 0;
+		if (1 == col->partitionCount) {
+			pos_s = 0;
+		}
+		else {
+			pos_s = col->p_pos[part_id - 1] + 1;
+		}
+		int pos_e = col->p_pos[part_id];
+		*r = malloc(sizeof(Result));
+		(*r)->num_tuples = 0;
+		int j = 0;
+		for (int i = pos_s; i < pos_e; i++) {
+			if (col->data->content[i] > val) {
+				(*r)->token = realloc((*r)->token, sizeof(Payload) * (j + 1));
+				(*r)->token[j].pos = i;
+				j++;
+			}
+		}
+		(*r)->num_tuples = j + 1;
+		s.code = OK;
+	}
+	return s;
+}
+
+status scan_partition_lessThan(Column *col, int val, int part_id, Result **r) {
+	status s;
+	s.code = ERROR;
+	if (NULL != col && part_id < col->partitionCount) {
+		int pos_s = 0;
+		if (1 == col->partitionCount) {
+			pos_s = 0;
+		}
+		else {
+			pos_s = col->p_pos[part_id - 1] + 1;
+		}
+		int pos_e = col->p_pos[part_id];
+		*r = malloc(sizeof(Result));
+		(*r)->num_tuples = 0;
+		int j = 0;
+		for (int i = pos_s; i < pos_e; i++) {
+			if (col->data->content[i] < val) {
+				(*r)->token = realloc((*r)->token, sizeof(Payload) *(j + 1));
+				(*r)->token[j].pos = i;
+				j++;
+			}
+		}
+		(*r)->num_tuples = j + 1;
+		s.code = OK;
+	}
+	return s;
+}
+
+status scan_partition_pointQuery(Column *col, int val, int part_id, Result **r) {
+	status s;
+	s.code = ERROR;
+	if (NULL != col && part_id < col->partitionCount) {
+		int pos_s = col->p_pos[part_id];
+		int pos_e = col->p_pos[part_id + 1]; 
+		*r = malloc(sizeof(Result));
+		(*r)->num_tuples = 0;
+		int j = 0;
+		for (int i = pos_s; i < pos_e; i++) {
+			if (col->data->content[i] == val) {
+				(*r)->token = realloc((*r)->token, sizeof(Payload) * (j + 1));
+				(*r)->token[j].pos = i;
+				j++;
+			}
+		}
+		(*r)->num_tuples = j + 1;
+		s.code = OK;
+	}
+	return s;
 }

@@ -5,7 +5,7 @@ AC_PREREQ([2.69])
 AC_INIT([RUM-SYSTEM], [0.1.0], [author@hidden])
 AC_CONFIG_AUX_DIR([build_aux])
 AM_INIT_AUTOMAKE([subdir-objects foreign])
-AM_SILENT_RULES([yes])
+AM_SILENT_RULES([no])
 
 #AC_CONFIG_SRCDIR([src/server.c])
 AC_CONFIG_HEADERS([include/config.h])

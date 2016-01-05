@@ -113,7 +113,7 @@ am__objects_1 = src/darray/lib_libdarray_a-darray.$(OBJEXT)
 am_lib_libdarray_a_OBJECTS = $(am__objects_1)
 lib_libdarray_a_OBJECTS = $(am_lib_libdarray_a_OBJECTS)
 lib_librum_a_AR = $(AR) $(ARFLAGS)
-lib_librum_a_LIBADD =
+lib_librum_a_DEPENDENCIES = lib/libdarray.a
 am__objects_2 = src/database/lib_librum_a-db.$(OBJEXT) \
 	src/database/lib_librum_a-table.$(OBJEXT) \
 	src/database/lib_librum_a-column.$(OBJEXT) \
@@ -221,7 +221,7 @@ am__distuninstallcheck_listfiles = $(distuninstallcheck_listfiles) \
 distcleancheck_listfiles = find . -type f -print
 ACLOCAL = ${SHELL} /home/skar/rum/shijia-rum-system-skeleton/build_aux/missing aclocal-1.14
 AMTAR = $${TAR-tar}
-AM_DEFAULT_VERBOSITY = 0
+AM_DEFAULT_VERBOSITY = 1
 AUTOCONF = ${SHELL} /home/skar/rum/shijia-rum-system-skeleton/build_aux/missing autoconf
 AUTOHEADER = ${SHELL} /home/skar/rum/shijia-rum-system-skeleton/build_aux/missing autoheader
 AUTOMAKE = ${SHELL} /home/skar/rum/shijia-rum-system-skeleton/build_aux/missing automake-1.14
@@ -353,7 +353,7 @@ RUM = \
 lib_librum_a_CFLAGS = $(AM_CFLAGS)
 lib_librum_a_CPPFLAGS = $(AM_CPPFLAGS)
 lib_librum_a_SOURCES = $(RUM)
-lib_librum_a_LIDADD = lib/libdarray.a
+lib_librum_a_LIBADD = lib/libdarray.a
 
 ###########################################
 #
