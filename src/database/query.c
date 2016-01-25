@@ -1,5 +1,5 @@
 #include "query.h"
-
+#define BUFFERSIZE 3096
 Result *res_hash_list;
 // TODO: two hash table
 
@@ -306,7 +306,7 @@ status query_prepare(const char* query, dsl* d, db_operator* op) {
 			return s;
 		}
 
-		if (NULL == tmp_col->data) {
+		if (NULL == tmp_col->data && NULL != tmp_tbl && 0 != tmp_tbl->length) {
 			load_column4disk(tmp_col, tmp_tbl->length);
 		}
 
@@ -479,19 +479,29 @@ status load_column4disk(Column *col, size_t len) {
 	free(colfile);
 
 	size_t read = len;
-	char *buffer = malloc(sizeof(int) * 1024);
+	char *buffer = malloc(sizeof(int) * BUFFERSIZE);
+	if (NULL == fp) {
+		log_info("cannot open file!\n");
+		s.code = ERROR;
+		return s;
+	}
 
 	// Try to read 1k integers at a time
-	for (size_t i = 0; i <= len / 1024; i++) {
-		if (read < 1024) {
+	for (size_t i = 0; i <= (len - 1) / BUFFERSIZE; i++) {
+		if (read < BUFFERSIZE) {
 			size_t r = 0;
 			while(r < read) {
 				size_t t = fread(buffer + sizeof(int) * r, sizeof(int), read - r, fp);
 				if (0 == t) {
-					darray_destory(col->data); free(buffer); col->data = NULL;
-					if (ferror(fp) || feof(fp)) {
+					darray_destory(col->data); free(buffer); col->data = NULL;	
+					if (ferror(fp)) {
 						log_err("error loading from disks!\n");
-						darray_destory(col->data); free(buffer); col->data = NULL;
+						// darray_destory(col->data); free(buffer); col->data = NULL;
+						fclose(fp);
+						s.code = ERROR;
+						return s;
+					}
+					else {
 						fclose(fp);
 						s.code = ERROR;
 						return s;
@@ -506,24 +516,32 @@ status load_column4disk(Column *col, size_t len) {
 		}
 		else {
 			size_t r = 0;
-			while (r < 1024) {
-				size_t t = fread(buffer + sizeof(int) * r, sizeof(int), read - r, fp);
+			while (r < BUFFERSIZE) {
+				size_t t = fread(buffer + sizeof(int) * r, sizeof(int), BUFFERSIZE - r, fp);
 				if (0 == t) {
-					darray_destory(col->data); free(buffer); col->data = NULL;
+					darray_destory(col->data); 
+					free(buffer); 
+					col->data = NULL;
 					if (ferror(fp) || feof(fp)) {
 						log_err("error loading from disks!\n");
-						darray_destory(col->data); free(buffer); col->data = NULL;
+						// darray_destory(col->data);
+						// free(buffer);
+						// col->data = NULL;
 						fclose(fp);
 						s.code = ERROR;
 						return s;
 					}
+					else {
+						fclose(fp);
+						s.code = ERROR;
+						return s;	
+					}
 				}
 				r += t;
-				// append data into column
-
 			}
-			read -= 1024;
-			darray_vec_push(col->data, buffer, 1024);
+			read -= BUFFERSIZE;
+			// append data into column
+			darray_vec_push(col->data, buffer, BUFFERSIZE);
 		}
 	}
 
@@ -600,7 +618,6 @@ status fetch_val(Column *col, Result *pos, Result **r) {
 		s.code = OK;
 		return s;
 	}
-
 	s.code = ERROR;
 	return s;
 }
@@ -647,7 +664,7 @@ status scan_partition_greaterThan(Column *col, int val, int part_id, Result **r)
 	status s;
 	s.code = ERROR;
 	if (NULL != col && part_id < col->partitionCount) {
-		int pos_s = 0;
+		int pos_s;
 		if (1 == col->partitionCount) {
 			pos_s = 0;
 		}
@@ -675,6 +692,7 @@ status scan_partition_lessThan(Column *col, int val, int part_id, Result **r) {
 	status s;
 	s.code = ERROR;
 	if (NULL != col && part_id < col->partitionCount) {
+		// start position
 		int pos_s = 0;
 		if (1 == col->partitionCount) {
 			pos_s = 0;
@@ -682,6 +700,7 @@ status scan_partition_lessThan(Column *col, int val, int part_id, Result **r) {
 		else {
 			pos_s = col->p_pos[part_id - 1] + 1;
 		}
+		// end position
 		int pos_e = col->p_pos[part_id];
 		*r = malloc(sizeof(Result));
 		(*r)->num_tuples = 0;
@@ -720,3 +739,4 @@ status scan_partition_pointQuery(Column *col, int val, int part_id, Result **r) 
 	}
 	return s;
 }
+

@@ -1,4 +1,7 @@
+#define _GNU_SOURCE
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include "config.h"
 #include "utils.h"
 
@@ -8,6 +11,8 @@
 // #define LOG
 // #define LOG_ERR
 // #define LOG_INFO
+
+
 
 void cs165_log(FILE* out, const char *format, ...) {
 #ifdef LOG
@@ -51,14 +56,33 @@ void log_info(const char *format, ...) {
 #endif
 }
 
-size_t count_file_lines(const char* filename) {
+
+void collect_file_info(const char* filename, size_t *lineCount, size_t *fieldCount) {
     FILE* fp = fopen(filename, "r");
+
     if (NULL != fp) {
+        size_t len = 0;
+        char *line = NULL;
+        size_t fields = 1;
+        ssize_t read;
+        read = getline(&line, &len, fp);
+        if (0 != read )  {
+            for (uint i = 0; i < strlen(line); i++) {
+                fields += (line[i] == ',');
+            }
+            if (line) free(line);    
+        }
+        
         size_t lines = 0;
         while (EOF != (fscanf(fp, "%*[^\n]"), fscanf(fp, "%*c")))
             ++lines;
         fclose(fp);
-        return lines;
+        *lineCount = lines;
+        *fieldCount = fields;
     }
-    return 0;    
+    else {
+        *lineCount = -1;
+        *fieldCount = -1;    
+    }
+    return;
 }

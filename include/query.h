@@ -8,9 +8,18 @@
 #include <stdbool.h>
 #include <string.h>
 
+
+typedef struct _swapargs {
+	Column *col;
+	int *pos;
+} Swapargs;
+
 status grab_result(const char *res_name, Result **res);
 bool compare(comparator *f, int val);
 status load_column4disk(Column *col, size_t len);
+
+
+
 
 // extern Result *res_hash_list;
 

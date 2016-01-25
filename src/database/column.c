@@ -9,11 +9,13 @@ status create_column(Table *table, const char* name, Column** col) {
 		if (NULL == (*col)) {
 			(*col) = malloc(sizeof(Column));
 		}
-		(*col)->name = name;
+
+		(*col)->name = malloc(sizeof(char) * (strlen(name) + 1));
+		strcpy((char *)(*col)->name, name);
 		(*col)->data = NULL;
 		(*col)->index = NULL;
 		(*col)->partitionCount = 1;
-		(*col)->pivot = NULL;
+		(*col)->pivots = NULL;
 		(*col)->p_pos = NULL;
 
 		size_t i = 0;

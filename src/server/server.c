@@ -100,24 +100,25 @@ db_operator* parse_command(message* recv_message, message* send_message) {
  * on what the return type should be, maybe a result struct, and then have
  * a serialization into a string message).
  **/
-char* execute_db_operator(db_operator* query) {
-    switch (query->type) {
+char* execute_db_operator(db_operator* dbO) {
+    switch (dbO->type) {
         case SHOWDB : {
             char *ret = show_db();
             if (NULL == ret) {
-                free(query);
+                free(dbO);
                 ret = malloc(sizeof(char) * (strlen("no info found!") + 1));
                 sprintf(ret, "%s", "no info found!");
                 return ret;
             }
             else {
-                free(query);
+                free(dbO);
                 return ret;    
-            }            
+            }
+            break;
         }
         case SELECT_COL: case SELECT_PRE: case FETCH: {
             Result *res = NULL;
-            status s = query_execute(query, &res);
+            status s = query_execute(dbO, &res);
             if (OK != s.code) {
                 
             }
@@ -127,23 +128,38 @@ char* execute_db_operator(db_operator* query) {
             break;
         }
         case TUPLE: {
-            char* ret = tuple(query);
+            char* ret = tuple(dbO);
             if (NULL != ret) {
-                free((query->domain).res);
-                free(query);
+                free((dbO->domain).res);
+                free(dbO);
                 return ret;
             }
             else {
-                free((query->domain).res);
-                free(query);
+                free((dbO->domain).res);
+                free(dbO);
                 ret = malloc(sizeof(char) * (strlen("no tuple found!") + 1));
                 sprintf(ret, "%s", "no tuple found!");
-                return ret;    
+                return ret;
             }
+            break;
         }
+        // case PARTITION: {
+        //     status s = create_index(dbO->, PARTI);
+        //     if (OK !== s.code) {
+        //         ret = malloc(sizeof(char) * (strlen("Partition Done!") + 1));
+        //         sprintf(ret, "%s", "Partition Done!");
+        //     }
+        //     else {
+        //         ret = malloc(sizeof(char) * (strlen("Fail to partition!") + 1));
+        //         sprintf(ret, "%s", "Fail to partition!");    
+        //     }
+        //     free(dbO);
+        //     return ret;
+        //     break;
+        // }
         default : break;
     }
-    free(query);
+    free(dbO);
     char *ret;
     ret = malloc(sizeof(char) *(strlen("Command Done") + 1));
     sprintf(ret, "Command Done");
@@ -188,15 +204,15 @@ bool handle_client(int client_socket) {
             recv_message.payload[recv_message.length] = '\0';
 
             // 1. Parse command
-            db_operator* query = parse_command(&recv_message, &send_message);
+            db_operator* dbO = parse_command(&recv_message, &send_message);
 
 
             // 2. Handle request
             char* res = NULL;            
-            if (NULL != query && OK_WAIT_FOR_RESPONSE == send_message.status){
-                res = execute_db_operator(query);
+            if (NULL != dbO && OK_WAIT_FOR_RESPONSE == send_message.status){
+                res = execute_db_operator(dbO);
                 send_message.length = strlen(res);
-                log_info("query result:\n%s\n", res);
+                log_info("cmd result:\n%s\n", res);
             }
             else {
                 if (SERVER_SHUTDOWN == send_message.status) {
@@ -297,7 +313,7 @@ int main(void)
     status s = open_db("data/dbinfo", &default_db, flags);
 
     if (ERROR == s.code) {
-        log_info("No database found on server\n");
+        log_info("No database found on server or database info corrupted\n");
     }
     else {
         log_info("Database found on server\n");

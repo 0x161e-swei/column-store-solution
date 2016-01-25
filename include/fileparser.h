@@ -25,6 +25,6 @@ void csv_process_fields(void *s,
 void csv_process_row(int delim __attribute__((unused)), 
 	void *data);
 
-status load_data4file(const char* filename, size_t line_count);
+status load_data4file(const char* filename, size_t line_count, size_t field_count);
 
 #endif /* __FILEPARSER_H */

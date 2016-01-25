@@ -86,6 +86,7 @@ void csv_process_fields(void *s,  size_t len __attribute__((unused)), void *data
 				// Find the table according to the name
 				Table* tmp_tbl;
 				HASH_FIND_STR(database->tables, tmp_name, tmp_tbl);
+				free(tmp_name);
 				// length == 0, in case of re-load
 				if (NULL != tmp_tbl && 0 == tmp_tbl->length) {
 					// Update the length of table according to the file loaded
@@ -107,17 +108,15 @@ void csv_process_fields(void *s,  size_t len __attribute__((unused)), void *data
 			Column *tmp_col;
 			HASH_FIND_STR(col_hash_list, (char *)s, tmp_col);
 			if (NULL != tmp_col) {
-				// TODO: better implementation of dynamic array  
-				// tmp_col->data = malloc(sizeof(int) * info->line_count);
 				tmp_col->data = darray_create(info->line_count);
 
 				// Record the number of columns to load
-				info->cols = realloc((info->cols), (info->cur_feild + 1) * sizeof(Column *));
-				if (NULL == info->cols) {
-					log_err("Mem alloc failed in loading\n");
-					info->error = 1;
-					return;
-				}
+				// info->cols = realloc((info->cols), (info->cur_feild + 1) * sizeof(Column *));
+				// if (NULL == info->cols) {
+				// 	log_err("Mem alloc failed in loading\n");
+				// 	info->error = 1;
+				// 	return;
+				// }
 				info->cols[info->cur_feild] = tmp_col;
 			}
 			else {
@@ -126,9 +125,10 @@ void csv_process_fields(void *s,  size_t len __attribute__((unused)), void *data
 				return;
 			}
 		}
-		else {							  // General case
+		else {
+			// General case
 			((info->cols[info->cur_feild])->data)->content[info->cur_row] = atoi((char *)s);
-			printf("catch data %d\n", atoi((char *)s));
+			// printf("catch data %d\n", atoi((char *)s));
 		}
 		info->cur_feild++;
 	}
@@ -142,7 +142,6 @@ void csv_process_row(int delim __attribute__((unused)), void *data)
 		if (info->error) return;
 		if (1 == info->first_row) {
 			info->first_row = 0;
-			info->field_count = info->cur_feild;
 			// info->cols = malloc(sizeof(Column *) * info->field_count);
 			// for (size_t i = 0; i < info->field_count; i++) {
 			//	 info->cols[i] = malloc(sizeof(int) * info->line_count);
@@ -156,7 +155,7 @@ void csv_process_row(int delim __attribute__((unused)), void *data)
 	}
 }
 
-status load_data4file(const char* filename, size_t line_count) {
+status load_data4file(const char* filename, size_t line_count, size_t field_count) {
 	size_t length = 0;
 	if (NULL == database) {
 		status ret;
@@ -185,9 +184,15 @@ status load_data4file(const char* filename, size_t line_count) {
 	parse_csv_info parser_info;
 	memset((void *)&parser_info, 0, sizeof(parse_csv_info));
 	parser_info.line_count = line_count;
+	parser_info.field_count = field_count;
+	parser_info.cols = malloc(sizeof(Col_ptr) * field_count);
+	
 	parser_info.first_row = 1;
+	
 	size_t byte_processed = csv_parse(&p, (void *)contents, length, csv_process_fields, csv_process_row, &parser_info);
 	rc = csv_fini(&p, csv_process_fields, csv_process_row, &parser_info);
+	
+	free(parser_info.cols);
 	free(contents);
 
 	if (0 != rc || byte_processed != length) {
@@ -198,13 +203,13 @@ status load_data4file(const char* filename, size_t line_count) {
 	}
 
 
-	for (size_t i = 0; i < parser_info.field_count; i++) {
-		for (size_t j = 0; j < parser_info.line_count; j++) {
-			// printf("%d\n", parser_info.cols[i][j]);
-			printf("%d ", ((parser_info.cols[i])->data)->content[j]);
-		}
-		printf("\n");
-	}
+	// for (size_t i = 0; i < parser_info.field_count; i++) {
+	// 	for (size_t j = 0; j < parser_info.line_count; j++) {
+	// 		// printf("%d\n", parser_info.cols[i][j]);
+	// 		printf("%d ", ((parser_info.cols[i])->data)->content[j]);
+	// 	}
+	// 	printf("\n");
+	// }
 
    	status ret;
    	ret.code = CMD_DONE;

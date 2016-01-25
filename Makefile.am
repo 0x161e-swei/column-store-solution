@@ -54,7 +54,8 @@ RUM = \
 	src/database/dsl.c \
 	src/database/fileparser.c \
 	src/database/parser.c \
-	src/database/query.c 
+	src/database/query.c \
+	src/database/index.c
 
 lib_librum_a_CFLAGS = $(AM_CFLAGS)
 lib_librum_a_CPPFLAGS = $(AM_CPPFLAGS)

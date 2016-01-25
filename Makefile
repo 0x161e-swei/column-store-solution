@@ -120,7 +120,8 @@ am__objects_2 = src/database/lib_librum_a-db.$(OBJEXT) \
 	src/database/lib_librum_a-dsl.$(OBJEXT) \
 	src/database/lib_librum_a-fileparser.$(OBJEXT) \
 	src/database/lib_librum_a-parser.$(OBJEXT) \
-	src/database/lib_librum_a-query.$(OBJEXT)
+	src/database/lib_librum_a-query.$(OBJEXT) \
+	src/database/lib_librum_a-index.$(OBJEXT)
 am_lib_librum_a_OBJECTS = $(am__objects_2)
 lib_librum_a_OBJECTS = $(am_lib_librum_a_OBJECTS)
 lib_libutil_a_AR = $(AR) $(ARFLAGS)
@@ -348,7 +349,8 @@ RUM = \
 	src/database/dsl.c \
 	src/database/fileparser.c \
 	src/database/parser.c \
-	src/database/query.c 
+	src/database/query.c \
+	src/database/index.c
 
 lib_librum_a_CFLAGS = $(AM_CFLAGS)
 lib_librum_a_CPPFLAGS = $(AM_CPPFLAGS)
@@ -469,6 +471,9 @@ src/database/lib_librum_a-parser.$(OBJEXT):  \
 src/database/lib_librum_a-query.$(OBJEXT):  \
 	src/database/$(am__dirstamp) \
 	src/database/$(DEPDIR)/$(am__dirstamp)
+src/database/lib_librum_a-index.$(OBJEXT):  \
+	src/database/$(am__dirstamp) \
+	src/database/$(DEPDIR)/$(am__dirstamp)
 
 lib/librum.a: $(lib_librum_a_OBJECTS) $(lib_librum_a_DEPENDENCIES) $(EXTRA_lib_librum_a_DEPENDENCIES) lib/$(am__dirstamp)
 	$(AM_V_at)-rm -f lib/librum.a
@@ -571,6 +576,7 @@ include src/database/$(DEPDIR)/lib_librum_a-column.Po
 include src/database/$(DEPDIR)/lib_librum_a-db.Po
 include src/database/$(DEPDIR)/lib_librum_a-dsl.Po
 include src/database/$(DEPDIR)/lib_librum_a-fileparser.Po
+include src/database/$(DEPDIR)/lib_librum_a-index.Po
 include src/database/$(DEPDIR)/lib_librum_a-parser.Po
 include src/database/$(DEPDIR)/lib_librum_a-query.Po
 include src/database/$(DEPDIR)/lib_librum_a-table.Po
@@ -704,6 +710,20 @@ src/database/lib_librum_a-query.obj: src/database/query.c
 #	$(AM_V_CC)source='src/database/query.c' object='src/database/lib_librum_a-query.obj' libtool=no \
 #	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
 #	$(AM_V_CC_no)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(lib_librum_a_CPPFLAGS) $(CPPFLAGS) $(lib_librum_a_CFLAGS) $(CFLAGS) -c -o src/database/lib_librum_a-query.obj `if test -f 'src/database/query.c'; then $(CYGPATH_W) 'src/database/query.c'; else $(CYGPATH_W) '$(srcdir)/src/database/query.c'; fi`
+
+src/database/lib_librum_a-index.o: src/database/index.c
+	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(lib_librum_a_CPPFLAGS) $(CPPFLAGS) $(lib_librum_a_CFLAGS) $(CFLAGS) -MT src/database/lib_librum_a-index.o -MD -MP -MF src/database/$(DEPDIR)/lib_librum_a-index.Tpo -c -o src/database/lib_librum_a-index.o `test -f 'src/database/index.c' || echo '$(srcdir)/'`src/database/index.c
+	$(AM_V_at)$(am__mv) src/database/$(DEPDIR)/lib_librum_a-index.Tpo src/database/$(DEPDIR)/lib_librum_a-index.Po
+#	$(AM_V_CC)source='src/database/index.c' object='src/database/lib_librum_a-index.o' libtool=no \
+#	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
+#	$(AM_V_CC_no)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(lib_librum_a_CPPFLAGS) $(CPPFLAGS) $(lib_librum_a_CFLAGS) $(CFLAGS) -c -o src/database/lib_librum_a-index.o `test -f 'src/database/index.c' || echo '$(srcdir)/'`src/database/index.c
+
+src/database/lib_librum_a-index.obj: src/database/index.c
+	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(lib_librum_a_CPPFLAGS) $(CPPFLAGS) $(lib_librum_a_CFLAGS) $(CFLAGS) -MT src/database/lib_librum_a-index.obj -MD -MP -MF src/database/$(DEPDIR)/lib_librum_a-index.Tpo -c -o src/database/lib_librum_a-index.obj `if test -f 'src/database/index.c'; then $(CYGPATH_W) 'src/database/index.c'; else $(CYGPATH_W) '$(srcdir)/src/database/index.c'; fi`
+	$(AM_V_at)$(am__mv) src/database/$(DEPDIR)/lib_librum_a-index.Tpo src/database/$(DEPDIR)/lib_librum_a-index.Po
+#	$(AM_V_CC)source='src/database/index.c' object='src/database/lib_librum_a-index.obj' libtool=no \
+#	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
+#	$(AM_V_CC_no)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(lib_librum_a_CPPFLAGS) $(CPPFLAGS) $(lib_librum_a_CFLAGS) $(CFLAGS) -c -o src/database/lib_librum_a-index.obj `if test -f 'src/database/index.c'; then $(CYGPATH_W) 'src/database/index.c'; else $(CYGPATH_W) '$(srcdir)/src/database/index.c'; fi`
 
 src/util/lib_libutil_a-utils.o: src/util/utils.c
 	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(lib_libutil_a_CPPFLAGS) $(CPPFLAGS) $(lib_libutil_a_CFLAGS) $(CFLAGS) -MT src/util/lib_libutil_a-utils.o -MD -MP -MF src/util/$(DEPDIR)/lib_libutil_a-utils.Tpo -c -o src/util/lib_libutil_a-utils.o `test -f 'src/util/utils.c' || echo '$(srcdir)/'`src/util/utils.c

@@ -22,6 +22,7 @@ SOFTWARE.
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <pthread.h>
 #include "utils.h"
 #include "uthash.h"
 #include "dsl.h"
@@ -60,6 +61,7 @@ typedef union dataToken{
 typedef enum IndexType {
 	SORTED,
 	B_PLUS_TREE,
+	PARTI,
 } IndexType;
 
 /**
@@ -86,6 +88,9 @@ typedef struct column_index {
  *	   name.
  * - data, this is the raw data for the column. Operations on the data should
  *	   be persistent.
+ * - partitionCount, this is the count for partitions, zero if none
+ * - pivots, this is an array of integer values for pivots in a [opt] partition
+ * - p_pos, this is an array of positions for pivots in a [opt] partition
  * - index, this is an [opt] index built on top of the column's data.
  * - hh, this is the handler for column hash list 
  * NOTE: We do not track the column length in the column struct since all
@@ -98,8 +103,11 @@ typedef struct _column {
 	DArray_INT *data;
 	
 	int partitionCount;
-	int *pivot;
+	int *pivots;
 	int *p_pos;
+	#ifdef SWAPLATER
+	int *pos;
+	#endif
 
 	column_index *index;
 	UT_hash_handle hh;
@@ -248,6 +256,7 @@ typedef enum OperatorType {
 	DELETE,
 	UPDATE,
 	AGGREGATE,
+	PARTITION,
 } OperatorType;
 
 typedef union _op_domain {
@@ -446,7 +455,7 @@ status create_column(Table *table, const char* name, Column** col);
  * type	 : the enum representing the index type to be created.
  * returns  : the status of the operation.
  **/
-status create_index(Column* col, IndexType type);
+status create_index(Table *table, Column* col, IndexType type);
 
 status insert(Column *col, int data);
 status delete(Column *col, int *pos);

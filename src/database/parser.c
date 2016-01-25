@@ -8,6 +8,7 @@
 #include "table.h"
 #include "column.h"
 #include "fileparser.h"
+#include "query.h"
 
 // Prototype for Helper function that executes that actual parsing after
 // parse_command_string has found a matching regex.
@@ -172,7 +173,7 @@ status parse_dsl(char* str, dsl* d, db_operator* op)
 
 		// Free the str_cpy
 		free(str_cpy);
-		free(full_name); // full name is used in the "name" field in struct
+		free(full_name);
 		str_cpy = NULL;
 		full_name = NULL;
 
@@ -234,9 +235,9 @@ status parse_dsl(char* str, dsl* d, db_operator* op)
 
 		// Free the str_cpy
 		free(str_cpy);
-		// free(full_name);  full_name is to be used in the "name" field in struct
+		free(full_name);  
 		str_cpy = NULL;
-		// full_name = NULL;
+		full_name = NULL;
 		
 		// No db_operator required, since no query plan
 		status ret;
@@ -258,13 +259,15 @@ status parse_dsl(char* str, dsl* d, db_operator* op)
 		
 		log_info("load(\"%s\")", filename);
 		
-		size_t line_count = count_file_lines(filename);
+		size_t lineCount = 0;
+		size_t fieldCount = 0;
+		collect_file_info(filename, &lineCount, &fieldCount);
 	
-		if (1 >= line_count) {
+		if (1 >= lineCount) {
 			ret.code = ERROR;
 		}  
 		else {
-			ret = load_data4file(filename, line_count - 1);
+			ret = load_data4file(filename, lineCount, fieldCount);
 		}
 
 		// Free the str_cpy
@@ -317,6 +320,72 @@ status parse_dsl(char* str, dsl* d, db_operator* op)
 		status ret;
 		ret.code = OK;
 		op->type = SHOWDB;
+		return ret;
+	}
+	else if (d->g == PARTITION_TEST) {
+
+		// Create a working copy, +1 for '\0'
+		char* str_cpy = malloc(strlen(str) + 1);
+		strncpy(str_cpy, str, strlen(str) + 1);
+
+		// This gives us everything inside the ("colname")
+		strtok(str_cpy, open_paren);
+		char* args = strtok(NULL, close_paren);
+
+		// This gives us the column name
+		const char* col_var = strtok(args, quotes);
+
+		unsigned int i =0, flag = 0;
+		while('\0' != col_var[i]) {
+			if ('.' == col_var[i]) {
+				flag++;
+				if (2 == flag) {		// Find the second '.'
+					break;
+				}
+			}
+			i++;
+		}
+		char* tbl_var = malloc(sizeof(char) * (i + 1));
+		strncpy(tbl_var, col_var, i);
+		tbl_var[i] = '\0';
+		printf("table name in partition_test %s\n", tbl_var);
+		
+		// Grab the table for further reference
+		Table* tmp_tbl = NULL;
+		status s = grab_table(tbl_var, &tmp_tbl);
+		if (OK != s.code) {
+			log_err("cannot grab the table!");
+			return s;
+		}
+		free(tbl_var);
+
+		// Grab the column
+		Column* tmp_col = NULL;
+		s = grab_column(col_var, &tmp_col);
+		if (OK != s.code) {
+			log_err("cannot grab the column!");
+			return s;
+		}
+
+		// Load data from disk if not in memory
+		if (NULL == tmp_col->data && NULL != tmp_tbl && 0 != tmp_tbl->length) {
+			// load_column4disk(tmp_col, tmp_tbl->length);
+			for (unsigned int j = 0; j < tmp_tbl->col_count; j++) {
+				load_column4disk(tmp_tbl->cols[j], tmp_tbl->length);
+			}
+		}
+		else if (0 == tmp_tbl->length) {
+			log_err("empty table to partition");
+			s.code = ERROR;
+			return s;
+		}
+
+		status ret = create_index(tmp_tbl, tmp_col, PARTI);
+		
+		// Free the str_cpy
+		free(str_cpy);
+		str_cpy = NULL;
+
 		return ret;
 	}
 	else {

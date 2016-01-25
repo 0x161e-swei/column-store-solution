@@ -37,8 +37,12 @@ const char* fetch_command = "^[a-zA-Z0-9_]+\\=fetch\\([a-zA-Z0-9_\\.]+\\,[a-zA-Z
 // Matches: tuple(<col_var>)
 const char* tuple_command = "^tuple\\([a-zA-Z0-9_\\.]+\\)";
 
+// temporary dsls for test
+// Matches: partition("colName")
+const char* partition_test = "^partition\\(\\\"[a-zA-Z0-9_\\.]+\\\"\\)";
 
 // TODO(USER): You will need to update the commands here for every single command you add.
+
 dsl** dsl_commands_init(void)
 {
 	dsl** commands = calloc(NUM_DSL_COMMANDS, sizeof(dsl*));
@@ -83,6 +87,9 @@ dsl** dsl_commands_init(void)
 
     commands[11]->c = shutdown_command;
     commands[11]->g = SHUTDOWN_CMD;
+
+	commands[12]->c = partition_test;
+    commands[12]->g = PARTITION_TEST;    
 
 	return commands;
 }
