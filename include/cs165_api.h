@@ -466,6 +466,7 @@ status col_scan_with_pos(comparator *f, Result *res, Result *pos, Result **r);
 status index_scan(comparator *f, Column *col, Result **r);
 
 /* Query API */
+status clear_res_list();
 status query_prepare(const char* query, dsl* d, db_operator* op);
 status query_execute(db_operator* op, Result** results);
 status fetch_val(Column *col, Result *pos, Result **r);

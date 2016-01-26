@@ -63,7 +63,7 @@ db_operator* parse_command(message* recv_message, message* send_message) {
         case ERROR: {
             free(dbo);
             dbo = NULL;
-            log_info("unknown internal error!\n");
+            log_info("server error! See logs\n");
             send_message->status = INTERNAL_ERROR;
             break;
         }

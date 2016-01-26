@@ -1,11 +1,16 @@
 #include "query.h"
 #define BUFFERSIZE 3096
-Result *res_hash_list;
-// TODO: two hash table
 
+// Global results hash list to keep track of query results
+Result *res_hash_list;
+
+/**
+ * Grab the result from the result hash list 
+ */
 status grab_result(const char *res_name, Result **res) {
 	status s;
 	if (NULL == res_hash_list) {
+		log_err("No results to grab from");
 		*res = NULL;
 		s.code = ERROR;
 	}
@@ -17,19 +22,21 @@ status grab_result(const char *res_name, Result **res) {
 			s.code = OK;
 		}
 		else {
+			log_err("No result named %s", res_name);
+			*res = NULL;
 			s.code = ERROR;
 		}
 	}
 	return s;
 }
 
+/**
+ * free up the space used in tracking previously queried results
+ *
+ */
 status clear_res_list() {
 	status ret;
-	if (NULL == res_hash_list) {
-		ret.code = OK;
-		return ret;
-	}
-	else {
+	if (NULL != res_hash_list) {
 		log_info("clearing the res_hash_list");
 		Result *tmp, *res;
 		HASH_ITER(hh, res_hash_list, res, tmp) {			
@@ -40,11 +47,21 @@ status clear_res_list() {
 				free(res);
 			}
 		}
+		res_hash_list = NULL;
 	}
 	ret.code = OK;
 	return ret;
 }
 
+/**
+ * Prepare the db_operator for execution, get the Table and Column for select,
+ * get the Result for fetch and tuple
+ * By preparing the query, this function is responsible for taking all data needed
+ * for the query into main memory
+ * query: 	the cmd string
+ * d: 		the matched dsl
+ * op:		address of the db_operator 
+ */ 
 status query_prepare(const char* query, dsl* d, db_operator* op) {
 	char open_paren[2] = "(";
 	char close_paren[2] = ")";
@@ -379,6 +396,11 @@ status query_prepare(const char* query, dsl* d, db_operator* op) {
 	return s;
 }
 
+/**
+ * execute the query with the db_operator and put the output in results
+ * op: 		pointer to a db_operator storing detail of the operation
+ * results: address of a Result to store the output
+ */
 status query_execute(db_operator* op, Result** results) {
 	status s;
 	switch (op->type) {
@@ -424,6 +446,13 @@ status query_execute(db_operator* op, Result** results) {
 	return s;
 }
 
+
+/**
+ * Comparasion used in SELECT operation
+ * f: 	pointer to the comparator containing all conditions
+ * val:	the integet to qualify
+ * Return ture if val is qualified
+ */
 bool compare(comparator *f, int val){
 	bool res = false, undone = true, cur_res;
 	Junction pre_junc = NONE;
@@ -464,6 +493,12 @@ bool compare(comparator *f, int val){
 	return res;
 }
 
+/**
+ * load the Column data from disk with length len
+ * col: the Column structure to store the data
+ * len: length of the Column to be loaded
+ * BUFFERSIZE: the macro used here is exactually the size of the fs buffer size
+ */
 status load_column4disk(Column *col, size_t len) {
 	status s;
 	static char dataprefix[] = "data/";
@@ -549,6 +584,12 @@ status load_column4disk(Column *col, size_t len) {
 	return s;
 }
 
+/** 
+ * scan the whole Column with conditions
+ * f: 	pointer to the comparator containing all conditions
+ * col: pointer to the Column to be scaned
+ * r: 	address of a pointer to Result to put to the output
+ */
 status col_scan(comparator *f, Column *col, size_t len, Result **r) {
 	status s;
 	if (NULL != col) {
@@ -575,6 +616,13 @@ status col_scan(comparator *f, Column *col, size_t len, Result **r) {
 	return s;
 }
 
+/**
+ * scan a Column at some positions specified
+ * f: 	pointer to the comparator containing all conditions
+ * col: pointer to the Column to be scaned
+ * pos: pointer to a Result as positions specified
+ * r: 	address of a pointer to Result to put to the output
+ */
 status col_scan_with_pos(comparator *f, Result *res, Result *pos, Result **r) {
 	status s;
 	if (NULL != res && NULL != pos) {
@@ -601,7 +649,12 @@ status col_scan_with_pos(comparator *f, Result *res, Result *pos, Result **r) {
 	return s;
 }
 
-
+/**
+ * fetch the value from a Column at positions specified
+ * col: pointer to the Column to be scaned
+ * pos: pointer to a Result as positions specified
+ * r: 	address of a pointer to Result to put to the output
+ */
 status fetch_val(Column *col, Result *pos, Result **r) {
 	status s;
 	if (NULL != col && NULL != pos) {
@@ -622,19 +675,27 @@ status fetch_val(Column *col, Result *pos, Result **r) {
 	return s;
 }
 
-char* tuple(db_operator *query){
+/**
+ * tuple the values requested
+ * return a char array of integers separated by \n
+ */
+char* tuple(db_operator *query) {
 	if (NULL != query && NULL != (query->domain).res[0]) {
 		Result *r = (query->domain).res[0];
-		size_t allocated_size = 1, i = 0;
+		size_t total_space = 1024;
+		size_t used_space = 1, i = 0;
 		char *ret = NULL;
-		ret = realloc(ret, sizeof(char) * allocated_size);
+		ret = realloc(ret, sizeof(char) * total_space);
 		ret[0] = '\0';
-		// TODO: reduce time to reallocate
+		
 		for (i = 0; i < r->num_tuples; i++) {
 			char num[20];
 			sprintf(num, "%d\n", r->token[i].val);
-			allocated_size += strlen(num);
-			ret = realloc(ret, sizeof(char) * allocated_size);				
+			used_space += strlen(num);
+			if (used_space > total_space){
+				total_space *= 2;	
+				ret = realloc(ret, sizeof(char) * total_space);
+			}
 			strncat(ret, num, strlen(num));
 		}
 		return ret;		
@@ -642,6 +703,12 @@ char* tuple(db_operator *query){
 	return	NULL;
 }
 
+/**
+ * scan a whole partition in a Column with partition id
+ * col: 	pointer to the Column to be scaned
+ * part_id: partition id specified
+ * r: 		address of a pointer to Result to put to the output
+ */
 status scan_partition(Column *col, int part_id, Result **r) {
 	status s;
 	s.code = ERROR;
@@ -660,6 +727,13 @@ status scan_partition(Column *col, int part_id, Result **r) {
 	return s;
 }
 
+/**
+ * scan a partition in a Column with greaterThan condition
+ * col: 	pointer to the Column to be scaned
+ * val: 	all qualified integers should be greater than val
+ * part_id: partition id specified
+ * r: 		address of a pointer to Result to put to the output
+ */
 status scan_partition_greaterThan(Column *col, int val, int part_id, Result **r) {
 	status s;
 	s.code = ERROR;
@@ -688,6 +762,13 @@ status scan_partition_greaterThan(Column *col, int val, int part_id, Result **r)
 	return s;
 }
 
+/**
+ * scan a partition in a Column with lessThan condition
+ * col: 	pointer to the Column to be scaned
+ * val: 	all qualified integers should be less than val
+ * part_id: partition id specified
+ * r: 		address of a pointer to Result to put to the output
+ */
 status scan_partition_lessThan(Column *col, int val, int part_id, Result **r) {
 	status s;
 	s.code = ERROR;
@@ -718,6 +799,13 @@ status scan_partition_lessThan(Column *col, int val, int part_id, Result **r) {
 	return s;
 }
 
+/**
+ * scan a partition in a Column with equal condition
+ * col: 	pointer to the Column to be scaned
+ * val: 	all qualified integers should be equal to val
+ * part_id: partition id specified
+ * r: 		address of a pointer to Result to put to the output
+ */
 status scan_partition_pointQuery(Column *col, int val, int part_id, Result **r) {
 	status s;
 	s.code = ERROR;

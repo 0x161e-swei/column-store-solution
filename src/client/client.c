@@ -129,7 +129,7 @@ int main(void)
                     log_err("Unknown Command\n");
                 }
                 else if (recv_message.status == INTERNAL_ERROR) {
-                    log_info("Server internal error!\n");
+                    log_err("Server error! see logs.\n");
                 }
                 else if (recv_message.status == CLIENT_QUIT || recv_message.status == SERVER_SHUTDOWN) {
                     break;

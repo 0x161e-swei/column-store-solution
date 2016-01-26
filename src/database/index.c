@@ -1,31 +1,33 @@
 #include "index.h"
 
+/**
+ * create an index over a Column
+ * tbl: 		Table the index is in
+ * col: 		the specific Column the index is on 
+ * IndexType:	Specify the type, now partition ONLY
+ */
 status create_index(Table *tbl, Column *col, IndexType type) {
 	status s;
+	// TODO: copy the data first...
 	if (NULL != col && NULL == col->index) {
 		switch (type) {
 			case PARTI: {
 				if (1 == col->partitionCount) {
-					// TODO: following variables are for tests ONLY
-					// int pCount = 10;
-					// int pivots[] = {500, 1000, 1500, 2000, 2500,
-					// 				3000, 3500, 4000, 4500, 65535};
-					int pCount = 0;
-					puts("pls enter number\n");
-					scanf("%d", &pCount);
-					printf("the p count read %d\n", pCount);
-					int *pivots = malloc(sizeof(int) * pCount);
-					for (int i = 0; i < pCount; i++) {
+					// TODO: following 6 lines of code are for tests ONLY
+					int p_count = 0;
+					scanf("%d", &p_count);
+					int *pivots = malloc(sizeof(int) * p_count);
+					for (int i = 0; i < p_count; i++) {
 						scanf("%d", &pivots[i]);
 					}
 
 					#ifdef SWAPLATER
-					s = nWayPartition(col, pCount, pivots);
+					s = nWayPartition(col, p_count, pivots);
 					if (OK == s.code) {
 						s = swap_after_partition(tbl, col);
 					}
 					#else 
-					s = nWayPartition(tbl, col, pCount, pivots);
+					s = nWayPartition(tbl, col, p_count, pivots);
 					#endif
 
 				}
@@ -41,6 +43,12 @@ status create_index(Table *tbl, Column *col, IndexType type) {
 	return s;
 }
 
+/** 
+ * partition a Column and keep data align in other Column LATER in another function
+ * col:		the Column that we are partitioning
+ * p_count:	number of pivots
+ * pivots:	an int array of pivots
+ */
 #ifdef SWAPLATER
 status nWayPartition(Column *col, int p_count, int pivots[]) {
 	
@@ -139,10 +147,12 @@ status nWayPartition(Column *col, int p_count, int pivots[]) {
 		}
 	}
 
-	// TODO: 
 	// put the idcs into columns p_pos as positions of the pivots...
-	// PAY ATTENTION TO THE DIFFERENCE BETWEEN ODD AND EVEN CASE FOR THE MIDDLE PIVOT
-	// free(idc);
+	for (int i = 0; i < p_count / 2; i++)
+		col->p_pos[i] = idc[i] - 1;
+	for (int i = p_count / 2 + 1; i <= p_count; i++)
+		col->p_pos[i - 1] = idc[i];
+	free(idc);
 	s.code = CMD_DONE;
 	return s;
 }
@@ -151,6 +161,10 @@ status swap_after_partition(Table *tbl, Column *col) {
 
 }
 
+/**
+ * function to be called by a single thread, swaping,
+ * shared READ ONLY DATA
+ */
 void *swapsIncolumns(void *arg) {
 	Swapargs *msg = (Swapargs *)arg;
 	DArray_INT *data = msg->col->data;
@@ -165,6 +179,13 @@ void *swapsIncolumns(void *arg) {
 	return NULL;
 }
 
+/**
+ * make data aligned in Same Table
+ * cols: 			an array of Columns in the same Table
+ * partitionedName: the name of the Column thas has already been partitioned
+ * pos:				supposed position of data
+ * col_count: 		number of Columns in the Table
+ */
 status doSwaps(Col_ptr *cols, const char *partitionedName, int *pos, int col_count){
 	status s;
 	if (NULL == cols) {
@@ -198,8 +219,14 @@ status doSwaps(Col_ptr *cols, const char *partitionedName, int *pos, int col_cou
 	s.code = OK;
 	return s;
 }
-#else
 
+#else
+/**
+ * do partitioning on a Column and swap as partitioning goes on
+ * col:		the Column that we are partitioning
+ * p_count:	number of pivots
+ * pivots:	an int array of pivots
+ */
 status nWayPartition(Table *tbl, Column *col, int p_count, int pivots[]) {
 	// idc used for indices to data during partitioning, pos used to record the position-map
 	int *idc;
@@ -336,10 +363,12 @@ status nWayPartition(Table *tbl, Column *col, int p_count, int pivots[]) {
 	free(l_val);
 	free(r_val);
 
-	// TODO: 
 	// put the idcs into columns p_pos as positions of the pivots...
-	// PAY ATTENTION TO THE DIFFERENCE BETWEEN ODD AND EVEN CASE FOR THE MIDDLE PIVOT
-	// free(idc);
+	for (int i = 0; i < p_count / 2; i++)
+		col->p_pos[i] = idc[i] - 1;
+	for (int i = p_count / 2 + 1; i <= p_count; i++)
+		col->p_pos[i - 1] = idc[i];
+	free(idc);
 	s.code = CMD_DONE;
 	return s;
 }

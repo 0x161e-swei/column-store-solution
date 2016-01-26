@@ -71,6 +71,7 @@ status grab_column(const char* column_name, Column **col) {
 			s.code = OK;
 		}
 		else {
+			*col = NULL;
 			s.code = ERROR;
 		}	
 	}
