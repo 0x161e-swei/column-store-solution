@@ -65,6 +65,11 @@ status create_db(const char* db_name, Db** db __attribute__((unused))) {
     return s;
 }
 
+
+/**
+ * Synchronize the database (now the only global one) to the disk
+ *
+ */
 status sync_db(Db* db __attribute__((unused))) {
     FILE *dbinfo;
     status s;
@@ -95,7 +100,7 @@ status sync_db(Db* db __attribute__((unused))) {
 
             for (size_t i = 0; i < tbl->col_count; i++) {
                 if (NULL != tbl->cols[i]) {
-
+                    // TODO: need to check the dirty bit of the Column
                     log_info("\t\tsaving the column %s...\n", (tbl->cols[i])->name);
 
                     // Write length of column name, column name to dbinfo
@@ -106,7 +111,6 @@ status sync_db(Db* db __attribute__((unused))) {
                     // Cleanups
                     HASH_DEL(col_hash_list, tbl->cols[i]);
                     if (NULL != (tbl->cols[i])->data) {
-                        // TODO: SAVE DATA BACK TO DISKS
                         char *dataname;
                         dataname = malloc(sizeof(char) * (len + 6));
                         strncpy(dataname, "data/", 6);

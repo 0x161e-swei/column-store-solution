@@ -1,8 +1,16 @@
 #include "column.h"
 
-// Global column hash list
+// Global column hash list, all in one
 Column *col_hash_list;
 
+
+/**
+ * Create a new Column in the Table
+ * table: 		pointer to the Table that the ctreated Column belongs to
+ * name:		the name of the Column to create
+ * col: 		address of the pointer that the Column was put in
+ * Return 		the status.code as OK if Table created successfully
+ */
 status create_column(Table *table, const char* name, Column** col) {
 	status s;
 	if (NULL != table) {
@@ -17,7 +25,7 @@ status create_column(Table *table, const char* name, Column** col) {
 		(*col)->partitionCount = 1;
 		(*col)->pivots = NULL;
 		(*col)->p_pos = NULL;
-
+		(*col)->isDirty = false;
 		size_t i = 0;
 		for (; i < table->col_count; i++){
 			if (NULL == table->cols[i]) break;
@@ -43,7 +51,12 @@ status create_column(Table *table, const char* name, Column** col) {
 	return s;
 }
 
-
+/**
+ * Grab the Column from the hash list
+ * table_name: 	the name of the column
+ * col: 		address of the pointer to the grabed Column
+ * Return 		the status.code as OK if Column found
+ */
 status grab_column(const char* column_name, Column **col) {
 	status s;
 	if (NULL == col_hash_list) {

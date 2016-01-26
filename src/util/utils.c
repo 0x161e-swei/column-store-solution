@@ -1,13 +1,7 @@
 #define _GNU_SOURCE
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include "config.h"
 #include "utils.h"
+#include <stdlib.h>
 
-#define ANSI_COLOR_RED     "\x1b[31m"
-#define ANSI_COLOR_GREEN   "\x1b[32m"
-#define ANSI_COLOR_RESET   "\x1b[0m"
 // #define LOG
 // #define LOG_ERR
 // #define LOG_INFO
@@ -27,34 +21,34 @@ void cs165_log(FILE* out, const char *format, ...) {
 #endif
 }
 
-void log_err(const char *format, ...) {
-#ifdef LOG_ERR
-    va_list v;
-    va_start(v, format);
-    fprintf(stderr, ANSI_COLOR_RED);
-    // fprintf(stderr, "[ERROR] (%s:%d) ", __FILE__, __LINE__);
-    vfprintf(stderr, format, v);
-    fprintf(stderr, ANSI_COLOR_RESET);
-    va_end(v);
-#else
-    (void) format;
-#endif
-}
+// void log_err(const char *format, ...) {
+// #ifdef LOG_ERR
+//     va_list v;
+//     va_start(v, format);
+//     fprintf(stderr, ANSI_COLOR_RED);
+//     // fprintf(stderr, "[ERROR] (%s:%d) ", __FILE__, __LINE__);
+//     vfprintf(stderr, format, v);
+//     fprintf(stderr, ANSI_COLOR_RESET);
+//     va_end(v);
+// #else
+//     (void) format;
+// #endif
+// }
 
-void log_info(const char *format, ...) {
-#ifdef LOG_INFO
-    va_list v;
-    va_start(v, format);
-    fprintf(stdout, ANSI_COLOR_GREEN);
-    // fprintf(stdout, "[INFO] (%s:%d) ", __FILE__, __LINE__);
-    vfprintf(stdout, format, v);
-    fprintf(stdout, ANSI_COLOR_RESET);
-    fflush(stdout);
-    va_end(v);
-#else
-    (void) format;
-#endif
-}
+// void log_info(const char *format, ...) {
+// #ifdef LOG_INFO
+//     va_list v;
+//     va_start(v, format);
+//     fprintf(stdout, ANSI_COLOR_GREEN);
+//     // fprintf(stdout, "[INFO] (%s:%d) ", __FILE__, __LINE__);
+//     vfprintf(stdout, format, v);
+//     fprintf(stdout, ANSI_COLOR_RESET);
+//     fflush(stdout);
+//     va_end(v);
+// #else
+//     (void) format;
+// #endif
+// }
 
 
 void collect_file_info(const char* filename, size_t *lineCount, size_t *fieldCount) {

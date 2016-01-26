@@ -5,7 +5,6 @@
 #include "column.h"
 #include "table.h"
 #include "db.h"
-#include <stdbool.h>
 #include <string.h>
 
 

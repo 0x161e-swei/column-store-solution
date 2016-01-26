@@ -23,6 +23,7 @@ SOFTWARE.
 #include <stdlib.h>
 #include <stdio.h>
 #include <pthread.h>
+#include <stdbool.h>
 #include "utils.h"
 #include "uthash.h"
 #include "dsl.h"
@@ -108,7 +109,7 @@ typedef struct _column {
 	#ifdef SWAPLATER
 	int *pos;
 	#endif
-
+	bool isDirty;
 	column_index *index;
 	UT_hash_handle hh;
 } Column, *Col_ptr;

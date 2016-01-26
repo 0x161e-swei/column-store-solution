@@ -21,7 +21,6 @@
 #include <sys/socket.h>
 #include <unistd.h>
 #include <string.h>
-#include <stdbool.h>
 
 #include "common.h"
 #include "cs165_api.h"
@@ -92,8 +91,6 @@ db_operator* parse_command(message* recv_message, message* send_message) {
     }
     return dbo;
 }
-
-
 
 /** execute_db_operator takes as input the db_operator and executes the query.
  * It should return the result (currently as a char*, although I'm not clear
