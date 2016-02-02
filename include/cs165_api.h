@@ -106,9 +106,15 @@ typedef struct _column {
 	int partitionCount;
 	int *pivots;
 	int *p_pos;
+
 	#ifdef SWAPLATER
 	int *pos;
 	#endif
+
+	#ifdef GHOST_VALUE
+	int *ghost_count;
+	#endif
+
 	bool isDirty;
 	column_index *index;
 	UT_hash_handle hh;

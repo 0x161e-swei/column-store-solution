@@ -14,21 +14,29 @@ status create_index(Table *tbl, Column *col, IndexType type) {
 			case PARTI: {
 				if (1 == col->partitionCount) {
 					// TODO: following 6 lines of code are for tests ONLY
-					int p_count = 0;
-					scanf("%d", &p_count);
-					int *pivots = malloc(sizeof(int) * p_count);
-					for (int i = 0; i < p_count; i++) {
-						scanf("%d", &pivots[i]);
+					Partition_inst inst;
+					scanf("%d", &(inst.p_count));
+					inst.pivots = malloc(sizeof(int) * inst.p_count);
+					for (int i = 0; i < inst.p_count; i++) {
+						scanf("%d", &(inst.pivots[i]));
 					}
+					#ifdef GHOST_VALUE
+					inst.ghost_count = malloc(sizeof(int) * inst.p_count);
+					for (int i = 0; i < inst.p_count; i++) {
+						scanf("%d", &(inst.ghost_count[i]));
+					}
+					#endif
 
 					#ifdef SWAPLATER
-					s = nWayPartition(col, p_count, pivots);
+					s = nWayPartition(col, &inst);
 					if (OK == s.code) {
 						s = swap_after_partition(tbl, col);
 					}
 					#else 
-					s = nWayPartition(tbl, col, p_count, pivots);
+					s = nWayPartition(tbl, col, &inst);
 					#endif
+
+
 
 				}
 				break;
@@ -46,13 +54,16 @@ status create_index(Table *tbl, Column *col, IndexType type) {
 /** 
  * partition a Column and keep data align in other Column LATER in another function
  * col:		the Column that we are partitioning
- * p_count:	number of pivots
- * pivots:	an int array of pivots
+ * inst:	the partition instruction containing pivot count, an array of pivots and
+ * 			an array of ghost_value slots if applicable
  */
 #ifdef SWAPLATER
-status nWayPartition(Column *col, int p_count, int pivots[]) {
+status nWayPartition(Column *col, Partition_inst *inst) {
 	
 	status s;
+	// TODO: code for Ghost Values
+	int p_count = inst->p_count;
+	int *pivots = inst->pivots;
 
 	DArray_INT *arr = col->data;
 	// idc used for indices to data during partitioning, pos used to record the position-map
@@ -224,14 +235,18 @@ status doSwaps(Col_ptr *cols, const char *partitionedName, int *pos, int col_cou
 /**
  * do partitioning on a Column and swap as partitioning goes on
  * col:		the Column that we are partitioning
- * p_count:	number of pivots
- * pivots:	an int array of pivots
+ * inst:	the partition instruction containing pivot count, an array of pivots and
+ * 			an array of ghost_value slots if applicable
  */
-status nWayPartition(Table *tbl, Column *col, int p_count, int pivots[]) {
+status nWayPartition(Table *tbl, Column *col, Partition_inst *inst) {
 	// idc used for indices to data during partitioning, pos used to record the position-map
 	int *idc;
 	status s;
 	
+	// TODO: code for Ghost Values
+	int p_count = inst->p_count;
+	int *pivots = inst->pivots;
+
 	// the index of the parttioned column in the table
 	int col_index = -1;
 	size_t col_count = tbl->col_count;
