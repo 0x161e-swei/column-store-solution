@@ -26,16 +26,25 @@ const char* load_command = "^load\\(\\\"[a-zA-Z0-9_/\\.]+\\\"\\)";
 const char* show_command = "^show_db";
 
 // Matches: <vec_pos>=select(<col_var>,<low>,<high>)
-const char* select_from_col_command = "^[a-zA-Z0-9_]+\\=select\\([a-zA-Z0-9_\\.]+\\,-?[0-9]+\\,-?[-0-9]+\\)";
+const char* select_from_col_command = "^[a-zA-Z0-9_]+\\=s\\([a-zA-Z0-9_\\.]+\\,-?[0-9]+\\,-?[0-9]+\\)";
 
-// Matches: <vec_pos>=select(<posn_vec>,<col_var>,<low>,<high>)
-const char* select_from_pre_command = "^[a-zA-Z0-9_]+\\=select\\([a-zA-Z0-9_]+\\,[a-zA-Z0-9_\\.]+\\,-?[0-9]+\\,-?[0-9]+\\)";
+// Matches: <vec_pos>=select(<col_var>,<posn_vec>,<low>,<high>)
+const char* select_from_pre_command = "^[a-zA-Z0-9_]+\\=s\\([a-zA-Z0-9_\\.]+\\,[a-zA-Z0-9_]+\\,-?[0-9]+\\,-?[0-9]+\\)";
 
 // Matches: <vec_val>=fetch(<col_var>,<vec_pos>)
 const char* fetch_command = "^[a-zA-Z0-9_]+\\=fetch\\([a-zA-Z0-9_\\.]+\\,[a-zA-Z0-9_]+\\)";
 
 // Matches: tuple(<col_var>)
 const char* tuple_command = "^tuple\\([a-zA-Z0-9_\\.]+\\)";
+
+// Matches: d(<col_var>,<vec_pos>)
+const char* delete_command = "^d\\([a-zA-Z0-9_\\.]+\\,[a-zA-Z0-9_]+\\)";
+
+// Matches: i(<col_var>, number, ...)
+const char* insert_command = "^i\\([a-zA-Z0-9_\\.]+(\\,-?[0-9]\\d+)+\\)";
+
+// Matches: u(<col_var>, <old>, <new>)
+const char* update_command = "^u\\([a-zA-Z0-9_\\.]+\\,-?[0-9]+\\,-?[0-9]+\\)";
 
 // temporary dsls for test
 // Matches: partition("colName")
@@ -82,14 +91,20 @@ dsl** dsl_commands_init(void)
 	commands[9]->c = fetch_command;
 	commands[9]->g = FETCH_CMD;
 
-    commands[10]->c = tuple_command;
-    commands[10]->g = TUPLE_CMD;
+	commands[10]->c = tuple_command;
+	commands[10]->g = TUPLE_CMD;
 
-    commands[11]->c = shutdown_command;
-    commands[11]->g = SHUTDOWN_CMD;
+	commands[11]->c = shutdown_command;
+	commands[11]->g = SHUTDOWN_CMD;
 
-	commands[12]->c = partition_test;
-    commands[12]->g = PARTITION_TEST;    
+	commands[12]->c = delete_command;
+	commands[12]->g = DELETE_CMD;
+
+	commands[13]->c = insert_command;
+	commands[13]->g = INSERT_CMD;
+
+	commands[14]->c = partition_test;
+	commands[14]->g = PARTITION_TEST;
 
 	return commands;
 }

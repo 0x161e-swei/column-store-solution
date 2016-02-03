@@ -42,54 +42,54 @@ dsl** dsl_commands;
  **/
 
 db_operator* parse_command(message* recv_message, message* send_message) { 
-    send_message->status = OK_WAIT_FOR_RESPONSE;
-    db_operator *dbo = malloc(sizeof(db_operator));
-    // Here you parse the message and fill in the proper db_operator fields for
-    // now we just log the payload
-    cs165_log(stdout, recv_message->payload);
+	send_message->status = OK_WAIT_FOR_RESPONSE;
+	db_operator *dbo = malloc(sizeof(db_operator));
+	// Here you parse the message and fill in the proper db_operator fields for
+	// now we just log the payload
+	cs165_log(stdout, recv_message->payload);
 
-    // Here, we give you a default parser, you are welcome to replace it with anything you want
-    status parse_status = parse_command_string(recv_message->payload, 
-        dsl_commands, dbo);
+	// Here, we give you a default parser, you are welcome to replace it with anything you want
+	status parse_status = parse_command_string(recv_message->payload,
+		dsl_commands, dbo);
 
-    switch (parse_status.code) {
-        case UNKNOWN_CMD: {
-            free(dbo);
-            dbo = NULL;
-            log_info("unknown command!\n"); 
-            send_message->status = UNKNOWN_COMMAND;
-            break;    
-        }
-        case ERROR: {
-            free(dbo);
-            dbo = NULL;
-            log_info("server error! See logs\n");
-            send_message->status = INTERNAL_ERROR;
-            break;
-        }
-        case QUIT: case SHUTDOWN:{
-            free(dbo);
-            dbo = NULL;
-            log_info("quit executed!\n");
-            send_message->status = (parse_status.code == QUIT)? CLIENT_QUIT:
-                                    SERVER_SHUTDOWN;
-            break;
-        }
-        case CMD_DONE: {
-            free(dbo);
-            dbo = NULL;
-            log_info("command done!\n");
-            send_message->status = OK_DONE;
-            break;
-        }
-        case OK:
-            log_info("query to be executed!\n");
-            send_message->status = OK_WAIT_FOR_RESPONSE;
-        default: {
-            break;
-        }     
-    }
-    return dbo;
+	switch (parse_status.code) {
+		case UNKNOWN_CMD: {
+			free(dbo);
+			dbo = NULL;
+			log_info("unknown command!\n");
+			send_message->status = UNKNOWN_COMMAND;
+			break;
+		}
+		case ERROR: {
+			free(dbo);
+			dbo = NULL;
+			log_info("server error! See logs\n");
+			send_message->status = INTERNAL_ERROR;
+			break;
+		}
+		case QUIT: case SHUTDOWN:{
+			free(dbo);
+			dbo = NULL;
+			log_info("quit executed!\n");
+			send_message->status = (parse_status.code == QUIT)? CLIENT_QUIT:
+									SERVER_SHUTDOWN;
+			break;
+		}
+		case CMD_DONE: {
+			free(dbo);
+			dbo = NULL;
+			log_info("command done!\n");
+			send_message->status = OK_DONE;
+			break;
+		}
+		case OK:
+			log_info("query to be executed!\n");
+			send_message->status = OK_WAIT_FOR_RESPONSE;
+		default: {
+			break;
+		}
+	}
+	return dbo;
 }
 
 /** execute_db_operator takes as input the db_operator and executes the query.
@@ -98,69 +98,55 @@ db_operator* parse_command(message* recv_message, message* send_message) {
  * a serialization into a string message).
  **/
 char* execute_db_operator(db_operator* dbO) {
-    switch (dbO->type) {
-        case SHOWDB : {
-            char *ret = show_db();
-            if (NULL == ret) {
-                free(dbO);
-                ret = malloc(sizeof(char) * (strlen("no info found!") + 1));
-                sprintf(ret, "%s", "no info found!");
-                return ret;
-            }
-            else {
-                free(dbO);
-                return ret;    
-            }
-            break;
-        }
-        case SELECT_COL: case SELECT_PRE: case FETCH: {
-            Result *res = NULL;
-            status s = query_execute(dbO, &res);
-            if (OK != s.code) {
-                
-            }
-            else {
-                // Serialize the result if it is a FETCH
-            }
-            break;
-        }
-        case TUPLE: {
-            char* ret = tuple(dbO);
-            if (NULL != ret) {
-                free((dbO->domain).res);
-                free(dbO);
-                return ret;
-            }
-            else {
-                free((dbO->domain).res);
-                free(dbO);
-                ret = malloc(sizeof(char) * (strlen("no tuple found!") + 1));
-                sprintf(ret, "%s", "no tuple found!");
-                return ret;
-            }
-            break;
-        }
-        // case PARTITION: {
-        //     status s = create_index(dbO->, PARTI);
-        //     if (OK !== s.code) {
-        //         ret = malloc(sizeof(char) * (strlen("Partition Done!") + 1));
-        //         sprintf(ret, "%s", "Partition Done!");
-        //     }
-        //     else {
-        //         ret = malloc(sizeof(char) * (strlen("Fail to partition!") + 1));
-        //         sprintf(ret, "%s", "Fail to partition!");    
-        //     }
-        //     free(dbO);
-        //     return ret;
-        //     break;
-        // }
-        default : break;
-    }
-    free(dbO);
-    char *ret;
-    ret = malloc(sizeof(char) *(strlen("Command Done") + 1));
-    sprintf(ret, "Command Done");
-    return ret;
+	switch (dbO->type) {
+		case SHOWDB : {
+			char *ret = show_db();
+			if (NULL == ret) {
+				free(dbO);
+				ret = malloc(sizeof(char) * (strlen("no info found!") + 1));
+				sprintf(ret, "%s", "no info found!");
+				return ret;
+			}
+			else {
+				free(dbO);
+				return ret;
+			}
+			break;
+		}
+		case SELECT_COL: case SELECT_PRE: case FETCH: {
+			Result *res = NULL;
+			status s = query_execute(dbO, &res);
+			if (OK != s.code) {
+
+			}
+			else {
+				// Serialize the result if it is a FETCH
+			}
+			break;
+		}
+		case TUPLE: {
+			char* ret = tuple(dbO);
+			if (NULL != ret) {
+				free((dbO->domain).res);
+				free(dbO);
+				return ret;
+			}
+			else {
+				free((dbO->domain).res);
+				free(dbO);
+				ret = malloc(sizeof(char) * (strlen("no tuple found!") + 1));
+				sprintf(ret, "%s", "no tuple found!");
+				return ret;
+			}
+			break;
+		}
+		default : break;
+	}
+	free(dbO);
+	char *ret;
+	ret = malloc(sizeof(char) *(strlen("Command Done") + 1));
+	sprintf(ret, "Command Done");
+	return ret;
 }
 
 /**
@@ -169,81 +155,79 @@ char* execute_db_operator(db_operator* dbO) {
  * It will continually listen for messages from the client and execute queries.
  **/
 bool handle_client(int client_socket) {
-    int done = 0;
-    int length = 0;
-    bool ret = false;
+	int done = 0;
+	int length = 0;
+	bool ret = false;
 
-    log_info("Connected to socket: %d.\n", client_socket);
+	log_info("Connected to socket: %d.\n", client_socket);
 
-    // Create two messages, one from which to read and one from which to receive
-    message send_message;
-    message recv_message;
+	// Create two messages, one from which to read and one from which to receive
+	message send_message;
+	message recv_message;
 
-    // Continually receive messages from client and execute queries.
-    // 1. Parse the command
-    // 2. Handle request if appropriate
-    // 3. Send status of the received message (OK, UNKNOWN_QUERY, etc)
-    // 4. Send response of request.
-    do {
-        length = recv(client_socket, &recv_message, sizeof(message), 0);
-        if (length < 0) {
-            log_err("Client connection closed!\n");
-            exit(1);
-        } else if (length == 0) {
-            log_err("length = 0 close!\n");
-            done = 1;
-        }
+	// Continually receive messages from client and execute queries.
+	// 1. Parse the command
+	// 2. Handle request if appropriate
+	// 3. Send status of the received message (OK, UNKNOWN_QUERY, etc)
+	// 4. Send response of request.
+	do {
+		length = recv(client_socket, &recv_message, sizeof(message), 0);
+		if (length < 0) {
+			log_err("Client connection closed!\n");
+			exit(1);
+		} else if (length == 0) {
+			log_err("length = 0 close!\n");
+			done = 1;
+		}
 
-        if (!done) {
-            char recv_buffer[recv_message.length];
-            length = recv(client_socket, recv_buffer, recv_message.length,0);
-            recv_message.payload = recv_buffer;
-            recv_message.payload[recv_message.length] = '\0';
+		if (!done) {
+			char recv_buffer[recv_message.length];
+			length = recv(client_socket, recv_buffer, recv_message.length,0);
+			recv_message.payload = recv_buffer;
+			recv_message.payload[recv_message.length] = '\0';
 
-            // 1. Parse command
-            db_operator* dbO = parse_command(&recv_message, &send_message);
+			// 1. Parse command
+			db_operator* dbO = parse_command(&recv_message, &send_message);
 
+			// 2. Handle request
+			char* res = NULL;
+			if (NULL != dbO && OK_WAIT_FOR_RESPONSE == send_message.status){
+				res = execute_db_operator(dbO);
+				send_message.length = strlen(res);
+				log_info("cmd result:\n%s\n", res);
+			}
+			else {
+				if (SERVER_SHUTDOWN == send_message.status) {
+					done = 1;
+					ret = true;
+				}
+				else if (CLIENT_QUIT == send_message.status) {
+					done = 1;
+				}
+				send_message.length = 0;
+			}
 
-            // 2. Handle request
-            char* res = NULL;            
-            if (NULL != dbO && OK_WAIT_FOR_RESPONSE == send_message.status){
-                res = execute_db_operator(dbO);
-                send_message.length = strlen(res);
-                log_info("cmd result:\n%s\n", res);
-            }
-            else {
-                if (SERVER_SHUTDOWN == send_message.status) {
-                    done = 1;
-                    ret = true;
-                }
-                else if (CLIENT_QUIT == send_message.status) {
-                    done = 1;
-                }
-                send_message.length = 0;
-            }
+			// 3. Send status of the received message (OK, UNKNOWN_QUERY, etc)
+			if (send(client_socket, &(send_message), sizeof(message), 0) == -1) {
+				log_err("Failed to send message.");
+				exit(1);
+			}
 
-                        
-            // 3. Send status of the received message (OK, UNKNOWN_QUERY, etc)
-            if (send(client_socket, &(send_message), sizeof(message), 0) == -1) {
-                log_err("Failed to send message.");
-                exit(1);
-            }
+			// 4. Send response of request
+			if (OK_WAIT_FOR_RESPONSE  == send_message.status) {
+				if (send(client_socket, res, send_message.length, 0) == -1) {
+					log_err("Failed to send message.");
+					exit(1);
+				}
+				// TODO: HOW TO FREE THIS STR
+				// free(res);
+			}
+		}
+	} while (!done);
 
-            // 4. Send response of request
-            if (OK_WAIT_FOR_RESPONSE  == send_message.status) {
-                if (send(client_socket, res, send_message.length, 0) == -1) {
-                    log_err("Failed to send message.");
-                    exit(1);
-                }
-                // TODO: HOW TO FREE THIS STR
-                // free(res);   
-            }        
-        }
-    } while (!done);
-
-    log_info("Connection closed at socket %d!\n", client_socket);
-    // close(client_socket);
-    return ret;
+	log_info("Connection closed at socket %d!\n", client_socket);
+	// close(client_socket);
+	return ret;
 }
 
 /**
@@ -253,42 +237,42 @@ bool handle_client(int client_socket) {
  * Returns a valid server socket fd on success, else -1 on failure.
  **/
 int setup_server() {
-    int server_socket;
-    size_t len;
-    struct sockaddr_un local;
+	int server_socket;
+	size_t len;
+	struct sockaddr_un local;
 
-    log_info("Attempting to setup server...\n");
+	log_info("Attempting to setup server...\n");
 
-    if ((server_socket = socket(AF_UNIX, SOCK_STREAM, 0)) == -1) {
-        log_err("L%d: Failed to create socket.\n", __LINE__);
-        return -1;
-    }
+	if ((server_socket = socket(AF_UNIX, SOCK_STREAM, 0)) == -1) {
+		log_err("L%d: Failed to create socket.\n", __LINE__);
+		return -1;
+	}
 
-    local.sun_family = AF_UNIX;
-    strncpy(local.sun_path, SOCK_PATH, strlen(SOCK_PATH) + 1);
-    unlink(local.sun_path);
+	local.sun_family = AF_UNIX;
+	strncpy(local.sun_path, SOCK_PATH, strlen(SOCK_PATH) + 1);
+	unlink(local.sun_path);
 
-    /*
-    int on = 1;
-    if (setsockopt(server_socket, SOL_SOCKET, SO_REUSEADDR, (char *)&on, sizeof(on)) < 0)
-    {
-        log_err("L%d: Failed to set socket as reusable.\n", __LINE__);
-        return -1;
-    }
-    */
+	/*
+	int on = 1;
+	if (setsockopt(server_socket, SOL_SOCKET, SO_REUSEADDR, (char *)&on, sizeof(on)) < 0)
+	{
+		log_err("L%d: Failed to set socket as reusable.\n", __LINE__);
+		return -1;
+	}
+	*/
 
-    len = strlen(local.sun_path) + sizeof(local.sun_family) + 1;
-    if (bind(server_socket, (struct sockaddr *)&local, len) == -1) {
-        log_err("L%d: Socket failed to bind.\n", __LINE__);
-        return -1;
-    }
+	len = strlen(local.sun_path) + sizeof(local.sun_family) + 1;
+	if (bind(server_socket, (struct sockaddr *)&local, len) == -1) {
+		log_err("L%d: Socket failed to bind.\n", __LINE__);
+		return -1;
+	}
 
-    if (listen(server_socket, 5) == -1) {
-        log_err("L%d: Failed to listen on socket.\n", __LINE__);
-        return -1;
-    }
+	if (listen(server_socket, 5) == -1) {
+		log_err("L%d: Failed to listen on socket.\n", __LINE__);
+		return -1;
+	}
 
-    return server_socket;
+	return server_socket;
 }
 
 // Currently this main will setup the socket and accept a single client.
@@ -297,48 +281,47 @@ int setup_server() {
 // and remain running until it receives a shut-down command.
 int main(void)
 {
-    int server_socket = setup_server();
-    if (server_socket < 0) {
-        exit(1);
-    }
+	int server_socket = setup_server();
+	if (server_socket < 0) {
+		exit(1);
+	}
 
-    // Populate the global dsl commands
-    dsl_commands = dsl_commands_init();
+	// Populate the global dsl commands
+	dsl_commands = dsl_commands_init();
 
-    Db *default_db;
-    OpenFlags flags = LOAD;
-    status s = open_db("data/dbinfo", &default_db, flags);
+	Db *default_db;
+	OpenFlags flags = LOAD;
+	status s = open_db("data/dbinfo", &default_db, flags);
 
-    if (ERROR == s.code) {
-        log_info("No database found on server or database info corrupted\n");
-    }
-    else {
-        log_info("Database found on server\n");
-    }
+	if (ERROR == s.code) {
+		log_info("No database found on server or database info corrupted\n");
+	}
+	else {
+		log_info("Database found on server\n");
+	}
 
 
-    log_info("Waiting for a connection %d ...\n", server_socket);
+	log_info("Waiting for a connection %d ...\n", server_socket);
 
-    struct sockaddr_un remote;
-    socklen_t t = sizeof(remote);
-    int client_socket = 0;
+	struct sockaddr_un remote;
+	socklen_t t = sizeof(remote);
+	int client_socket = 0;
 
-    bool shutdown_server = false;
-    while (!shutdown_server) {
-        if ((client_socket = accept(server_socket, (struct sockaddr *)&remote, &t)) == -1) {
-            log_err("L%d: Failed to accept a new connection.\n", __LINE__);
-            exit(1);
-        }
+	bool shutdown_server = false;
+	while (!shutdown_server) {
+		if ((client_socket = accept(server_socket, (struct sockaddr *)&remote, &t)) == -1) {
+			log_err("L%d: Failed to accept a new connection.\n", __LINE__);
+			exit(1);
+		}
 
-        shutdown_server = handle_client(client_socket);
-        if (false == shutdown_server) {
-            close(client_socket);
-        }
+		shutdown_server = handle_client(client_socket);
+		if (false == shutdown_server) {
+			close(client_socket);
+		}
 
-        if (NULL != default_db)
-            sync_db(default_db);
-    }
+		if (NULL != default_db)
+			sync_db(default_db);
+	}
 
-    return 0;
+	return 0;
 }
-

@@ -31,11 +31,11 @@ void cs165_log(FILE* out, const char *format, ...);
 // void log_err(const char *format, ...);
 #ifdef LOG_ERR
 #define log_err(...) do {										\
-    fprintf(stderr, ANSI_COLOR_RED);							\
-    fprintf(stderr, "[ERROR] (%s:%d)\n", __FILE__, __LINE__);	\
-    fprintf(stderr, ##__VA_ARGS__);								\
-    fprintf(stderr, ANSI_COLOR_RESET);							\
-    fflush(stderr);												\
+	fprintf(stderr, ANSI_COLOR_RED);							\
+	fprintf(stderr, "[ERROR] (%s:%d)\n", __FILE__, __LINE__);	\
+	fprintf(stderr, ##__VA_ARGS__);								\
+	fprintf(stderr, ANSI_COLOR_RESET);							\
+	fflush(stderr);												\
 } while (0)
 #else
 #define log_err(...) do{} while(0)
@@ -52,11 +52,11 @@ void cs165_log(FILE* out, const char *format, ...);
 
 #ifdef LOG_INFO
 #define log_info(...) do {										\
-    fprintf(stdout, ANSI_COLOR_GREEN);							\
-    fprintf(stdout, "[INFO] (%s:%d):\n", __FILE__, __LINE__);	\
-    fprintf(stdout, ##__VA_ARGS__);								\
-    fprintf(stdout, ANSI_COLOR_RESET);							\
-    fflush(stdout);												\
+	fprintf(stdout, ANSI_COLOR_GREEN);							\
+	fprintf(stdout, "[INFO] (%s:%d):\n", __FILE__, __LINE__);	\
+	fprintf(stdout, ##__VA_ARGS__);								\
+	fprintf(stdout, ANSI_COLOR_RESET);							\
+	fflush(stdout);												\
 } while (0)
 #else
 #define log_info(...) do{} while(0)

@@ -5,8 +5,8 @@
 #include "uthash.h"
 
 char *readfile(const char *filename, size_t *len) {
-	FILE *fp = fopen(filename, "r"); 
- 
+	FILE *fp = fopen(filename, "r");
+
 	// Get file length
 	int rc = fseek(fp, 0, SEEK_END);
 	if (rc < 0) {
@@ -19,18 +19,18 @@ char *readfile(const char *filename, size_t *len) {
 		return NULL;
 	}
 	*len = l;
- 
+
 	// Set file stream to the beginning
 	rc = fseek(fp, 0, SEEK_SET);
 	if (rc < 0) {
 		log_err("fseek(SET)");
 		return NULL;
 	}
- 
+
 	/* Read the whole file
 		WARNING: maybe it would be better to 
 		do it block by block
-	 */
+	*/
 	char *contents = malloc(*len);
 	if (contents == NULL) {
 		log_err("malloc");
@@ -134,7 +134,6 @@ void csv_process_fields(void *s,  size_t len __attribute__((unused)), void *data
 	}
 }
 
-
 void csv_process_row(int delim __attribute__((unused)), void *data) 
 {
 	parse_csv_info *info = (parse_csv_info *)data;
@@ -202,7 +201,6 @@ status load_data4file(const char* filename, size_t line_count, size_t field_coun
 		return ret;		
 	}
 
-
 	// for (size_t i = 0; i < parser_info.field_count; i++) {
 	// 	for (size_t j = 0; j < parser_info.line_count; j++) {
 	// 		// printf("%d\n", parser_info.cols[i][j]);
@@ -211,21 +209,7 @@ status load_data4file(const char* filename, size_t line_count, size_t field_coun
 	// 	printf("\n");
 	// }
 
-   	status ret;
-   	ret.code = CMD_DONE;
-   	return ret;
+	status ret;
+	ret.code = CMD_DONE;
+	return ret;
 }
-
-// int main(int argc, char const *argv[])
-// {
-//	 char str[] = "filename";
-//	 size_t t = count_file_lines(str);
-//	 load_data4file(str, t - 1);
-
-//	 // status s = load_data4file(filename, t - 1);
-	
-//	 // if (CMD_DONE != s.code) {
-//	 //	 log_err("something wrong\n");
-//	 // }
-//	 return 0;
-// }

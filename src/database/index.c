@@ -35,9 +35,6 @@ status create_index(Table *tbl, Column *col, IndexType type) {
 					#else 
 					s = nWayPartition(tbl, col, &inst);
 					#endif
-
-
-
 				}
 				break;
 			}

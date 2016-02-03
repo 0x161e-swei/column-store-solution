@@ -1,5 +1,5 @@
 #ifndef INDEX_H__
-#define INDEX_H__ 
+#define INDEX_H__
 
 #include "cs165_api.h"
 #include "column.h"
@@ -26,5 +26,4 @@ void *swapsIncolumns(void *arg);	// for threads processing
 status nWayPartition(Table *tbl, Column *col, Partition_inst *inst);
 #endif
 
-#endif // INDEX_H__ 
-
+#endif // INDEX_H__

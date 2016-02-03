@@ -279,28 +279,42 @@ status parse_dsl(char* str, dsl* d, db_operator* op)
 		return ret;
 	}
 	else if (SELECT_COL_CMD == d->g  || SELECT_PRE_CMD == d->g
-            || FETCH_CMD == d->g || TUPLE_CMD == d->g) {
-        status s = query_prepare(str, d, op);
-        if (OK != s.code) {
-            switch (d->g) {
-                case SELECT_COL_CMD: {
-                    log_err("cannnot prepare the query for select column!");    
-                    break;
-                }
-                case SELECT_PRE_CMD: {
-					log_err("cannnot prepare the query for select previous!");       
+			|| FETCH_CMD == d->g || TUPLE_CMD == d->g
+			|| INSERT_CMD == d->g || DELETE_CMD == d->g
+			|| UPDATE_CMD == d->g) {
+		status s = query_prepare(str, d, op);
+		if (OK != s.code) {
+			switch (d->g) {
+				case SELECT_COL_CMD: {
+					log_err("cannnot prepare the query for select column!");
 					break;
-                }
-                case FETCH_CMD: {
+				}
+				case SELECT_PRE_CMD: {
+					log_err("cannnot prepare the query for select previous!");
+					break;
+				}
+				case FETCH_CMD: {
 					log_err("cannnot prepare the query for fetch!");
 					break;
-                }
-                case TUPLE_CMD: {
+				}
+				case TUPLE_CMD: {
 					log_err("cannnot prepare the query for tuple!");
-                    break;	
-                }
-                default: break;
-            }
+					break;
+				}
+				case DELETE_CMD: {
+					log_err("cannnot prepare the query for delete!");
+					break;
+				}
+				case INSERT_CMD: {
+					log_err("cannnot prepare the query for insert!");
+					break;
+				}
+				case UPDATE_CMD: {
+					log_err("cannnot prepare the query for update!");
+					break;
+				}
+				default: break;
+			}
 			return s;
 		}
 		else return s;

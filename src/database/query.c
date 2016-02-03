@@ -4,6 +4,12 @@
 // Global results hash list to keep track of query results
 Result *res_hash_list;
 
+char open_paren[2] = "(";
+char close_paren[2] = ")";
+char comma[2] = ",";
+// char quotes[2] = "\"";
+char eq_sign[2] = "=";
+
 /**
  * Grab the result from the result hash list 
  */
@@ -39,7 +45,7 @@ status clear_res_list() {
 	if (NULL != res_hash_list) {
 		log_info("clearing the res_hash_list");
 		Result *tmp, *res;
-		HASH_ITER(hh, res_hash_list, res, tmp) {			
+		HASH_ITER(hh, res_hash_list, res, tmp) {            
 			if (NULL != res) {
 				HASH_DEL(res_hash_list, res);
 				free((void *)res->res_name);
@@ -58,16 +64,11 @@ status clear_res_list() {
  * get the Result for fetch and tuple
  * By preparing the query, this function is responsible for taking all data needed
  * for the query into main memory
- * query: 	the cmd string
- * d: 		the matched dsl
- * op:		address of the db_operator 
+ * query:   the cmd string
+ * d:       the matched dsl
+ * op:      address of the db_operator 
  */ 
 status query_prepare(const char* query, dsl* d, db_operator* op) {
-	char open_paren[2] = "(";
-	char close_paren[2] = ")";
-	char comma[2] = ",";
-	// char quotes[2] = "\"";
-	char eq_sign[2] = "=";
 	status s;
 
 	if (SELECT_COL_CMD == d->g) { 
@@ -83,10 +84,14 @@ status query_prepare(const char* query, dsl* d, db_operator* op) {
 		// This gives us everything inside the '(' ')'
 		char* args = strtok(NULL, close_paren);
 
-		// This gives us <col_var>
-		char* col_var = strtok(args, comma);
+		Table  *tmp_tbl = NULL;
+		Column *tmp_col = NULL;
+		args = prepare_col(args, &tmp_tbl, &tmp_col);
+		// // This gives us <col_var>
+		// char* col_var = strtok(args, comma);
 
-		char* low_str = strtok(NULL, comma);
+		char *low_str = strtok(args, comma);
+		// char* low_str = strtok(NULL, comma);
 		int low = 0;
 		if (NULL != low_str) {
 			low = atoi(low_str);
@@ -106,48 +111,10 @@ status query_prepare(const char* query, dsl* d, db_operator* op) {
 		else {
 			s.code = WRONG_FORMAT;
 			log_err("wrong select format");
-			return s;	
+			return s;   
 		}
 		(void) high;
-		log_info("%s=select(%s,%d,%d)", pos_var, col_var, low, high);
-
-		unsigned int i =0, flag = 0;
-		while('\0' != col_var[i]) {
-			if ('.' == col_var[i]) {
-				flag++;
-				if (2 == flag) {		// Find the second '.'
-					break;
-				}
-			}
-			i++;
-		}
-
-		char* tbl_var = malloc(sizeof(char) * (i + 1));
-		strncpy(tbl_var, col_var, i);
-		tbl_var[i] = '\0';
-		printf("table name in select %s\n", tbl_var);
-		
-		Table* tmp_tbl = NULL;
-		s = grab_table(tbl_var, &tmp_tbl);
-		if (OK != s.code) {
-			log_err("cannot grab the table!");
-			return s;
-		}
-		free(tbl_var);
-
-		// Grab the column
-		Column *tmp_col = NULL;
-		s = grab_column(col_var, &tmp_col);
-
-		if (OK != s.code) {
-			log_err("cannot grab the column!\n");
-			return s;
-		}
-
-		// Data of the column might not be in main memory
-		if (NULL != tmp_tbl && NULL == tmp_col->data && 0 != tmp_tbl->length) {
-			load_column4disk(tmp_col, tmp_tbl->length);
-		}
+		log_info("%s=select(%s,%d,%d)", pos_var, tmp_col->name, low, high);
 
 		op->type = SELECT_COL;
 		op->tables = malloc(sizeof(Tbl_ptr));
@@ -192,11 +159,11 @@ status query_prepare(const char* query, dsl* d, db_operator* op) {
 		// This gives us everything inside the '(' ')'
 		char* args = strtok(NULL, close_paren);
 
-		// This gives us <posn_vec> 
-		char* posn_vec = strtok(args, comma);
+		// This gives us <col_var> 
+		char* col_var = strtok(args, comma);
 
-		// This gives us <col_var>
-		char* col_var = strtok(NULL, comma);
+		// This gives us <posn_vec>
+		char* posn_vec = strtok(NULL, comma);
 
 		char* low_str = strtok(NULL, comma);
 		int low = 0;
@@ -217,7 +184,7 @@ status query_prepare(const char* query, dsl* d, db_operator* op) {
 		else {
 			s.code = WRONG_FORMAT;
 			log_err("wrong select format");
-			return s;	
+			return s;   
 		}
 		(void) high;
 
@@ -284,62 +251,25 @@ status query_prepare(const char* query, dsl* d, db_operator* op) {
 		// This gives us everything inside the '(' ')'
 		char* args = strtok(NULL, close_paren);
 
-		// THis gives us <col_var>
-		char* col_var = strtok(args, comma);
+		// // THis gives us <col_var>
+		// char* col_var = strtok(args, comma);
 
-		// This gives us <vec_pos>
-		char* vec_pos = strtok(NULL, comma);
+		// // This gives us <vec_pos>
+		// char* vec_pos = strtok(NULL, comma);
+		Table  *tmp_tbl = NULL;
+		Column *tmp_col = NULL;
+		Result *tmp_pos = NULL;
+		args = prepare_col(args, &tmp_tbl, &tmp_col);
+		args = prepare_res(args, &tmp_pos);
 
-		log_info("%s=fetch(%s,%s)",val_var, col_var, vec_pos);
-
-		unsigned int i =0, flag = 0;
-		while('\0' != col_var[i]) {
-			if ('.' == col_var[i]) {
-				flag++;
-				if (2 == flag) {		// Find the second '.'
-					break;
-				}
-			}
-			i++;
-		}
-
-		char* tbl_var = malloc(sizeof(char) * (i + 1));
-		strncpy(tbl_var, col_var, i);
-		tbl_var[i] = '\0';
-		printf("table name in fetch %s\n", tbl_var);
-		
-		Table* tmp_tbl = NULL;
-		s = grab_table(tbl_var, &tmp_tbl);
-		if (OK != s.code) {
-			log_err("cannot grab the table!");
-			return s;
-		}
-		free(tbl_var);
-
-		Column* tmp_col = NULL;
-		s = grab_column(col_var, &tmp_col);
-		if (OK != s.code) {
-			log_err("cannot grab the column!");
-			return s;
-		}
-
-		if (NULL == tmp_col->data && NULL != tmp_tbl && 0 != tmp_tbl->length) {
-			load_column4disk(tmp_col, tmp_tbl->length);
-		}
-
-		Result* tmp_res = NULL;
-		s = grab_result(vec_pos, &tmp_res);
-		if (OK != s.code) {
-			log_err("cannot grab the position!");
-			return s;
-		}
+		log_info("%s=fetch(%s,%s)",val_var, tmp_col->name, tmp_pos->res_name);
 
 		op->type = FETCH;
-		op->tables = NULL;			// no need to record table
+		op->tables = NULL;          // no need to record table
 
 		(op->domain).cols = malloc(sizeof(Col_ptr));
 		(op->domain).cols[0] = tmp_col;
-		op->position = tmp_res;
+		op->position = tmp_pos;
 
 		op->pos1 = NULL;
 		op->pos2 = NULL;
@@ -359,7 +289,7 @@ status query_prepare(const char* query, dsl* d, db_operator* op) {
 		char* str_cpy = malloc(strlen(query) + 1);
 		strncpy(str_cpy, query, strlen(query) + 1);
 	
-		// This gives us <col_var>	
+		// This gives us <col_var>  
 		strtok(str_cpy, open_paren);
 		char* col_var = strtok(NULL, close_paren);
 
@@ -386,6 +316,40 @@ status query_prepare(const char* query, dsl* d, db_operator* op) {
 		s.code = OK;
 		return s;
 	}
+	else if (DELETE_CMD == d->g) {
+		char* str_cpy = malloc(strlen(query) + 1);
+		strncpy(str_cpy, query, strlen(query) + 1);
+		strtok(str_cpy, open_paren);
+
+		// This gives us everything inside the '(' ')'
+		char* args = strtok(NULL, close_paren);
+
+		Table *tmp_tbl = NULL;
+		Column *tmp_col = NULL;
+		Result *tmp_pos = NULL;
+		args = prepare_col(args, &tmp_tbl, &tmp_col);
+		args = prepare_res(args, &tmp_pos);
+
+		op->type = DELETE;
+		op->tables = malloc(sizeof(Tbl_ptr));
+		op->tables[0] = tmp_tbl;
+		// TODO: position1 should be used to delete, 
+		// yet it should be a dynamic array? tmp_pos
+		op->pos1 = NULL;
+		op->pos2 = NULL;
+		op->value1 = NULL;
+		op->value2 = NULL;
+		op->res_name = NULL;
+
+		return s;
+
+	}
+	else if (INSERT_CMD == d->g) {
+		// TODO: parse the insert command and prepare the db_op
+	}
+	else if (UPDATE_CMD == d->g) {
+		// TODO: parse the update command and prepare the db_op
+	}
 	else {
 		s.code = ERROR;
 		return s;
@@ -398,7 +362,7 @@ status query_prepare(const char* query, dsl* d, db_operator* op) {
 
 /**
  * execute the query with the db_operator and put the output in results
- * op: 		pointer to a db_operator storing detail of the operation
+ * op:      pointer to a db_operator storing detail of the operation
  * results: address of a Result to store the output
  */
 status query_execute(db_operator* op, Result** results) {
@@ -449,8 +413,8 @@ status query_execute(db_operator* op, Result** results) {
 
 /**
  * Comparasion used in SELECT operation
- * f: 	pointer to the comparator containing all conditions
- * val:	the integet to qualify
+ * f:   pointer to the comparator containing all conditions
+ * val: the integet to qualify
  * Return ture if val is qualified
  */
 bool compare(comparator *f, int val){
@@ -468,7 +432,7 @@ bool compare(comparator *f, int val){
 		}
 		switch (pre_junc) {
 			case NONE: {
-				res = cur_res;	
+				res = cur_res;  
 				break;
 			}
 			case AND: {
@@ -528,7 +492,7 @@ status load_column4disk(Column *col, size_t len) {
 			while(r < read) {
 				size_t t = fread(buffer + sizeof(int) * r, sizeof(int), read - r, fp);
 				if (0 == t) {
-					darray_destory(col->data); free(buffer); col->data = NULL;	
+					darray_destory(col->data); free(buffer); col->data = NULL;  
 					if (ferror(fp)) {
 						log_err("error loading from disks!\n");
 						// darray_destory(col->data); free(buffer); col->data = NULL;
@@ -569,7 +533,7 @@ status load_column4disk(Column *col, size_t len) {
 					else {
 						fclose(fp);
 						s.code = ERROR;
-						return s;	
+						return s;   
 					}
 				}
 				r += t;
@@ -586,9 +550,9 @@ status load_column4disk(Column *col, size_t len) {
 
 /** 
  * scan the whole Column with conditions
- * f: 	pointer to the comparator containing all conditions
+ * f:   pointer to the comparator containing all conditions
  * col: pointer to the Column to be scaned
- * r: 	address of a pointer to Result to put to the output
+ * r:   address of a pointer to Result to put to the output
  */
 status col_scan(comparator *f, Column *col, size_t len, Result **r) {
 	status s;
@@ -598,7 +562,7 @@ status col_scan(comparator *f, Column *col, size_t len, Result **r) {
 		(*r)->num_tuples = 0;
 		for (size_t i = 0; i < len; i++) {
 			if (compare(f, (col->data)->content[i])) {
-				// Results storing needs improving later
+				// TODO: Results storing needs improving later
 				(*r)->num_tuples++;
 				(*r)->token = realloc((*r)->token, (*r)->num_tuples * sizeof(Payload));
 				(*r)->token[(*r)->num_tuples - 1].pos = i;
@@ -618,10 +582,10 @@ status col_scan(comparator *f, Column *col, size_t len, Result **r) {
 
 /**
  * scan a Column at some positions specified
- * f: 	pointer to the comparator containing all conditions
+ * f:   pointer to the comparator containing all conditions
  * col: pointer to the Column to be scaned
  * pos: pointer to a Result as positions specified
- * r: 	address of a pointer to Result to put to the output
+ * r:   address of a pointer to Result to put to the output
  */
 status col_scan_with_pos(comparator *f, Result *res, Result *pos, Result **r) {
 	status s;
@@ -632,8 +596,8 @@ status col_scan_with_pos(comparator *f, Result *res, Result *pos, Result **r) {
 		size_t i = 0;
 		while (i < pos->num_tuples) {
 			// if (compare(f, (col->data)->content[pos->token[i].pos])) {
-			if (compare(f, res->token[i].val)) {	
-				// Results storing needs improving later
+			if (compare(f, res->token[i].val)) {    
+				// TODO: Results storing needs improving later
 				(*r)->num_tuples++;
 				(*r)->token = realloc(((*r)->token), (*r)->num_tuples * sizeof(Payload));
 				(*r)->token[(*r)->num_tuples - 1].pos = pos->token[i].pos;
@@ -653,7 +617,7 @@ status col_scan_with_pos(comparator *f, Result *res, Result *pos, Result **r) {
  * fetch the value from a Column at positions specified
  * col: pointer to the Column to be scaned
  * pos: pointer to a Result as positions specified
- * r: 	address of a pointer to Result to put to the output
+ * r:   address of a pointer to Result to put to the output
  */
 status fetch_val(Column *col, Result *pos, Result **r) {
 	status s;
@@ -661,7 +625,7 @@ status fetch_val(Column *col, Result *pos, Result **r) {
 		*r = malloc(sizeof(Result));
 		(*r)->num_tuples = pos->num_tuples;
 		size_t i = 0;
-		(*r)->token	= malloc((*r)->num_tuples * sizeof(Payload));
+		(*r)->token = malloc((*r)->num_tuples * sizeof(Payload));
 		log_info("fetched data:\n");
 		while (i < pos->num_tuples) {
 			(*r)->token[i].val = (col->data)->content[pos->token[i].pos];
@@ -693,21 +657,21 @@ char* tuple(db_operator *query) {
 			sprintf(num, "%d\n", r->token[i].val);
 			used_space += strlen(num);
 			if (used_space > total_space){
-				total_space *= 2;	
+				total_space *= 2;   
 				ret = realloc(ret, sizeof(char) * total_space);
 			}
 			strncat(ret, num, strlen(num));
 		}
-		return ret;		
+		return ret;     
 	}
-	return	NULL;
+	return  NULL;
 }
 
 /**
  * scan a whole partition in a Column with partition id
- * col: 	pointer to the Column to be scaned
+ * col:     pointer to the Column to be scaned
  * part_id: partition id specified
- * r: 		address of a pointer to Result to put to the output
+ * r:       address of a pointer to Result to put to the output
  */
 status scan_partition(Column *col, int part_id, Result **r) {
 	status s;
@@ -718,7 +682,7 @@ status scan_partition(Column *col, int part_id, Result **r) {
 		*r = malloc(sizeof(Result));
 		(*r)->num_tuples = pos_e - pos_s;
 		int j = 0;
-		(*r)->token	= malloc((*r)->num_tuples * sizeof(Payload));
+		(*r)->token = malloc((*r)->num_tuples * sizeof(Payload));
 		for (int i = pos_s; i < pos_e; i++) {
 			(*r)->token[j++].pos = i;
 		}
@@ -729,10 +693,10 @@ status scan_partition(Column *col, int part_id, Result **r) {
 
 /**
  * scan a partition in a Column with greaterThan condition
- * col: 	pointer to the Column to be scaned
- * val: 	all qualified integers should be greater than val
+ * col:     pointer to the Column to be scaned
+ * val:     all qualified integers should be greater than val
  * part_id: partition id specified
- * r: 		address of a pointer to Result to put to the output
+ * r:       address of a pointer to Result to put to the output
  */
 status scan_partition_greaterThan(Column *col, int val, int part_id, Result **r) {
 	status s;
@@ -764,10 +728,10 @@ status scan_partition_greaterThan(Column *col, int val, int part_id, Result **r)
 
 /**
  * scan a partition in a Column with lessThan condition
- * col: 	pointer to the Column to be scaned
- * val: 	all qualified integers should be less than val
+ * col:     pointer to the Column to be scaned
+ * val:     all qualified integers should be less than val
  * part_id: partition id specified
- * r: 		address of a pointer to Result to put to the output
+ * r:       address of a pointer to Result to put to the output
  */
 status scan_partition_lessThan(Column *col, int val, int part_id, Result **r) {
 	status s;
@@ -801,10 +765,10 @@ status scan_partition_lessThan(Column *col, int val, int part_id, Result **r) {
 
 /**
  * scan a partition in a Column with equal condition
- * col: 	pointer to the Column to be scaned
- * val: 	all qualified integers should be equal to val
+ * col:     pointer to the Column to be scaned
+ * val:     all qualified integers should be equal to val
  * part_id: partition id specified
- * r: 		address of a pointer to Result to put to the output
+ * r:       address of a pointer to Result to put to the output
  */
 status scan_partition_pointQuery(Column *col, int val, int part_id, Result **r) {
 	status s;
@@ -826,5 +790,76 @@ status scan_partition_pointQuery(Column *col, int val, int part_id, Result **r) 
 		s.code = OK;
 	}
 	return s;
+}
+
+/**
+ * prepare the Column together with the Table it belongs to
+ * args:	a char array to parse
+ * tbl:		address of a Table to hold the Table pointer 
+ * col:		address of a Table to hold the Column pointer 	
+ */
+char *prepare_col(char *args, Table **tbl, Column **col) {
+	char *col_var = strtok(args, comma);
+
+	unsigned int i =0, flag = 0;
+	while('\0' != col_var[i]) {
+		if ('.' == col_var[i]) {
+			flag++;
+			if (2 == flag) {		// Find the second '.'
+				break;
+			}
+		}
+		i++;
+	}
+
+	char* tbl_var = malloc(sizeof(char) * (i + 1));
+	strncpy(tbl_var, col_var, i);
+	tbl_var[i] = '\0';
+	printf("table name in select %s\n", tbl_var);
+	
+	Table* tmp_tbl = NULL;
+	status s = grab_table(tbl_var, &tmp_tbl);
+	if (OK != s.code) {
+		log_err("cannot grab the table!");
+		return NULL;
+	}
+	free(tbl_var);
+	*tbl = tmp_tbl;	
+
+	// Grab the column
+	Column *tmp_col = NULL;
+	s = grab_column(col_var, &tmp_col);
+
+	if (OK != s.code) {
+		log_err("cannot grab the column!\n");
+		return NULL;
+	}
+
+	// Data of the column might not be in main memory
+	if (NULL != tmp_tbl && NULL == tmp_col->data && 0 != tmp_tbl->length) {
+		load_column4disk(tmp_col, tmp_tbl->length);
+	}
+	*col = tmp_col;
+
+	return col_var + strlen(col_var) + 1;	
+}
+
+/**
+ * prepare the Result together with the Table it belongs to
+ * args:	a char array to parse
+ * res:		address of a Table to hold the Result pointer 
+ */
+char *prepare_res(char *args , Result **res) {
+	char *vec_res = strtok(args, comma);
+
+	// Grab the position list
+	Result *tmp_res = NULL;
+	status s = grab_result(vec_res, &tmp_res);
+	if (OK != s.code) {
+		log_err("cannot grab the results!\n");
+		return NULL;
+	}
+	*res = tmp_res;
+	return vec_res + strlen(vec_res) + 1;
 }
 

@@ -253,7 +253,7 @@ typedef enum Aggr {
 
 typedef enum OperatorType {
 	SHOWDB,
-    TUPLE,
+	TUPLE,
 	SELECT_COL,
 	SELECT_PRE,
 	FETCH,
@@ -312,15 +312,15 @@ typedef struct _db_operator {
 	int* pos1;
 	// Needed for HASH_JOIN
 	int* pos2;
-    // Needed for SELECT_PRE and FETCH
-    Result* position;
+	// Needed for SELECT_PRE and FETCH
+	Result* position;
 
 	// For insert/delete operations, we only use value1;
 	// For update operations, we update value1 -> value2;
 	int* value1;
 	int* value2;
 
-	// For select and fetch operations only
+	// To keep track of the name of the result for select and fetch
 	char* res_name;
 
 	// This includes several possible fields that may be used in the operation.

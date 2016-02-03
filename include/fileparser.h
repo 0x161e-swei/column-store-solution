@@ -7,13 +7,13 @@
 #include "csv.h"
 
 typedef struct parse_csv_info {
-    char first_row;
-    size_t cur_feild;
-    size_t cur_row;
-    size_t field_count;
-    size_t line_count;
-    Column **cols;
-    int error;
+	char first_row;
+	size_t cur_feild;
+	size_t cur_row;
+	size_t field_count;
+	size_t line_count;
+	Column **cols;
+	int error;
 } parse_csv_info; 
 
 char *readfile(const char *filename, size_t *len);
