@@ -40,6 +40,7 @@ status create_column(Table *table, const char* name, Column** col) {
 		}
 		else { 								// All columns have already been created
 			free(*col);
+			*col = NULL;
 			s.code = ERROR;
 			log_err("table full of columns");
 		}

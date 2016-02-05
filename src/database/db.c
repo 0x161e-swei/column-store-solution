@@ -216,8 +216,10 @@ status open_db(const char* filename, Db** db, OpenFlags flags) {
 	FILE *dbinfo;
 	status s;
 	if (LOAD == flags) {
+		/* When we are loading the database we are actually 
+			re-creating the database according the dbinfo again
+		 */
 		if (NULL == database && NULL != (dbinfo = fopen(filename, "r+"))) {
-			// database = malloc(sizeof(Db));
 			int len, num __attribute__((unused));
 			num = fread(&len, sizeof(len), 1, dbinfo);        // length of db name
 			char *db_name = malloc(len * sizeof(char) + 1);
@@ -234,7 +236,6 @@ status open_db(const char* filename, Db** db, OpenFlags flags) {
 			 */
 			size_t table_count = 0;
 			num = fread(&table_count, sizeof(size_t), 1, dbinfo);
-			// database->table_count = table_count;
 			
 			for (unsigned int i = 0; i < table_count; i++){        
 				Table *t = NULL;
@@ -257,22 +258,24 @@ status open_db(const char* filename, Db** db, OpenFlags flags) {
 				s = create_table(database, tbl_name, col_count, &t);
 				t->length = col_len;
 				free(tbl_name);
-				log_info("\ttable %s found with length %zu\n", t->name, t->length);
+				log_info("\ttable %s found with length %zu and %zu columns\n", t->name, t->length, t->col_count);
 
-				t->cols = malloc(sizeof(Col_ptr) * t->col_count);
 				for (unsigned int j = 0; j < t->col_count; j++) {
 					int col_name_len;
 					num = fread(&col_name_len, sizeof(col_name_len), 1, dbinfo);
 					char *col_name = malloc(sizeof(char) * col_name_len + 1);
 					num = fread(col_name, sizeof(char), col_name_len, dbinfo);
 					col_name[col_name_len] = '\0';
-					// Column* c = malloc(sizeof(Column));
 					Column *c = NULL;
 					
 					s = create_column(t, col_name, &c);
+					if (ERROR == s.code) {
+						log_err("cannot load column info of %s", col_name);
+						free(col_name);
+						// TODO: potential mem leaks in metadata
+						return s;
+					}
 					free(col_name);
-					// Add the ptr to the array in table struct
-					// t->cols[j] = c;                         
 					
 					log_info("\t\tcolumn found: %s\n", c->name);
 					// // Add the content of column into the global column hash list

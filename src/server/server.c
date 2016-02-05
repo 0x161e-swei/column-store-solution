@@ -314,6 +314,10 @@ int main(void)
 			exit(1);
 		}
 
+		if (NULL == database) {
+			open_db("data/dbinfo", &default_db, flags);
+		}
+
 		shutdown_server = handle_client(client_socket);
 		if (false == shutdown_server) {
 			close(client_socket);
