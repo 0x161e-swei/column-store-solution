@@ -113,7 +113,7 @@ char* execute_db_operator(db_operator* dbO) {
 			}
 			break;
 		}
-		case SELECT_COL: case SELECT_PRE: case FETCH: {
+		case SELECT_COL: case SELECT_PRE: case FETCH: case DELETE: case INSERT: case UPDATE: {
 			Result *res = NULL;
 			status s = query_execute(dbO, &res);
 			if (OK != s.code) {

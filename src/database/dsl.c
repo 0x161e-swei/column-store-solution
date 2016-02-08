@@ -41,10 +41,10 @@ const char* tuple_command = "^tuple\\([a-zA-Z0-9_\\.]+\\)";
 const char* delete_command = "^d\\([a-zA-Z0-9_\\.]+\\,[a-zA-Z0-9_]+\\)";
 
 // Matches: i(<col_var>, number, ...)
-const char* insert_command = "^i\\([a-zA-Z0-9_\\.]+(\\,-?[0-9]\\d+)+\\)";
+const char* insert_command = "^i\\([a-zA-Z0-9_\\.]+(\\,-?[0-9]+)+\\)";
 
-// Matches: u(<col_var>, <old>, <new>)
-const char* update_command = "^u\\([a-zA-Z0-9_\\.]+\\,-?[0-9]+\\,-?[0-9]+\\)";
+// Matches: u(<col_var>, <vec_pos>, <new>)
+const char* update_command = "^u\\([a-zA-Z0-9_\\.]+\\,[a-zA-Z0-9_]+\\,-?[0-9]+\\)";
 
 // temporary dsls for test
 // Matches: partition("colName")
@@ -103,8 +103,11 @@ dsl** dsl_commands_init(void)
 	commands[13]->c = insert_command;
 	commands[13]->g = INSERT_CMD;
 
-	commands[14]->c = partition_test;
-	commands[14]->g = PARTITION_TEST;
+	commands[14]->c = update_command;
+	commands[14]->g = UPDATE_CMD;
+
+	commands[15]->c = partition_test;
+	commands[15]->g = PARTITION_TEST;
 
 	return commands;
 }

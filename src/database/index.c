@@ -161,6 +161,7 @@ status nWayPartition(Column *col, Partition_inst *inst) {
 	for (int i = p_count / 2 + 1; i <= p_count; i++)
 		col->p_pos[i - 1] = idc[i];
 	free(idc);
+	col->partitionCount = p_count;
 	s.code = CMD_DONE;
 	return s;
 }
@@ -381,6 +382,7 @@ status nWayPartition(Table *tbl, Column *col, Partition_inst *inst) {
 	for (int i = p_count / 2 + 1; i <= p_count; i++)
 		col->p_pos[i - 1] = idc[i];
 	free(idc);
+	col->partitionCount = p_count;
 	s.code = CMD_DONE;
 	return s;
 }

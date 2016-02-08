@@ -308,11 +308,11 @@ typedef struct _db_operator {
 	Table** tables;
 	Op_domain domain;
 
-	// Internmediaties used for PROJECT, DELETE, HASH_JOIN
-	int* pos1;
+	// Internmediaties used for PROJECT, HASH_JOIN
+	// int* pos1;
 	// Needed for HASH_JOIN
-	int* pos2;
-	// Needed for SELECT_PRE and FETCH
+	// int* pos2;
+	// Needed for SELECT_PRE, FETCH and DELETE
 	Result* position;
 
 	// For insert/delete operations, we only use value1;

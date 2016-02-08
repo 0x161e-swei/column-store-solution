@@ -13,7 +13,7 @@
 
 // Currently we have 4 DSL commands to parse.
 // TODO(USER): you will need to increase this to track the commands you support.
-#define NUM_DSL_COMMANDS (15)
+#define NUM_DSL_COMMANDS (16)
 
 // This helps group similar DSL commands together.
 // For example, some queries can be parsed together:
@@ -70,6 +70,7 @@ extern const char* fetch_command;
 extern const char* tuple_command;
 extern const char* delete_command;
 extern const char* insert_command;
+extern const char* update_command;
 
 extern const char* partition_test;
 

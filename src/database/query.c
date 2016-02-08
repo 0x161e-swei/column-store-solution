@@ -10,6 +10,7 @@ char comma[2] = ",";
 // char quotes[2] = "\"";
 char eq_sign[2] = "=";
 
+
 /**
  * Grab the result from the result hash list 
  */
@@ -123,8 +124,8 @@ status query_prepare(const char* query, dsl* d, db_operator* op) {
 		(op->domain).cols = malloc(sizeof(Col_ptr));
 		(op->domain).cols[0] = tmp_col;
 
-		op->pos1 = NULL;
-		op->pos2 = NULL;
+		// op->pos1 = NULL;
+		// op->pos2 = NULL;
 		op->value1 = NULL;
 		op->value2 = NULL;
 
@@ -214,8 +215,8 @@ status query_prepare(const char* query, dsl* d, db_operator* op) {
 		(op->domain).res[0] = tmp_val;
 		op->position = tmp_pos;
 
-		op->pos1 = NULL;
-		op->pos2 = NULL;
+		// op->pos1 = NULL;
+		// op->pos2 = NULL;
 		op->value1 = NULL;
 		op->value2 = NULL;
 
@@ -271,8 +272,8 @@ status query_prepare(const char* query, dsl* d, db_operator* op) {
 		(op->domain).cols[0] = tmp_col;
 		op->position = tmp_pos;
 
-		op->pos1 = NULL;
-		op->pos2 = NULL;
+		// op->pos1 = NULL;
+		// op->pos2 = NULL;
 		op->value1 = NULL;
 		op->value2 = NULL;
 		op->c = NULL;
@@ -307,8 +308,8 @@ status query_prepare(const char* query, dsl* d, db_operator* op) {
 		op->type = TUPLE;
 		op->tables = NULL;
 		op->position = NULL;
-		op->pos1 = NULL;
-		op->pos2 = NULL;
+		// op->pos1 = NULL;
+		// op->pos2 = NULL;
 		op->value1 = NULL;
 		op->value2 = NULL;
 		op->res_name = NULL;
@@ -317,6 +318,7 @@ status query_prepare(const char* query, dsl* d, db_operator* op) {
 		return s;
 	}
 	else if (DELETE_CMD == d->g) {
+
 		char* str_cpy = malloc(strlen(query) + 1);
 		strncpy(str_cpy, query, strlen(query) + 1);
 		strtok(str_cpy, open_paren);
@@ -324,31 +326,129 @@ status query_prepare(const char* query, dsl* d, db_operator* op) {
 		// This gives us everything inside the '(' ')'
 		char* args = strtok(NULL, close_paren);
 
+		// Prepare the table, column and position vector
 		Table *tmp_tbl = NULL;
 		Column *tmp_col = NULL;
 		Result *tmp_pos = NULL;
 		args = prepare_col(args, &tmp_tbl, &tmp_col);
 		args = prepare_res(args, &tmp_pos);
 
+		log_info("delete vector %s in column %s\n", tmp_pos->res_name, tmp_col->name);
+
+		if (NULL == tmp_tbl || NULL == tmp_col || NULL == tmp_pos) {
+			s.code = ERROR; 
+			return s;
+		}
+
 		op->type = DELETE;
 		op->tables = malloc(sizeof(Tbl_ptr));
 		op->tables[0] = tmp_tbl;
-		// TODO: position1 should be used to delete, 
-		// yet it should be a dynamic array? tmp_pos
-		op->pos1 = NULL;
-		op->pos2 = NULL;
+		op->domain.cols = tmp_tbl->cols;
+		// op->pos1 = NULL;
+		// op->pos2 = NULL;
 		op->value1 = NULL;
 		op->value2 = NULL;
 		op->res_name = NULL;
+		op->position = tmp_pos;
+		op->c = NULL;
 
+		s.code = OK;
 		return s;
-
 	}
 	else if (INSERT_CMD == d->g) {
-		// TODO: parse the insert command and prepare the db_op
+		// It is a relational insertion
+		char* str_cpy = malloc(strlen(query) + 1);
+		strncpy(str_cpy, query, strlen(query) + 1);
+		strtok(str_cpy, open_paren);
+
+		// This gives us everything inside the '(' ')'
+		char *args = strtok(NULL, close_paren);
+		
+		log_info("insert commmand within paren %s\n", args);
+
+		Table *tmp_tbl = NULL;
+		char *tbl_var = strtok(args, comma);
+		s = grab_table(tbl_var, &tmp_tbl);
+		if (OK != s.code) {
+			log_err("cannot grab the table %s when insert!\n", tbl_var);
+			return s;
+		}
+
+		log_info("insert tbale found, %s\n", tmp_tbl->name);
+
+		unsigned int i = 0;
+		op->value1 = malloc(sizeof(int) * tmp_tbl->col_count);
+		// Grab all the integers
+		
+		while (i < tmp_tbl->col_count) {
+			char* num_str = strtok(NULL, comma);
+			if (NULL != num_str) {
+				op->value1[i] = atoi(num_str);
+				log_info("insert number found %d\n", op->value1[i]);
+				i++;
+			}
+			else {
+				s.code = WRONG_FORMAT;
+				log_err("cannot match %s as integer when insert!\n", num_str);
+				free(op->value1);
+				return s;
+			}
+		}
+
+		op->type = INSERT;
+		op->tables = malloc(sizeof(Tbl_ptr));
+		op->tables[0] = tmp_tbl;
+		op->domain.cols = tmp_tbl->cols;
+		// op->pos1 = NULL;
+		// op->pos2 = NULL;
+		op->value2 = NULL;
+		op->res_name = NULL;
+		op->position = NULL;
+		op->c = NULL;
+
+		s.code = OK;
+		return s;
 	}
 	else if (UPDATE_CMD == d->g) {
-		// TODO: parse the update command and prepare the db_op
+		char* str_cpy = malloc(strlen(query) + 1);
+		strncpy(str_cpy, query, strlen(query) + 1);
+		strtok(str_cpy, open_paren);
+
+		// This gives us everything inside the '(' ')'
+		char* args = strtok(NULL, close_paren);
+
+		// Prepare the table, column and position vector
+		Table *tmp_tbl = NULL;
+		Column *tmp_col = NULL;
+		Result *tmp_pos = NULL;
+		args = prepare_col(args, &tmp_tbl, &tmp_col);
+		args = prepare_res(args, &tmp_pos);
+
+		log_info("found update vector %s in column %s", tmp_pos->res_name, tmp_tbl->name);
+
+		// match the new value (integer)
+		op->value2 = malloc(sizeof(int)); 
+		char* num_str = strtok(args, comma);
+		if (NULL != num_str) {
+			*(op->value2) = atoi(num_str);
+		}
+		else {
+			s.code = WRONG_FORMAT;
+			log_err("cannot match an integer when update");
+			free(op->value2);
+			return s;
+		}
+
+		op->type = UPDATE;
+		op->tables = malloc(sizeof(Tbl_ptr));
+		op->tables[0] = tmp_tbl;
+		op->value1 = NULL;
+		op->res_name = NULL;
+		op->position = tmp_pos;
+		op->c = NULL;
+
+		s.code = OK;
+		return s;
 	}
 	else {
 		s.code = ERROR;
@@ -401,6 +501,18 @@ status query_execute(db_operator* op, Result** results) {
 			(*results)->res_name = op->res_name;
 			HASH_ADD_KEYPTR(hh, res_hash_list, ((*results)->res_name), 
 				strlen((*results)->res_name), *results);
+			break;
+		}
+		case DELETE: {
+			log_info("going to exec delete");
+			break;
+		}
+		case INSERT: {
+			log_info("going to exec insert");
+			break;
+		}
+		case UPDATE: {
+			log_info("going to exec update");
 			break;
 		}
 		default:
@@ -790,76 +902,5 @@ status scan_partition_pointQuery(Column *col, int val, int part_id, Result **r) 
 		s.code = OK;
 	}
 	return s;
-}
-
-/**
- * prepare the Column together with the Table it belongs to
- * args:	a char array to parse
- * tbl:		address of a Table to hold the Table pointer 
- * col:		address of a Table to hold the Column pointer 	
- */
-char *prepare_col(char *args, Table **tbl, Column **col) {
-	char *col_var = strtok(args, comma);
-
-	unsigned int i =0, flag = 0;
-	while('\0' != col_var[i]) {
-		if ('.' == col_var[i]) {
-			flag++;
-			if (2 == flag) {		// Find the second '.'
-				break;
-			}
-		}
-		i++;
-	}
-
-	char* tbl_var = malloc(sizeof(char) * (i + 1));
-	strncpy(tbl_var, col_var, i);
-	tbl_var[i] = '\0';
-	printf("table name in select %s\n", tbl_var);
-	
-	Table* tmp_tbl = NULL;
-	status s = grab_table(tbl_var, &tmp_tbl);
-	if (OK != s.code) {
-		log_err("cannot grab the table!");
-		return NULL;
-	}
-	free(tbl_var);
-	*tbl = tmp_tbl;	
-
-	// Grab the column
-	Column *tmp_col = NULL;
-	s = grab_column(col_var, &tmp_col);
-
-	if (OK != s.code) {
-		log_err("cannot grab the column!\n");
-		return NULL;
-	}
-
-	// Data of the column might not be in main memory
-	if (NULL != tmp_tbl && NULL == tmp_col->data && 0 != tmp_tbl->length) {
-		load_column4disk(tmp_col, tmp_tbl->length);
-	}
-	*col = tmp_col;
-
-	return col_var + strlen(col_var) + 1;	
-}
-
-/**
- * prepare the Result together with the Table it belongs to
- * args:	a char array to parse
- * res:		address of a Table to hold the Result pointer 
- */
-char *prepare_res(char *args , Result **res) {
-	char *vec_res = strtok(args, comma);
-
-	// Grab the position list
-	Result *tmp_res = NULL;
-	status s = grab_result(vec_res, &tmp_res);
-	if (OK != s.code) {
-		log_err("cannot grab the results!\n");
-		return NULL;
-	}
-	*res = tmp_res;
-	return vec_res + strlen(vec_res) + 1;
 }
 
