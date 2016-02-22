@@ -91,7 +91,7 @@ status query_prepare(const char* query, dsl* d, db_operator* op) {
 		// // This gives us <col_var>
 		// char* col_var = strtok(args, comma);
 		if (NULL == args) {
-			log_err("wrong format in column name\n");
+			log_err("wrong format in column name in select\n");
 			s.code = ERROR;
 			return s;
 		}
@@ -125,7 +125,6 @@ status query_prepare(const char* query, dsl* d, db_operator* op) {
 		op->type = SELECT_COL;
 		op->tables = malloc(sizeof(Tbl_ptr));
 		op->tables[0] = tmp_tbl;
-
 		(op->domain).cols = malloc(sizeof(Col_ptr));
 		(op->domain).cols[0] = tmp_col;
 
@@ -201,7 +200,7 @@ status query_prepare(const char* query, dsl* d, db_operator* op) {
 		s = grab_result(posn_vec, &tmp_pos);
 
 		if (OK != s.code) {
-			log_err("cannot grab the position!\n");
+			log_err("cannot grab the position in select_pre!\n");
 			return s;
 		}
 
@@ -209,7 +208,7 @@ status query_prepare(const char* query, dsl* d, db_operator* op) {
 		Result *tmp_val = NULL;
 		s = grab_result(col_var, &tmp_val);
 		if (OK != s.code) {
-			log_err("cannot grab the value!\n");
+			log_err("cannot grab the value in select_pre!\n");
 			return s;
 		}
 
@@ -266,13 +265,23 @@ status query_prepare(const char* query, dsl* d, db_operator* op) {
 		Column *tmp_col = NULL;
 		Result *tmp_pos = NULL;
 		args = prepare_col(args, &tmp_tbl, &tmp_col);
+		if (NULL == args) {
+			log_err("cannot grab column in fetch!\n");
+			s.code = WRONG_FORMAT; 
+			return s;
+		}
 		args = prepare_res(args, &tmp_pos);
-
+		if (NULL == args) {
+			log_err("cannot grab pos_vec in fetch!\n");
+			s.code = WRONG_FORMAT; 
+			return s;
+		}
+		
 		log_info("%s=fetch(%s,%s)\n",val_var, tmp_col->name, tmp_pos->res_name);
 
 		op->type = FETCH;
-		op->tables = NULL;          // no need to record table
-
+		op->tables = malloc(sizeof(Tbl_ptr));
+		op->tables[0] = tmp_tbl;
 		(op->domain).cols = malloc(sizeof(Col_ptr));
 		(op->domain).cols[0] = tmp_col;
 		op->position = tmp_pos;
@@ -367,6 +376,7 @@ status query_prepare(const char* query, dsl* d, db_operator* op) {
 		// (op->c[0]).type = GREATER_THAN | EQUAL;
 		// (op->c[0]).mode = NONE;
 
+		// TODO: cleanup tables and op->domain.cols in query_exec
 		s.code = OK;
 		return s;
 	}
@@ -385,17 +395,16 @@ status query_prepare(const char* query, dsl* d, db_operator* op) {
 		args = prepare_col(args, &tmp_tbl, &tmp_col);
 		args = prepare_res(args, &tmp_pos);
 
-		log_info("delete vector %s in column %s\n", tmp_pos->res_name, tmp_col->name);
-
 		if (NULL == tmp_tbl || NULL == tmp_col || NULL == tmp_pos) {
+			log_err("cannot grab column or pos_vec in delete_pos!\n");
 			s.code = ERROR; 
 			return s;
 		}
+		log_info("delete vector %s in column %s\n", tmp_pos->res_name, tmp_col->name);
 
 		op->type = DELETE_POS;
 		op->tables = malloc(sizeof(Tbl_ptr));
 		op->tables[0] = tmp_tbl;
-		op->domain.cols = tmp_tbl->cols;
 		op->value1 = NULL;
 		op->value2 = NULL;
 		op->res_name = NULL;
@@ -420,7 +429,7 @@ status query_prepare(const char* query, dsl* d, db_operator* op) {
 		char *tbl_var = strtok(args, comma);
 		s = grab_table(tbl_var, &tmp_tbl);
 		if (OK != s.code) {
-			log_err("cannot grab the table %s when insert!\n", tbl_var);
+			log_err("cannot grab the table %s in insert!\n", tbl_var);
 			return s;
 		}
 
@@ -439,7 +448,7 @@ status query_prepare(const char* query, dsl* d, db_operator* op) {
 			}
 			else {
 				s.code = WRONG_FORMAT;
-				log_err("cannot match %u th out of %zu integer when insert!\n", i, tmp_tbl->col_count);
+				log_err("cannot match %u th out of %zu integer in insert!\n", i, tmp_tbl->col_count);
 				free(op->value1);
 				return s;
 			}
@@ -452,7 +461,6 @@ status query_prepare(const char* query, dsl* d, db_operator* op) {
 		op->type = INSERT;
 		op->tables = malloc(sizeof(Tbl_ptr));
 		op->tables[0] = tmp_tbl;
-		op->domain.cols = tmp_tbl->cols;
 		// op->pos1 = NULL;
 		// op->pos2 = NULL;
 		op->value2 = NULL;
@@ -511,7 +519,8 @@ status query_prepare(const char* query, dsl* d, db_operator* op) {
 		op->type = UPDATE;
 		op->tables = malloc(sizeof(Tbl_ptr));
 		op->tables[0] = tmp_tbl;
-		op->value1 = NULL;
+		(op->domain).cols = malloc(sizeof(Col_ptr));
+		(op->domain).cols[0] = tmp_col;
 		op->res_name = NULL;
 		op->position = NULL;
 		op->c = NULL;
@@ -538,6 +547,9 @@ status query_execute(db_operator* op, Result** results) {
 	status s;
 	switch (op->type) {
 		case SELECT_COL: {
+			if (NULL == (op->domain).cols[0]->data && 0 != op->tables[0]->length) {
+				load_column4disk((op->domain).cols[0], op->tables[0]->length);
+			}
 			s = col_scan(op->c, (op->domain).cols[0], results);
 			if (OK != s.code) {
 				// Something Wrong
@@ -549,10 +561,9 @@ status query_execute(db_operator* op, Result** results) {
 			break;
 		}
 		case SELECT_PRE: {
-			s = col_scan_with_pos(op->c, (op->domain).res[0], op->position, 
-				results);
+			s = col_scan_with_pos(op->c, (op->domain).res[0], op->position, results);
 			if (OK != s.code) {
-				// Something Wroing
+				// Something Wrong
 				return s;
 			}
 			(*results)->res_name = op->res_name;
@@ -561,6 +572,9 @@ status query_execute(db_operator* op, Result** results) {
 			break;
 		}
 		case FETCH: {
+			if (NULL == (op->domain).cols[0]->data && 0 != op->tables[0]->length) {
+				load_column4disk((op->domain).cols[0], op->tables[0]->length);
+			}
 			s = fetch_val((op->domain).cols[0], op->position, results);
 			if (OK != s.code) {
 				// Something Wrong 
@@ -572,23 +586,26 @@ status query_execute(db_operator* op, Result** results) {
 			break;
 		}
 		case DELETE: {
-			log_info("going to exec delete\n");
-			// perform the point query first...
-			Result *pos = NULL;
-			col_point_query((op->domain).cols[0], op->value1[0], &pos);
-			s = delete_with_pos(op->tables[0], pos);
-			if (OK != s.code) {
-				log_err("cannot delete from Column %s at value %d\n", ((op->domain).cols[0])->name, op->value1[0]);
-				free(pos->token);
-				free(pos);
-				return s;
+			if (0 != op->tables[0]->length) {
+				for (size_t i = 0; i < op->tables[0]->col_count; i++) {
+					if (NULL == (op->tables[0])->cols[i]->data) {
+						load_column4disk((op->tables[0])->cols[i], op->tables[0]->length);
+					}
+				}
 			}
-			free(pos->token);
-			free(pos);
+			log_info("going to exec delete\n");
+			delete_with_pointQuery(op->tables[0], (op->domain).cols[0], op->value1[0]);
 			break;
 		}
 		case DELETE_POS: {
 			log_info("going to exec delete_pos\n");
+			if (0 != op->tables[0]->length) {
+				for (size_t i = 0; i < op->tables[0]->col_count; i++) {
+					if (NULL == (op->tables[0])->cols[i]->data) {
+						load_column4disk((op->tables[0])->cols[i], op->tables[0]->length);
+					}
+				}
+			}
 			// TODO: make the delete relational by delete_with_pointQuery(op->tables[0], (op->domain).cols[0], val); 
 			s = delete_with_pos(op->tables[0], op->position);
 			if (OK != s.code) {
@@ -599,6 +616,13 @@ status query_execute(db_operator* op, Result** results) {
 		}
 		case INSERT: {
 			log_info("going to exec insert\n");
+			if (0 != op->tables[0]->length) {
+				for (size_t i = 0; i < op->tables[0]->col_count; i++) {
+					if (NULL == (op->tables[0])->cols[i]->data) {
+						load_column4disk((op->tables[0])->cols[i], op->tables[0]->length);
+					}
+				}
+			}
 			s = insert_tuple(op->tables[0], op->value1);
 			if (OK != s.code) {
 				log_err("cannot insert in table %s\n", (op->tables[0])->name);
@@ -608,12 +632,19 @@ status query_execute(db_operator* op, Result** results) {
 		}
 		case UPDATE: {
 			log_info("going to exec update\n");
+			if (NULL == (op->domain).cols[0] && 0 != op->tables[0]->length) {
+				load_column4disk((op->domain).cols[0], op->tables[0]->length);
+			}
+			s = update_with_pointQuery((op->domain).cols[0], op->value1[0], op->value2[0]);
+			if (OK != s.code) {
+				// something wrong...
+				return s;
+			}
 			break;
 		}
 		default:
 			break;
 	}
-	s.code = OK;
 	return s;
 }
 
@@ -791,16 +822,20 @@ status col_point_query(Column *col, int val, Result **r) {
 		*r = malloc(sizeof(Result));
 		(*r)->token = NULL;
 		(*r)->num_tuples = 0;
+		(*r)->partitionNum = NULL; 
 		// for partitioned Column
 		if (col->partitionCount > 1) {
+
 			size_t partition_to_query = 0;
 			while (partition_to_query < col->partitionCount 
 				&& col->pivots[partition_to_query] < val) {
 				partition_to_query++;
 			}
+			(*r)->partitionNum = malloc(sizeof(size_t));
+			(*r)->partitionNum[0] = partition_to_query;
 			beg = (partition_to_query == 0)? 0: (col->p_pos[partition_to_query - 1] + 1);
-			end = col->p_pos[partition_to_query] + 1;
 			// TODO: use NON_QUALIFYING_INT or mark the posision
+			end = col->p_pos[partition_to_query] + 1;
 			// #ifdef GHOST_VALUE
 			// end = col->p_pos[partition_to_query] - col->ghost_count[partition_to_query] + 1;
 			// #else
@@ -842,10 +877,12 @@ status col_range_query(Column *col, int low, int high, Result **r) {
 			size_t beg_l = 0, end_l = 0;
 			size_t beg_r = 0, end_r = 0;
 			size_t partition_to_query = 0;
+			(*r)->partitionNum = malloc(sizeof(size_t) * 2);
 			while (partition_to_query < col->partitionCount 
 				&& col->pivots[partition_to_query] < low) {
 				partition_to_query++;
 			}
+			(*r)->partitionNum[0] = partition_to_query;
 			// TODO: check if in the same partition
 			beg_l = (partition_to_query == 0)? 0: (col->p_pos[partition_to_query - 1] + 1);
 			end_l = col->p_pos[partition_to_query] + 1;
@@ -853,8 +890,11 @@ status col_range_query(Column *col, int low, int high, Result **r) {
 				&& col->pivots[partition_to_query] < high) {
 				partition_to_query++;
 			}
+			(*r)->partitionNum[1] = partition_to_query;
 			beg_r = (partition_to_query == 0)? 0: (col->p_pos[partition_to_query - 1] + 1);
 			end_r = col->p_pos[partition_to_query] + 1;
+
+
 			for (size_t i = beg_l; i < end_l; i++) {
 				if (low <= (col->data)->content[i] && high > (col->data)->content[i]) {
 					// do something
@@ -978,11 +1018,90 @@ char* tuple(db_operator *query) {
 	return  NULL;
 }
 
-/** 
- * TODO: the client interface should be delete_with_pointQuery(Table *tbl, Column *col, int val) and 
- * TODO: the function is implemented based on the assumption that the position vector is within a single partition, 
+
+/** update operation, client interface
+ * update old_v in col to new_v
+ * col:		the Column pointer
+ * old_v:	point query value
+ * new_v:	the new updated value
+ */
+status update_with_pointQuery(Column *col, int old_v, int new_v) {
+	status s;
+	// perform the point query first...
+	Result *pos = NULL;
+	col_point_query(col, old_v, &pos);
+	// then delete with a position vector
+	if (pos->num_tuples > 0){
+		// s = update_with_pos(col, new_v, pos);
+		log_info("updating %d to %d\n", old_v, new_v);
+	}
+	else {
+		log_info("no tuple satisfies the point query, nothing to update!\n");
+		s.code = OK;
+		return s;
+	}
+	// cleanup
+	free(pos->token);
+	free(pos);
+	return s;
+}
+
+/** deletion operation, client interface
+ * delete in tbl where col equals to val
+ * tbl:	the Table pointer
+ * col:	the Column pointers
+ * val: point query value
+ */
+status delete_with_pointQuery(Table *tbl, Column *col, int val) {
+	status s;
+	// perform the point query first...
+	Result *pos = NULL;
+	col_point_query(col, val, &pos);
+	// then delete with a position vector
+	if (pos->num_tuples > 0){
+		s = delete_with_pos(tbl, pos);
+		if (OK != s.code) {
+			log_err("cannot delete from Column %s at value %d\n", col->name, val);
+		}
+	}
+	else {
+		free(pos);
+		log_info("no tuple satisfies the point query, nothing to delete!\n");
+		s.code = OK;
+		return s;
+	}
+	// clean up intermediate position vector
+	free(pos->token);
+	free(pos);
+	return s;
+}
+
+/**
+ * TODO: the fuction is implemented based on the assumption that all positions reside within a single partition,
  * TODO: which might not be true when the position vector is selected in a unpartitioned Column, i.e. bug will occur
- * delete some tuples within a table, with a position vector specified
+ * update some tuple in col to val as pos specifies
+ * col:	Column ppointer
+ * val:	updated value
+ * pos:	position vector
+ */
+// status update_with_pos(Column *col, int val, Result *pos) {
+// 	status s;
+// 	size_t partition_to_update = 0;
+// 	size_t total_update = pos->num_tuples;
+// 	DArray_INT *arr = col->data;
+// 	if (pos->token[pos->num_tuples - 1].pos >= arr->length) {
+// 		log_err("delete array boundary verflow!\n");
+// 		s.code = ERROR;
+// 		return s;
+// 	}
+// 	s.code = OK;
+// 	return s;
+// }
+
+/** 
+ * TODO: the function is implemented based on the assumption that all positions reside within a single partition,
+ * TODO: which might not be true when the position vector is selected in a unpartitioned Column, i.e. bug will occur
+ * delete some tuples within a table, with a position vector specifies
  * tbl: 	pointer to the Table to perform the delete
  * pos: 	specified position vector, this vector of position 
  * is supposed to be within a partition
@@ -999,7 +1118,11 @@ status delete_with_pos(Table *tbl, Result *pos) {
 	Column *partitionedCol = tbl->primary_indexed_col;
 	DArray_INT *arr = partitionedCol->data;
 	// Find the partition to perform the deletion
-	
+	if (pos->token[pos->num_tuples - 1].pos >= arr->length) {
+		log_err("delete array boundary verflow!\n");
+		s.code = ERROR;
+		return s;
+	}
 	while (partition_to_delete < partitionedCol->partitionCount 
 		&& partitionedCol->p_pos[partition_to_delete] < pos->token[0].pos) {
 		partition_to_delete++;
@@ -1322,10 +1445,10 @@ status scan_partition(Column *col, size_t part_id, Result **r) {
 	status s;
 	s.code = ERROR;
 	if (NULL != col && part_id < col->partitionCount) {
-		size_t pos_s = col->p_pos[part_id];
+		size_t pos_s = (part_id == 0)?0 :col->p_pos[part_id - 1] + 1;
 		size_t pos_e = col->p_pos[part_id + 1]; 
 		*r = malloc(sizeof(Result));
-		(*r)->num_tuples = pos_e - pos_s;
+		(*r)->num_tuples = pos_e - pos_s + 1;
 		size_t j = 0;
 		(*r)->token = malloc((*r)->num_tuples * sizeof(Payload));
 		for (size_t i = pos_s; i < pos_e; i++) {
@@ -1352,7 +1475,7 @@ status scan_partition_greaterThan(Column *col, int val, size_t part_id, Result *
 			pos_s = 0;
 		}
 		else {
-			pos_s = col->p_pos[part_id - 1] + 1;
+			pos_s = (part_id == 0)?0 :col->p_pos[part_id - 1] + 1;
 		}
 		size_t pos_e = col->p_pos[part_id];
 		*r = malloc(sizeof(Result));
@@ -1360,6 +1483,7 @@ status scan_partition_greaterThan(Column *col, int val, size_t part_id, Result *
 		size_t j = 0;
 		for (size_t i = pos_s; i < pos_e; i++) {
 			if (col->data->content[i] > val) {
+				// TODO: reallocate it in better way
 				(*r)->token = realloc((*r)->token, sizeof(Payload) * (j + 1));
 				(*r)->token[j].pos = i;
 				j++;
@@ -1388,7 +1512,7 @@ status scan_partition_lessThan(Column *col, int val, size_t part_id, Result **r)
 			pos_s = 0;
 		}
 		else {
-			pos_s = col->p_pos[part_id - 1] + 1;
+			pos_s = (part_id == 0)?0 :col->p_pos[part_id - 1] + 1;
 		}
 		// end position
 		size_t pos_e = col->p_pos[part_id];
@@ -1397,6 +1521,7 @@ status scan_partition_lessThan(Column *col, int val, size_t part_id, Result **r)
 		size_t j = 0;
 		for (size_t i = pos_s; i < pos_e; i++) {
 			if (col->data->content[i] < val) {
+				// TODO: reallocate it in better way
 				(*r)->token = realloc((*r)->token, sizeof(Payload) *(j + 1));
 				(*r)->token[j].pos = i;
 				j++;
@@ -1419,9 +1544,11 @@ status scan_partition_pointQuery(Column *col, int val, size_t part_id, Result **
 	status s;
 	s.code = ERROR;
 	if (NULL != col && part_id < col->partitionCount) {
-		size_t pos_s = col->p_pos[part_id];
-		size_t pos_e = col->p_pos[part_id + 1]; 
+		size_t pos_s = (part_id == 0)?0 :col->p_pos[part_id - 1] + 1;
+		size_t pos_e = col->p_pos[part_id]; 
 		*r = malloc(sizeof(Result));
+		(*r)->partitionNum = malloc(sizeof(size_t));
+		(*r)->partitionNum[0] = part_id;
 		(*r)->num_tuples = 0;
 		size_t j = 0;
 		for (size_t i = pos_s; i < pos_e; i++) {

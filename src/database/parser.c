@@ -3,13 +3,12 @@
 #include <regex.h>
 #include <string.h>
 #include <ctype.h>
-
+#include <stdio.h>
 #include "db.h"
 #include "table.h"
 #include "column.h"
 #include "fileparser.h"
 #include "query.h"
-
 // Prototype for Helper function that executes that actual parsing after
 // parse_command_string has found a matching regex.
 status parse_dsl(char* str, dsl* d, db_operator* op);
@@ -255,9 +254,7 @@ status parse_dsl(char* str, dsl* d, db_operator* op)
 
 		// This gives us the filename
 		const char* filename = strtok(args, quotes);
-		
 		log_info("load(\"%s\")\n", filename);
-		
 		size_t lineCount = 0;
 		size_t fieldCount = 0;
 		collect_file_info(filename, &lineCount, &fieldCount);
@@ -283,41 +280,7 @@ status parse_dsl(char* str, dsl* d, db_operator* op)
 			|| UPDATE_CMD == d->g) {
 		status s = query_prepare(str, d, op);
 		if (OK != s.code) {
-			switch (d->g) {
-				case SELECT_COL_CMD: {
-					log_err("cannnot prepare the query for select column!\n");
-					break;
-				}
-				case SELECT_PRE_CMD: {
-					log_err("cannnot prepare the query for select previous!\n");
-					break;
-				}
-				case FETCH_CMD: {
-					log_err("cannnot prepare the query for fetch!\n");
-					break;
-				}
-				case TUPLE_CMD: {
-					log_err("cannnot prepare the query for tuple!\n");
-					break;
-				}
-				case DELETE_CMD: {
-					log_err("cannnot prepare the query for delete!\n");
-					break;
-				}
-				case DELETE_POS_CMD: {
-					log_err("cannnot prepare the query for delete_pos!\n");
-					break;
-				}
-				case INSERT_CMD: {
-					log_err("cannnot prepare the query for insert!\n");
-					break;
-				}
-				case UPDATE_CMD: {
-					log_err("cannnot prepare the query for update!\n");
-					break;
-				}
-				default: break;
-			}
+			log_err("fail to prepare the query!\n");
 			return s;
 		}
 		else return s;
@@ -395,6 +358,30 @@ status parse_dsl(char* str, dsl* d, db_operator* op)
 			return ret;
 		}
 
+		tmp_tbl->primary_indexed_col = tmp_col;
+		// 
+		const char* filename = strtok(args, quotes);
+		log_info("workload file: \"%s\"\n", filename);
+		size_t lineCount = 0;
+		size_t fieldCount = 0;
+		collect_file_info(filename, &lineCount, &fieldCount);
+
+		if (1 >= lineCount) {
+			log_err("cannot workload file\n");
+			ret.code = ERROR;
+			return ret;
+		}
+		
+		int *op_type = malloc(sizeof(int) * (lineCount + 1));
+		int *num1 = malloc(sizeof(int) * (lineCount + 1));
+		int *num2 = malloc(sizeof(int) * (lineCount + 1));
+		workload_parse(filename, op_type, num1, num2);
+		
+		Workload w;
+		w.ops = op_type;
+		w.num1 = num1;
+		w.num2 = num2;
+		w.count = lineCount + 1;
 		// Load data from disk if not in memory
 		if (tmp_tbl->length != 0) {
 			for (unsigned int j = 0; j < tmp_tbl->col_count; j++) {
@@ -409,7 +396,7 @@ status parse_dsl(char* str, dsl* d, db_operator* op)
 		}
 
 		// TODO: make create_index a db operator?
-		ret = create_index(tmp_tbl, tmp_col, PARTI);
+		ret = create_index(tmp_tbl, tmp_col, PARTI, w);
 		
 		// Free the str_cpy
 		free(str_cpy);
@@ -428,4 +415,84 @@ status parse_dsl(char* str, dsl* d, db_operator* op)
 	status fail;
 	fail.code = ERROR;
 	return fail;
+}
+
+void workload_parse(const char *filename, int *ops, int *num1, int *num2) {
+	FILE* fp = fopen(filename, "r");
+	char *line = NULL;
+	ssize_t read;
+	size_t len = 0;
+	size_t count = 0;
+	db_operator *op = malloc(sizeof(db_operator));	
+	if (NULL != fp) {
+		while (-1 != (read = getline(&line, &len, fp))) {
+			parse_command_string(line, dsl_commands, op);
+			switch(op->type) {
+				case SELECT_COL: {
+					// TODO: 
+					if (((op->c[0]).p_val + 1) == (op->c[1]).p_val) {
+						ops[count] = 0;
+						num1[count] = (op->c[0]).p_val;
+						num2[count] = -1;
+					}
+					else {
+						ops[count] = 1;
+						num1[count] = (op->c[0]).p_val;
+						num2[count] = (op->c[1]).p_val;
+					}
+					// cleanups
+					free(op->res_name);
+					free(op->tables);
+					free((op->domain).cols);
+					free(op->c);
+					break;
+				}
+				case INSERT: {
+					ops[count] = 2;
+					size_t i = 0;
+					for (; i < op->tables[0]->col_count; i++) {
+						if (op->tables[0]->cols[i] == op->tables[0]->primary_indexed_col) break;
+					}
+					num1[count] = op->value1[i];
+					num2[count] = -1;
+					free(op->tables);
+					free((op->domain).cols);
+					free(op->value1);
+					break;
+				}
+				case UPDATE: {
+					ops[count] = 3;
+					num1[count] = op->value1[0];
+					num2[count] = op->value2[0];
+					free(op->tables);
+					free((op->domain).cols);
+					free(op->value1);
+					free(op->value2);
+					break;
+				}
+				case DELETE: {
+					ops[count] = 4;
+					num1[count] = op->value1[0];
+					num2[count] = -1;
+					free(op->tables);
+					free((op->domain).cols);
+					free(op->value1);
+					break;
+				}
+				default: break;
+				// case SELECT_PRE: {
+				// 	break;
+				// }
+				// case DELETE_POS: {
+				// 	break;
+				// }
+			}
+			count++;
+		}
+		fclose(fp);
+		debug("after workload parsed:\n");
+		for (size_t ii = 0; ii < count; ii++) {
+			printf("%d %d %d\n", ops[ii], num1[ii], num2[ii]);
+		}
+	}
 }

@@ -1,6 +1,7 @@
 #ifndef PARSER_H__
 #define PARSER_H__
-
+#define _GNU_SOURCE
+#include <stdio.h>
 #include "cs165_api.h"
 #include "dsl.h"
 #include "utils.h"
@@ -12,5 +13,6 @@
 //
 // Usage: parse_command_string(input_query, commands, operator);
 status parse_command_string(char* str, dsl** commands, db_operator* op);
+void workload_parse(const char *filename, int *ops, int *num1, int *num2);
 
 #endif // PARSER_H__

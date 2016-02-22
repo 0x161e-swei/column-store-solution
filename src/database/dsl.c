@@ -50,10 +50,10 @@ const char* insert_command = "^i\\([a-zA-Z0-9_\\.]+(\\,-?[0-9]+)+\\)";
 const char* update_command = "^u\\([a-zA-Z0-9_\\.]+\\,-?[0-9]+\\,-?[0-9]+\\)";
 
 // temporary dsls for test
-// Matches: partition("colName")
-const char* partition_test = "^partition\\([a-zA-Z0-9_\\.]+\\)";
+// Matches: partition(<col_var>, "filename")
+const char* partition_test = "^partition\\([a-zA-Z0-9_\\.]+\\,\\\"[a-zA-Z0-9_/\\.]+\\\"\\)";
 
-// Matches: show_tbl("colName")
+// Matches: show_tbl(<col_var>)
 const char* show_table_test = "^show_tbl\\([a-zA-Z0-9_\\.]+\\)";
 
 // TODO(USER): You will need to update the commands here for every single command you add.

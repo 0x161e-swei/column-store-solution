@@ -29,6 +29,7 @@
 #include "db.h"
 #include "table.h"
 #include "utils.h"
+#include "dsl.h"
 
 #define DEFAULT_QUERY_BUFFER_SIZE 1024
 
@@ -123,6 +124,7 @@ char* execute_db_operator(db_operator* dbO) {
 		case INSERT: case UPDATE: case DELETE_POS: {
 			Result *res = NULL;
 			// TODO: need to clean up dbO inside query_execute
+
 			query_execute(dbO, &res);
 			// if (OK != s.code) {
 

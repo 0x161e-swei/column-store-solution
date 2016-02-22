@@ -56,6 +56,7 @@ typedef struct dsl {
 
 // This returns an array of all the DSL commands that you can match with.
 dsl** dsl_commands_init(void);
+extern dsl** dsl_commands;
 
 // We define these in the dsl.c file.
 // TODO(USER) Add more extern strings for new commands

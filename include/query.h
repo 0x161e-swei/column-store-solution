@@ -15,11 +15,23 @@ extern char comma[2];
 // extern char quotes[2];
 extern char eq_sign[2];
 
+status clear_res_list();
 status grab_result(const char *res_name, Result **res);
 bool compare(comparator *f, int val);
 status load_column4disk(Column *col, size_t len);
+
 status col_point_query(Column *col, int val, Result **r);
 status col_range_query(Column *col, int low, int high, Result **r);
+status delete_with_pos(Table *tbl, Result *pos);
+status update_with_pos(Column *col, int val, Result *pos);
+
+#ifdef GHOST_VALUE
+status delete_other_cols(Table *tbl, size_t *from, size_t *to, size_t total_delete);
+status insert_other_cols(Table *tbl, int *vals, size_t partition_to_insert, size_t partition_to_steal);
+#else
+status delete_other_cols(Table *tbl, size_t *from, size_t *to, size_t total_delete, size_t partition_to_delete);
+status insert_other_cols(Table *tbl, int *vals);
+#endif
 
 /**
  * prepare the Column together with the Table it belongs to
@@ -68,10 +80,10 @@ static inline char *prepare_col(char *args, Table **tbl, Column **col) {
 		return NULL;
 	}
 
-	// Data of the column might not be in main memory
-	if (NULL != tmp_tbl && NULL == tmp_col->data && 0 != tmp_tbl->length) {
-		load_column4disk(tmp_col, tmp_tbl->length);
-	}
+	// // Data of the column might not be in main memory
+	// if (NULL != tmp_tbl && NULL == tmp_col->data && 0 != tmp_tbl->length) {
+	// 	load_column4disk(tmp_col, tmp_tbl->length);
+	// }
 	*col = tmp_col;
 
 	return col_var + strlen(col_var) + 1;	
@@ -96,14 +108,6 @@ static inline char *prepare_res(char *args , Result **res) {
 	return vec_res + strlen(vec_res) + 1;
 }
 
-status delete_with_pos(Table *tbl, Result *pos);
-#ifdef GHOST_VALUE
-status delete_other_cols(Table *tbl, size_t *from, size_t *to, size_t total_delete);
-status insert_other_cols(Table *tbl, int *vals, size_t partition_to_insert, size_t partition_to_steal);
-#else
-status delete_other_cols(Table *tbl, size_t *from, size_t *to, size_t total_delete, size_t partition_to_delete);
-status insert_other_cols(Table *tbl, int *vals);
-#endif
 
 
 // extern Result *res_hash_list;

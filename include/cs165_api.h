@@ -47,6 +47,13 @@ typedef enum DataType {
 	// Others??
 } DataType;
 
+typedef struct _workload_des
+{
+	int *ops;
+	int *num1;
+	int *num2;
+	size_t count;
+} Workload;
 
 typedef union dataToken{
 	int IntVal;
@@ -241,6 +248,7 @@ typedef union payload{
 typedef struct result {
 	const char* res_name; 
 	Payload* token;
+	size_t *partitionNum;
 	size_t num_tuples;
 	UT_hash_handle hh;
 } Result, *Res_ptr;
@@ -466,7 +474,7 @@ status create_column(Table *table, const char* name, Column** col);
  * type	 : the enum representing the index type to be created.
  * returns  : the status of the operation.
  **/
-status create_index(Table *table, Column* col, IndexType type);
+status create_index(Table *table, Column* col, IndexType type, Workload);
 
 status insert(Column *col, int data);
 status delete(Column *col, int *pos);
@@ -476,13 +484,13 @@ status col_scan_with_pos(comparator *f, Result *res, Result *pos, Result **r);
 status index_scan(comparator *f, Column *col, Result **r);
 
 /* Query API */
-status clear_res_list();
 status query_prepare(const char* query, dsl* d, db_operator* op);
 status query_execute(db_operator* op, Result** results);
 status fetch_val(Column *col, Result *pos, Result **r);
 char* tuple(db_operator *query);
 
 status delete_with_pointQuery(Table *tbl, Column *col, int val);
+status update_with_pointQuery(Column *col, int old_v, int new_v);
 status insert_tuple(Table *tbl, int *src);
 
 

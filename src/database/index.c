@@ -6,14 +6,20 @@
  * col: 		the specific Column the index is on 
  * IndexType:	Specify the type, now partition ONLY
  */
-status create_index(Table *tbl, Column *col, IndexType type) {
+status create_index(Table *tbl, Column *col, IndexType type, Workload w) {
 	status s;
 	if (NULL != col && NULL == col->index) {
 		switch (type) {
 			case PARTI: {
 				if (1 == col->partitionCount) {
-					// TODO: following 6 lines of code are for tests ONLY
 					Partition_inst inst;
+					// TODO: call Partition decision function with Workload and dataset
+					// callfunction(const int *data, size_t size, const int* ops, const int *num1, 
+					// const int *num2, size_t size_w, Partition_inst *inst);
+					// callfunction(col->data->content, col->data->length, w.ops, w.num1, w.num2, w.count, &inst);
+					log_info("parsed workload %zu lines\n", w.count);
+					// TODO: following 6 lines of code are for tests ONLY
+					
 					log_info("waiting for partition instruction\n");
 					scanf("%d", &(inst.p_count));
 					log_info("waiting for %d pivots\n", inst.p_count);

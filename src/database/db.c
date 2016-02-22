@@ -1,5 +1,6 @@
 #include "db.h"
 #include "column.h"
+#include "query.h"
 
 
 // TODO(USER): Here we provide an incomplete implementation of the create_db.
@@ -73,6 +74,7 @@ status create_db(const char* db_name, Db** db __attribute__((unused))) {
 status sync_db(Db* db __attribute__((unused))) {
 	FILE *dbinfo;
 	status s;
+	clear_res_list();
 	if (NULL != database && NULL != (dbinfo = fopen("data/dbinfo", "w+"))) {
 		log_info("saving the database %s...\n", database->name);
 		/* Write length of database name, 
