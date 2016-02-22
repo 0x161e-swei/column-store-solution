@@ -1129,16 +1129,16 @@ status delete_with_pos(Table *tbl, Result *pos) {
 	}
 
 	log_info("deletion in partition %zu\n", partition_to_delete);
-
+	size_t head = 0;
 	// size_t beg = (partition_to_delete == 0)? 0: partitionedCol->p_pos[partition_to_delete - 1] + 1;
 	#ifdef GHOST_VALUE
 	size_t end = partitionedCol->p_pos[partition_to_delete] - partitionedCol->ghost_count[partition_to_delete];
 	#else
 	size_t end = partitionedCol->p_pos[partition_to_delete];
 	#endif
-	
 	size_t last_item_to_delete = total_delete - 1;
 	size_t delete_item_count = 0;
+
 	// move the data specified by pos to the end of the partition
 	while (delete_item_count < total_delete) {
 		while (end == pos->token[last_item_to_delete].pos && delete_item_count < total_delete) {
@@ -1153,13 +1153,14 @@ status delete_with_pos(Table *tbl, Result *pos) {
 			delete_item_count++;
 		}
 		if (delete_item_count < total_delete) {
-			arr->content[pos->token[delete_item_count].pos] = arr->content[end];
+			arr->content[pos->token[head].pos] = arr->content[end];
 			#ifdef GHOST_VALUE
 			arr->content[end] = NON_QUALIFYING_INT;
 			#endif
 			swap_position_record_from[delete_item_count] = end;
-			swap_position_record_to[delete_item_count] = pos->token[delete_item_count].pos;
+			swap_position_record_to[delete_item_count] = pos->token[head].pos;
 			end--;
+			head++;
 			delete_item_count++;
 		}
 	}
@@ -1169,16 +1170,17 @@ status delete_with_pos(Table *tbl, Result *pos) {
 	#else // GHOST_VALUE NOT DEFINED
 	// Move data from other partitions
 	int *dst = &(arr->content[partitionedCol->p_pos[partition_to_delete] - total_delete + 1]);
-	int *src = NULL; 
-	for (size_t i = partition_to_delete; i < partitionedCol->partitionCount - 1; i++) {
+	int *src = NULL;
+	size_t i = partition_to_delete;
+	for (; i < partitionedCol->partitionCount - 1; i++) {
 		int num_cpy = total_delete;
-		int dest_inc = partitionedCol->p_pos[i + 1] - partitionedCol->p_pos[i]
+		int dest_inc = partitionedCol->p_pos[i + 1] - partitionedCol->p_pos[i];
 		if (dest_inc < num_cpy){
 			num_cpy = dest_inc;
 		}
 		// TODO: may trigger bug when a partition is empty, i.e. num_cpy = 0.. depends on how memcpy behaves when n = 0
 		src = &(arr->content[partitionedCol->p_pos[i + 1] - num_cpy + 1]);
-		memcpy(dst, src, sizeof(int) * num_cpy);
+		memmove(dst, src, sizeof(int) * num_cpy);
 		// move the holes to next partition
 		dst += dest_inc;
 		// decrease the boundary of the current partition
@@ -1189,7 +1191,7 @@ status delete_with_pos(Table *tbl, Result *pos) {
 	// decrease the size of the whole array
 	arr->length -= total_delete;
 	delete_other_cols(tbl, swap_position_record_from, swap_position_record_to, total_delete, partition_to_delete);
-	#endif
+	#endif /* GHOST_VALUE */
 	debug("partition %zu after deletion:\n", partition_to_delete);
 	size_t k = partition_to_delete == 0? 0: partitionedCol->p_pos[partition_to_delete - 1] + 1;
 	for (; k <= partitionedCol->p_pos[partition_to_delete]; k++) {
@@ -1237,7 +1239,7 @@ status delete_other_cols(Table *tbl, size_t *from, size_t *to, size_t total_dele
 		int *src = NULL;
 		for (unsigned int i = partition_to_delete; i < partitionedCol->partitionCount - 1; i++) {
 			int num_cpy = total_delete;
-			int dest_inc = partitionedCol->p_pos[i + 1] - partitionedCol->p_pos[i]
+			int dest_inc = partitionedCol->p_pos[i + 1] - partitionedCol->p_pos[i];
 			if (dest_inc < num_cpy){
 				num_cpy = dest_inc;
 			}
@@ -1352,14 +1354,15 @@ status insert_tuple(Table *tbl, int *vals) {
 		size_t from = ++partitionedCol->p_pos[i - 1];
 		// move the data at the head to the end, thus the head becomes a hole
 		arr->content[insert_pos] = arr->content[from];
+		insert_pos = from;
 	}
 	arr->content[insert_pos] = vals[partitionedCol_index];
 	// insert vals in other Columns
-	insert_other_cols(tbl, vals);
+	insert_other_cols(tbl, vals, partition_to_insert);
 	#endif /* GHOST_VALUE */
 	tbl->length += 1;
 
-	debug("partition %zu after deletion:\n", partition_to_insert);
+	debug("partition %zu after insertion:\n", partition_to_insert);
 	size_t k = partition_to_insert == 0? 0: partitionedCol->p_pos[partition_to_insert - 1] + 1;
 	for (; k <= partitionedCol->p_pos[partition_to_insert]; k++) {
 		printf("rid %zu: ", k);
@@ -1382,7 +1385,7 @@ status insert_tuple(Table *tbl, int *vals) {
 #ifdef GHOST_VALUE
 status insert_other_cols(Table *tbl, int *vals, size_t partition_to_insert, size_t partition_to_steal)
 #else
-status insert_other_cols(Table *tbl, int *vals)
+status insert_other_cols(Table *tbl, int *vals, size_t partition_to_insert)
 #endif
 {
 	status s;

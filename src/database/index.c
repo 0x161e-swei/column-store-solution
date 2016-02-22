@@ -33,19 +33,28 @@ status create_index(Table *tbl, Column *col, IndexType type, Workload w) {
 					for (int i = 0; i < inst.p_count; i++) {
 						scanf("%d", &(inst.ghost_count[i]));
 					}
-					#endif
+					#endif /* GHOST_VALUE */
 
 					#ifdef SWAPLATER
-					tbl->primary_indexed_col = col;
+					// tbl->primary_indexed_col = col; done in parse
+
+					#ifdef GHOST_VALUE
 					s = nWayPartition(tbl, col, &inst);
-					free(inst.pivots);
 					free(inst.ghost_count);
+					#else
+					s = nWayPartition(col, &inst);
+					#endif /* GHOST_VALUE */
+					free(inst.pivots);
 					if (CMD_DONE == s.code) {
 						s = align_after_partition(tbl, col->pos);
 					}
-					#else 
+					#else
+					#ifdef GHOST_VALUE
 					s = nWayPartition(tbl, col, &inst);
-					#endif
+					#else
+					s = nWayPartition(col, &inst);
+					#endif /* GHOST_VALUE */
+					#endif /* SWAPLATER */
 					tbl->primary_indexed_col = col;
 				}
 				break;
@@ -88,7 +97,13 @@ status insert_ghost_values(Table *tbl, int total_ghost) {
  * 			an array of ghost_value slots if applicable
  */
 #ifdef SWAPLATER
-status nWayPartition(Table *tbl, Column *col, Partition_inst *inst) {
+#ifdef GHOST_VALUE
+status nWayPartition(Table *tbl, Column *col, Partition_inst *inst)
+#else
+status nWayPartition(Column *col, Partition_inst *inst)
+#endif /* GHOST_VALUE */
+{
+
 	status s;
 	int p_count = inst->p_count;
 	int *pivots = inst->pivots;
@@ -334,7 +349,12 @@ status align_after_partition(Table *tbl, size_t *pos){
  * 			an array of ghost_value slots if applicable
  */
 // TODO: ghost value not implemented in swap during partition time
-status nWayPartition(Table *tbl, Column *col, Partition_inst *inst) {
+#ifdef GHOST_VALUE
+status nWayPartition(Table *tbl, Column *col, Partition_inst *inst)
+#else
+status nWayPartition(Column *col, Partition_inst *inst)
+#endif /* GHOST_VALUE */
+{
 	// idc used for indices to data during partitioning, pos used to record the position-map
 	int *idc;
 	status s;

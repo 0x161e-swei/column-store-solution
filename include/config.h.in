@@ -3,9 +3,6 @@
 /* Define for debug */
 #undef DEBUG
 
-/* Define for ghost value */
-#undef GHOST_VALUE
-
 /* Define to 1 if you have the <fcntl.h> header file. */
 #undef HAVE_FCNTL_H
 

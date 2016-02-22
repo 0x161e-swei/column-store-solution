@@ -30,7 +30,7 @@ status delete_other_cols(Table *tbl, size_t *from, size_t *to, size_t total_dele
 status insert_other_cols(Table *tbl, int *vals, size_t partition_to_insert, size_t partition_to_steal);
 #else
 status delete_other_cols(Table *tbl, size_t *from, size_t *to, size_t total_delete, size_t partition_to_delete);
-status insert_other_cols(Table *tbl, int *vals);
+status insert_other_cols(Table *tbl, int *vals, size_t partition_to_insert);
 #endif
 
 /**

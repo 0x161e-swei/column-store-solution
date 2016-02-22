@@ -17,11 +17,14 @@ typedef struct _partition_inst{
 	#endif
 } Partition_inst;
 
-status nWayPartition(Table *tbl, Column *col, Partition_inst *inst);
+
 
 #ifdef GHOST_VALUE
+status nWayPartition(Table *tbl, Column *col, Partition_inst *inst);
 status insert_ghost_values(Table *tbl, int total_ghost);
-#endif
+#else
+status nWayPartition(Column *col, Partition_inst *inst);
+#endif /* GHOST_VALUE */
 
 #ifdef SWAPLATER
 typedef struct _swapargs {
