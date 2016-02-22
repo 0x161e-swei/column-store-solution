@@ -19,9 +19,17 @@ AC_PROG_RANLIB
 AC_DEFINE([LOG])
 AC_DEFINE([LOG_ERR])
 AC_DEFINE([LOG_INFO])
+AC_DEFINE([SWAPLATER])
+AC_DEFINE([GHOST_VALUE])
+AC_DEFINE([DEBUG])
 AH_TEMPLATE([LOG],[Define for log])
 AH_TEMPLATE([LOG_ERR], [Define for log_err])
 AH_TEMPLATE([LOG_INFO], [Define for log_info])
+AH_TEMPLATE([SWAPLATER], [Define for swap in parallel])
+AH_TEMPLATE([GHOST_VALUE], [Define for ghost value])
+AH_TEMPLATE([DEBUG],[Define for debug])
+
+
 
 # Checks for libraries.
 AC_CHECK_LIB([csv], [csv_init], [],

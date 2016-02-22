@@ -34,118 +34,118 @@
  *
  **/
 int connect_client() {
-    int client_socket;
-    size_t len;
-    struct sockaddr_un remote;
+	int client_socket;
+	size_t len;
+	struct sockaddr_un remote;
 
-    log_info("Attempting to connect...\n");
+	log_info("Attempting to connect...\n");
 
-    if ((client_socket = socket(AF_UNIX, SOCK_STREAM, 0)) == -1) {
-        log_err("L%d: Failed to create socket.\n", __LINE__);
-        return -1;
-    }
+	if ((client_socket = socket(AF_UNIX, SOCK_STREAM, 0)) == -1) {
+		log_err("L%d: Failed to create socket.\n", __LINE__);
+		return -1;
+	}
 
-    remote.sun_family = AF_UNIX;
-    strncpy(remote.sun_path, SOCK_PATH, strlen(SOCK_PATH) + 1);
-    len = strlen(remote.sun_path) + sizeof(remote.sun_family) + 1;
-    if (connect(client_socket, (struct sockaddr *)&remote, len) == -1) {
-        perror("client connect failed: ");
-        return -1;
-    }
+	remote.sun_family = AF_UNIX;
+	strncpy(remote.sun_path, SOCK_PATH, strlen(SOCK_PATH) + 1);
+	len = strlen(remote.sun_path) + sizeof(remote.sun_family) + 1;
+	if (connect(client_socket, (struct sockaddr *)&remote, len) == -1) {
+		perror("client connect failed: ");
+		return -1;
+	}
 
-    log_info("Client connected at socket: %d.\n", client_socket);
-    return client_socket;
+	log_info("Client connected at socket: %d.\n", client_socket);
+	return client_socket;
 }
 
 int main(void)
 {
-    int client_socket = connect_client();
-    if (client_socket < 0) {
-        exit(1);
-    }
+	int client_socket = connect_client();
+	if (client_socket < 0) {
+		exit(1);
+	}
 
-    message send_message;
-    message recv_message;
+	message send_message;
+	message recv_message;
 
-    // Always output an interactive marker at the start of each command if the
-    // input is from stdin. Do not output if piped in from file or from other fd
-    char* prefix = "";
-    if (isatty(fileno(stdin))) {
-        prefix = "db_client > ";
-    }
+	// Always output an interactive marker at the start of each command if the
+	// input is from stdin. Do not output if piped in from file or from other fd
+	char* prefix = "";
+	if (isatty(fileno(stdin))) {
+		prefix = "db_client > ";
+	}
 
-    char *output_str = NULL;
-    int len = 0;
+	char *output_str = NULL;
+	int len = 0;
 
-    // Continuously loop and wait for input. At each iteration:
-    // 1. output interactive marker
-    // 2. read from stdin until eof.
-    char read_buffer[DEFAULT_STDIN_BUFFER_SIZE];
-    send_message.payload = read_buffer;
+	// Continuously loop and wait for input. At each iteration:
+	// 1. output interactive marker
+	// 2. read from stdin until eof.
+	char read_buffer[DEFAULT_STDIN_BUFFER_SIZE];
+	send_message.payload = read_buffer;
 
-    while (printf("%s", prefix), output_str = fgets(read_buffer,
-           DEFAULT_STDIN_BUFFER_SIZE, stdin), !feof(stdin)) {
-        if (output_str == NULL) {
-            log_err("fgets failed.\n");
-            break;
-        }
+	while (printf("%s", prefix), output_str = fgets(read_buffer,
+		   DEFAULT_STDIN_BUFFER_SIZE, stdin), !feof(stdin)) {
+		if (output_str == NULL) {
+			log_err("fgets failed.\n");
+			break;
+		}
 
-        // Only process input that is greater than 1 character.
-        // Ignore things such as new lines.
-        // Otherwise, convert to message and send the message and the
-        // payload directly to the server.
-        send_message.length = strlen(read_buffer);
-        if (send_message.length > 1) {
-            // Send the message_header, which tells server payload size
-            if (send(client_socket, &(send_message), sizeof(message), 0) == -1) {
-                log_err("Failed to send message header.");
-                exit(1);
-            }
+		// Only process input that is greater than 1 character.
+		// Ignore things such as new lines.
+		// Otherwise, convert to message and send the message and the
+		// payload directly to the server.
+		send_message.length = strlen(read_buffer);
+		if (send_message.length > 1) {
+			// Send the message_header, which tells server payload size
+			if (send(client_socket, &(send_message), sizeof(message), 0) == -1) {
+				log_err("Failed to send message header.");
+				exit(1);
+			}
 
-            // Send the payload (query) to server
-            if (send(client_socket, send_message.payload, send_message.length, 0) == -1) {
-                log_err("Failed to send query payload.");
-                exit(1);
-            }
+			// Send the payload (query) to server
+			if (send(client_socket, send_message.payload, send_message.length, 0) == -1) {
+				log_err("Failed to send query payload.");
+				exit(1);
+			}
 
-            // Always wait for server response (even if it is just an OK message)
-            if ((len = recv(client_socket, &(recv_message), sizeof(message), 0)) > 0) {
-                if (recv_message.status == OK_WAIT_FOR_RESPONSE &&
-                    (int) recv_message.length > 0) {
-                    // Calculate number of bytes in response package
-                    int num_bytes = (int) recv_message.length;
-                    char payload[num_bytes + 1];
+			// Always wait for server response (even if it is just an OK message)
+			if ((len = recv(client_socket, &(recv_message), sizeof(message), 0)) > 0) {
+				if (recv_message.status == OK_WAIT_FOR_RESPONSE &&
+					(int) recv_message.length > 0) {
+					// Calculate number of bytes in response package
+					int num_bytes = (int) recv_message.length;
+					char payload[num_bytes + 1];
 
-                    // Receive the payload and print it out
-                    if ((len = recv(client_socket, payload, num_bytes, 0)) > 0) {
-                        payload[num_bytes] = '\0';
-                        printf("%s\n", payload);
-                    }
-                }
-                else if (recv_message.status == OK_DONE) {
-                    log_info("Command Done!\n");
-                }
-                else if (recv_message.status == UNKNOWN_COMMAND) {
-                    log_err("Unknown Command\n");
-                }
-                else if (recv_message.status == INTERNAL_ERROR) {
-                    log_err("Server error! see logs.\n");
-                }
-                else if (recv_message.status == CLIENT_QUIT || recv_message.status == SERVER_SHUTDOWN) {
-                    break;
-                }
-            }
-            else {
-                if (len < 0) {
-                    log_err("Failed to receive message.");
-                }
-                else {
-		            log_info("Server closed connection\n");
-		        }
-                exit(1);
-            }
-        }
-    }
-    close(client_socket);
-    return 0;
+					// Receive the payload and print it out
+					if ((len = recv(client_socket, payload, num_bytes, 0)) > 0) {
+						payload[num_bytes] = '\0';
+						printf("%s\n", payload);
+					}
+				}
+				else if (recv_message.status == OK_DONE) {
+					log_info("Command Done!\n");
+				}
+				else if (recv_message.status == UNKNOWN_COMMAND) {
+					log_err("Unknown Command\n");
+				}
+				else if (recv_message.status == INTERNAL_ERROR) {
+					log_err("Server error! see logs.\n");
+				}
+				else if (recv_message.status == CLIENT_QUIT || recv_message.status == SERVER_SHUTDOWN) {
+					break;
+				}
+			}
+			else {
+				if (len < 0) {
+					log_err("Failed to receive message.");
+				}
+				else {
+					log_info("Server closed connection\n");
+				}
+				exit(1);
+			}
+		}
+	}
+	close(client_socket);
+	return 0;
 }

@@ -84,14 +84,13 @@ status parse_dsl(char* str, dsl* d, db_operator* op)
 		char* full_name = (char *) malloc(sizeof(char) * strlen(db_name) + 1);
 
 		strcpy(full_name, db_name);
-		printf("%s\n", full_name);
 
 		// Here, we can create the DB using our parsed info!
 		Db* db1 = NULL;
 		status s = create_db(full_name, &db1);
 		if (OK != s.code) {
 			// Something went wrong
-			log_err("fialed to create databse");
+			log_err("fialed to create databse\n");
 			return s;
 		}
 
@@ -153,7 +152,7 @@ status parse_dsl(char* str, dsl* d, db_operator* op)
 		status s = grab_db(db_name, &db1);
 		if (OK != s.code) {
 			// Something went wrong
-			log_err("No database found");
+			log_err("No database found\n");
 			return s;
 		}
 
@@ -162,7 +161,7 @@ status parse_dsl(char* str, dsl* d, db_operator* op)
 		s = create_table(db1, full_name, count, &tbl1);
 		if (OK != s.code) {
 			// Something went wrong
-			log_err("cannot create table");
+			log_err("cannot create table\n");
 			return s;
 		}
 
@@ -215,7 +214,7 @@ status parse_dsl(char* str, dsl* d, db_operator* op)
 		status s = grab_table(tbl_name, &tbl1);
 		if (OK != s.code) {
 			// Something went wrong
-			log_err("cannot grab the table");
+			log_err("cannot grab the table\n");
 			return s;
 		}
 
@@ -224,7 +223,7 @@ status parse_dsl(char* str, dsl* d, db_operator* op)
 		s = create_column(tbl1, full_name, &col1);
 		if (OK != s.code) {
 			// Something went wrong
-			log_err("cannot create the column");
+			log_err("cannot create the column\n");
 			return s;
 		}
 
@@ -257,7 +256,7 @@ status parse_dsl(char* str, dsl* d, db_operator* op)
 		// This gives us the filename
 		const char* filename = strtok(args, quotes);
 		
-		log_info("load(\"%s\")", filename);
+		log_info("load(\"%s\")\n", filename);
 		
 		size_t lineCount = 0;
 		size_t fieldCount = 0;
@@ -280,37 +279,41 @@ status parse_dsl(char* str, dsl* d, db_operator* op)
 	}
 	else if (SELECT_COL_CMD == d->g  || SELECT_PRE_CMD == d->g
 			|| FETCH_CMD == d->g || TUPLE_CMD == d->g
-			|| INSERT_CMD == d->g || DELETE_CMD == d->g
+			|| INSERT_CMD == d->g || DELETE_CMD == d->g || DELETE_POS_CMD == d->g
 			|| UPDATE_CMD == d->g) {
 		status s = query_prepare(str, d, op);
 		if (OK != s.code) {
 			switch (d->g) {
 				case SELECT_COL_CMD: {
-					log_err("cannnot prepare the query for select column!");
+					log_err("cannnot prepare the query for select column!\n");
 					break;
 				}
 				case SELECT_PRE_CMD: {
-					log_err("cannnot prepare the query for select previous!");
+					log_err("cannnot prepare the query for select previous!\n");
 					break;
 				}
 				case FETCH_CMD: {
-					log_err("cannnot prepare the query for fetch!");
+					log_err("cannnot prepare the query for fetch!\n");
 					break;
 				}
 				case TUPLE_CMD: {
-					log_err("cannnot prepare the query for tuple!");
+					log_err("cannnot prepare the query for tuple!\n");
 					break;
 				}
 				case DELETE_CMD: {
-					log_err("cannnot prepare the query for delete!");
+					log_err("cannnot prepare the query for delete!\n");
+					break;
+				}
+				case DELETE_POS_CMD: {
+					log_err("cannnot prepare the query for delete_pos!\n");
 					break;
 				}
 				case INSERT_CMD: {
-					log_err("cannnot prepare the query for insert!");
+					log_err("cannnot prepare the query for insert!\n");
 					break;
 				}
 				case UPDATE_CMD: {
-					log_err("cannnot prepare the query for update!");
+					log_err("cannnot prepare the query for update!\n");
 					break;
 				}
 				default: break;
@@ -324,7 +327,7 @@ status parse_dsl(char* str, dsl* d, db_operator* op)
 		clear_res_list();
 		ret = sync_db(NULL);
 		if (OK != ret.code) {
-			log_err("failed to sync database!");
+			log_err("failed to sync database!\n");
 		}
 		else {
 			ret.code = (QUIT_CMD == d->g)? QUIT: SHUTDOWN;
@@ -337,8 +340,42 @@ status parse_dsl(char* str, dsl* d, db_operator* op)
 		op->type = SHOWDB;
 		return ret;
 	}
-	else if (d->g == PARTITION_TEST) {
+	else if (d->g == SHOWTBL_TEST) {
+		status ret;
+		// Create a working copy, +1 for '\0'
+		char* str_cpy = malloc(strlen(str) + 1);
+		strncpy(str_cpy, str, strlen(str) + 1);
 
+		// This gives us everything inside the ("colname")
+		strtok(str_cpy, open_paren);
+		char* args = strtok(NULL, close_paren);
+		
+		// prepare table and column
+		Table *tmp_tbl = NULL;
+		Column *tmp_col = NULL;
+		args = prepare_col(args, &tmp_tbl, &tmp_col);
+
+		if (NULL == tmp_tbl || NULL == tmp_tbl) {
+			log_err("wrong column/table name in show table\n");
+			ret.code = ERROR;
+			return ret;
+		}
+
+		if (tmp_tbl->length > 0) {
+			for (unsigned int j = 0; j < tmp_tbl->col_count; j++) {
+				if (NULL == tmp_tbl->cols[j]->data)
+					load_column4disk(tmp_tbl->cols[j], tmp_tbl->length);
+			}
+		}
+			
+		op->type = SHOWTBL;
+		op->tables = malloc(sizeof(Tbl_ptr));
+		op->tables[0] = tmp_tbl;
+		ret.code = OK;
+		return ret;
+	}
+	else if (d->g == PARTITION_TEST) {
+		status ret;
 		// Create a working copy, +1 for '\0'
 		char* str_cpy = malloc(strlen(str) + 1);
 		strncpy(str_cpy, str, strlen(str) + 1);
@@ -347,55 +384,32 @@ status parse_dsl(char* str, dsl* d, db_operator* op)
 		strtok(str_cpy, open_paren);
 		char* args = strtok(NULL, close_paren);
 
-		// This gives us the column name
-		const char* col_var = strtok(args, quotes);
+		// prepare table and column
+		Table *tmp_tbl = NULL;
+		Column *tmp_col = NULL;
+		args = prepare_col(args, &tmp_tbl, &tmp_col);
 
-		unsigned int i =0, flag = 0;
-		while('\0' != col_var[i]) {
-			if ('.' == col_var[i]) {
-				flag++;
-				if (2 == flag) {		// Find the second '.'
-					break;
-				}
-			}
-			i++;
-		}
-		char* tbl_var = malloc(sizeof(char) * (i + 1));
-		strncpy(tbl_var, col_var, i);
-		tbl_var[i] = '\0';
-		printf("table name in partition_test %s\n", tbl_var);
-		
-		// Grab the table for further reference
-		Table* tmp_tbl = NULL;
-		status s = grab_table(tbl_var, &tmp_tbl);
-		if (OK != s.code) {
-			log_err("cannot grab the table!");
-			return s;
-		}
-		free(tbl_var);
-
-		// Grab the column
-		Column* tmp_col = NULL;
-		s = grab_column(col_var, &tmp_col);
-		if (OK != s.code) {
-			log_err("cannot grab the column!");
-			return s;
+		if (NULL == tmp_tbl || NULL == tmp_tbl) {
+			log_err("wrong column/table name in partition test\n");
+			ret.code = ERROR;
+			return ret;
 		}
 
 		// Load data from disk if not in memory
-		if (NULL == tmp_col->data && NULL != tmp_tbl && 0 != tmp_tbl->length) {
-			// load_column4disk(tmp_col, tmp_tbl->length);
+		if (tmp_tbl->length != 0) {
 			for (unsigned int j = 0; j < tmp_tbl->col_count; j++) {
-				load_column4disk(tmp_tbl->cols[j], tmp_tbl->length);
+				if (NULL == tmp_tbl->cols[j]->data)
+					load_column4disk(tmp_tbl->cols[j], tmp_tbl->length);
 			}
 		}
-		else if (0 == tmp_tbl->length) {
-			log_err("empty table to partition");
-			s.code = ERROR;
-			return s;
+		else {
+			log_err("empty table to partition\n");
+			ret.code = ERROR;
+			return ret;
 		}
 
-		status ret = create_index(tmp_tbl, tmp_col, PARTI);
+		// TODO: make create_index a db operator?
+		ret = create_index(tmp_tbl, tmp_col, PARTI);
 		
 		// Free the str_cpy
 		free(str_cpy);

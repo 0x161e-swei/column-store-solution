@@ -1,6 +1,12 @@
 /* include/config.h.  Generated from config.h.in by configure.  */
 /* include/config.h.in.  Generated from configure.ac by autoheader.  */
 
+/* Define for debug */
+#define DEBUG 1
+
+/* Define for ghost value */
+#define GHOST_VALUE 1
+
 /* Define to 1 if you have the <fcntl.h> header file. */
 #define HAVE_FCNTL_H 1
 
@@ -98,6 +104,9 @@
 
 /* Define to 1 if you have the ANSI C header files. */
 #define STDC_HEADERS 1
+
+/* Define for swap in parallel */
+#define SWAPLATER 1
 
 /* Version number of package */
 #define VERSION "0.1.0"

@@ -1,12 +1,13 @@
 #include "fileparser.h"
 #include "db.h"
+#include "config.h"
 #include "table.h"
 #include "column.h"
 #include "uthash.h"
 
 char *readfile(const char *filename, size_t *len) {
 	FILE *fp = fopen(filename, "r");
-
+	if (NULL == fp) return NULL;
 	// Get file length
 	int rc = fseek(fp, 0, SEEK_END);
 	if (rc < 0) {
@@ -108,8 +109,10 @@ void csv_process_fields(void *s,  size_t len __attribute__((unused)), void *data
 			Column *tmp_col;
 			HASH_FIND_STR(col_hash_list, (char *)s, tmp_col);
 			if (NULL != tmp_col) {
+				log_info("init an array with %zu slots\n", info->line_count);
 				tmp_col->data = darray_create(info->line_count);
-
+				// mark length at first
+				tmp_col->data->length = info->line_count;
 				// Record the number of columns to load
 				// info->cols = realloc((info->cols), (info->cur_feild + 1) * sizeof(Column *));
 				// if (NULL == info->cols) {
@@ -193,7 +196,7 @@ status load_data4file(const char* filename, size_t line_count, size_t field_coun
 	
 	free(parser_info.cols);
 	free(contents);
-
+	log_info("parsing done\n");
 	if (0 != rc || byte_processed != length) {
 		log_err("error parsing file %s\n", csv_strerror(csv_error(&p)));
 		status ret;

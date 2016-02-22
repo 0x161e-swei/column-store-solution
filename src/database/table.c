@@ -39,16 +39,15 @@ status grab_table(const char* table_name, Table** tbl) {
  */
 status create_table(Db* db, const char* name, size_t num_columns, Table** table) {
 	status s;
-	if (NULL != db) {		
+	if (NULL != db) {
 		if (NULL == *table ) {
 			*table = malloc(sizeof(Table));
 		}
-		
 		(*table)->name = malloc(sizeof(char) * (strlen(name) + 1));
-		
 		strcpy((char *)(*table)->name, name);
 		(*table)->col_count = num_columns;
 		(*table)->length = 0;
+		(*table)->primary_indexed_col = NULL;
 		
 		/* Store the pointers to the columns in this table */
 		(*table)->cols = malloc(num_columns * sizeof(Col_ptr));
@@ -72,6 +71,35 @@ status create_table(Db* db, const char* name, size_t num_columns, Table** table)
 	return s;
 }
 
+status show_tbl(Table *tbl) {
+	size_t len = tbl->length;
+	if (NULL != tbl->primary_indexed_col)
+		// real length including ...extra data slots like ghost value
+		len = tbl->primary_indexed_col->data->length;
+	size_t cur_partition = 0;
+	debug("show table %s data:(len %zu)\n", tbl->name, tbl->length);
+	for (size_t i = 0; i < len; i++) {
+		printf("rid %zu: ", i);
+		for (size_t j = 0; j < tbl->col_count; j++) {
+			printf("%d\t", tbl->cols[j]->data->content[i]);
+		}
+		if (NULL != tbl->primary_indexed_col && NULL != tbl->primary_indexed_col->p_pos ) {
+			#ifdef GHOST_VALUE
+			if ( (tbl->primary_indexed_col->p_pos[cur_partition] - tbl->primary_indexed_col->ghost_count[cur_partition]) == i) {
+				printf("data fence ");
+			}
+			#endif
+			if ( tbl->primary_indexed_col->p_pos[cur_partition] == i) {
+				printf("partition fence at pivot %d", tbl->primary_indexed_col->pivots[cur_partition]);
+				cur_partition++;
+			}
+		}
+		printf("\n");
+	}
+	status s;
+	s.code = OK;
+	return s;
+}
 // status drop_table(Db* db, Table* table) {
 
 // }

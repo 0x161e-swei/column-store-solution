@@ -1,8 +1,5 @@
 /* include/config.h.in.  Generated from configure.ac by autoheader.  */
 
-/* Define for debug */
-#undef DEBUG
-
 /* Define for ghost value */
 #undef GHOST_VALUE
 

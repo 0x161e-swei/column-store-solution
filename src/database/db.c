@@ -120,7 +120,7 @@ status sync_db(Db* db __attribute__((unused))) {
 						FILE *fwp = fopen(dataname, "w+");
 						if (NULL != fwp) {
 							// Write as a whole or do it one by one
-							fwrite(((tbl->cols[i])->data)->content, sizeof(int), tbl->length, fwp);
+							fwrite(((tbl->cols[i])->data)->content, sizeof(int), ((tbl->cols[i])->data)->length, fwp);
 							// for (size_t k = 0; k < tbl->length; k++) {
 							//     fprintf(fwp, "%d\n", ((tbl->cols[i])->data)->content[k]);
 							//     fwrite(&((tbl->cols[i])->data)->content[k], sizeof(int), 1, fwp);
@@ -134,17 +134,24 @@ status sync_db(Db* db __attribute__((unused))) {
 						// free((tbl->cols[i])->data);
 						darray_destory((tbl->cols[i])->data); (tbl->cols[i])->data = NULL;
 					}
-
 					if (NULL != (tbl->cols[i])->index) {
-						// TODO: SAVE INDEX TO DISKS ??
-						free ((tbl->cols[i])->index);
+						free((tbl->cols[i])->index);
 					}
 					free((void *)(tbl->cols[i])->name);
 					if ((tbl->cols[i])->partitionCount > 1) {
 						free((tbl->cols[i])->pivots);
 						free((tbl->cols[i])->p_pos);
 					}
-					
+					#ifdef SWAPLATER
+					if (NULL != (tbl->cols[i])->pos) {
+						free((tbl->cols[i])->pos);
+					}
+					#endif
+					#ifdef GHOST_VALUE
+					if (NULL != (tbl->cols[i])->ghost_count) {
+						free((tbl->cols[i])->ghost_count);
+					}
+					#endif
 					free(tbl->cols[i]);
 				}
 				else {

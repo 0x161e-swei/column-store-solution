@@ -7,11 +7,7 @@
 #include "db.h"
 #include <string.h>
 
-
-typedef struct _swapargs {
-	Column *col;
-	int *pos;
-} Swapargs;
+#define NON_QUALIFYING_INT 66000
 
 extern char open_paren[2];
 extern char close_paren[2];
@@ -22,6 +18,8 @@ extern char eq_sign[2];
 status grab_result(const char *res_name, Result **res);
 bool compare(comparator *f, int val);
 status load_column4disk(Column *col, size_t len);
+status col_point_query(Column *col, int val, Result **r);
+status col_range_query(Column *col, int low, int high, Result **r);
 
 /**
  * prepare the Column together with the Table it belongs to
@@ -29,19 +27,23 @@ status load_column4disk(Column *col, size_t len);
  * tbl:		address of a Table to hold the Table pointer 
  * col:		address of a Table to hold the Column pointer 	
  */
-inline char *prepare_col(char *args, Table **tbl, Column **col) {
+static inline char *prepare_col(char *args, Table **tbl, Column **col) {
 	char *col_var = strtok(args, comma);
 
-	unsigned int i =0, flag = 0;
-	while('\0' != col_var[i]) {
-		if ('.' == col_var[i]) {
-			flag++;
-			if (2 == flag) {		// Find the second '.'
-				break;
-			}
-		}
-		i++;
-	}
+	// unsigned int i =0, flag = 0;
+	// while('\0' != col_var[i]) {
+	// 	if ('.' == col_var[i]) {
+	// 		flag++;
+	// 		if (2 == flag) {		// Find the second '.'
+	// 			break;
+	// 		}
+	// 	}
+	// 	i++;
+	// }
+
+	// Find the second/last dot in the Column name in order to find the table name
+	const char *second_dot = strrchr(col_var, '.');
+	int i = (int)(second_dot - col_var);
 
 	char* tbl_var = malloc(sizeof(char) * (i + 1));
 	strncpy(tbl_var, col_var, i);
@@ -80,7 +82,7 @@ inline char *prepare_col(char *args, Table **tbl, Column **col) {
  * args:	a char array to parse
  * res:		address of a Table to hold the Result pointer 
  */
-inline char *prepare_res(char *args , Result **res) {
+static inline char *prepare_res(char *args , Result **res) {
 	char *vec_res = strtok(args, comma);
 
 	// Grab the position list
@@ -93,6 +95,15 @@ inline char *prepare_res(char *args , Result **res) {
 	*res = tmp_res;
 	return vec_res + strlen(vec_res) + 1;
 }
+
+status delete_with_pos(Table *tbl, Result *pos);
+#ifdef GHOST_VALUE
+status delete_other_cols(Table *tbl, size_t *from, size_t *to, size_t total_delete);
+status insert_other_cols(Table *tbl, int *vals, size_t partition_to_insert, size_t partition_to_steal);
+#else
+status delete_other_cols(Table *tbl, size_t *from, size_t *to, size_t total_delete, size_t partition_to_delete);
+status insert_other_cols(Table *tbl, int *vals);
+#endif
 
 
 // extern Result *res_hash_list;

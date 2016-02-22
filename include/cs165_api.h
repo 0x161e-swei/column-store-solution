@@ -103,17 +103,18 @@ typedef struct _column {
 	// int* data;
 	DArray_INT *data;
 	
-	int partitionCount;
+	
 	int *pivots;
-	int *p_pos;
+	size_t partitionCount;
+	size_t *p_pos;
 
 	#ifdef SWAPLATER
-	int *pos;
+	size_t *pos;
 	#endif
 
 	#ifdef GHOST_VALUE
 	int *ghost_count;
-	#endif
+	#endif /* GHOST_VALUE */
 
 	bool isDirty;
 	column_index *index;
@@ -140,6 +141,7 @@ typedef struct _table {
 	size_t col_count;
 	size_t length;
 	Col_ptr* cols;
+	Col_ptr primary_indexed_col;
 	UT_hash_handle hh;
 } Table, *Tbl_ptr;
 
@@ -253,6 +255,7 @@ typedef enum Aggr {
 
 typedef enum OperatorType {
 	SHOWDB,
+	SHOWTBL,
 	TUPLE,
 	SELECT_COL,
 	SELECT_PRE,
@@ -261,6 +264,7 @@ typedef enum OperatorType {
 	HASH_JOIN,
 	INSERT,
 	DELETE,
+	DELETE_POS,
 	UPDATE,
 	AGGREGATE,
 	PARTITION,
@@ -467,7 +471,7 @@ status create_index(Table *table, Column* col, IndexType type);
 status insert(Column *col, int data);
 status delete(Column *col, int *pos);
 status update(Column *col, int *pos, int new_val);
-status col_scan(comparator *f, Column *col, size_t len, Result **r);
+status col_scan(comparator *f, Column *col, Result **r);
 status col_scan_with_pos(comparator *f, Result *res, Result *pos, Result **r);
 status index_scan(comparator *f, Column *col, Result **r);
 
@@ -478,10 +482,14 @@ status query_execute(db_operator* op, Result** results);
 status fetch_val(Column *col, Result *pos, Result **r);
 char* tuple(db_operator *query);
 
-status scan_partition(Column *col, int part_id, Result **r);
-status scan_partition_greaterThan(Column *col, int val, int part_id, Result **r);
-status scan_partition_lessThan(Column *col, int val, int part_id, Result **r);
-status scan_partition_pointQuery(Column *col, int val, int part_id, Result **r);
+status delete_with_pointQuery(Table *tbl, Column *col, int val);
+status insert_tuple(Table *tbl, int *src);
+
+
+status scan_partition(Column *col, size_t part_id, Result **r);
+status scan_partition_greaterThan(Column *col, int val, size_t part_id, Result **r);
+status scan_partition_lessThan(Column *col, int val, size_t part_id, Result **r);
+status scan_partition_pointQuery(Column *col, int val, size_t part_id, Result **r);
 
 #endif /* CS165_H */
 

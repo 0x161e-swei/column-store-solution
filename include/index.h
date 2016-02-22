@@ -17,13 +17,22 @@ typedef struct _partition_inst{
 	#endif
 } Partition_inst;
 
+status nWayPartition(Table *tbl, Column *col, Partition_inst *inst);
+
+#ifdef GHOST_VALUE
+status insert_ghost_values(Table *tbl, int total_ghost);
+#endif
+
 #ifdef SWAPLATER
-status nWayPartition(Column *col, Partition_inst *inst);
-status swap_after_partition(Table *tbl, Column *col);
-status doSwaps(Col_ptr *cols, const char *partitionedName, int *pos, int col_count);
+typedef struct _swapargs {
+	Column *col;
+	size_t *pos;
+} Swapargs;
+
+status align_after_partition(Table *tbl, size_t *pos);
 void *swapsIncolumns(void *arg);	// for threads processing
 #else
-status nWayPartition(Table *tbl, Column *col, Partition_inst *inst);
+
 #endif
 
 #endif // INDEX_H__

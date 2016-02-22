@@ -38,17 +38,23 @@ const char* fetch_command = "^[a-zA-Z0-9_]+\\=fetch\\([a-zA-Z0-9_\\.]+\\,[a-zA-Z
 const char* tuple_command = "^tuple\\([a-zA-Z0-9_\\.]+\\)";
 
 // Matches: d(<col_var>,<vec_pos>)
-const char* delete_command = "^d\\([a-zA-Z0-9_\\.]+\\,[a-zA-Z0-9_]+\\)";
+const char* delete_pos = "^d\\([a-zA-Z0-9_\\.]+\\,\\\"[a-zA-Z0-9_]+\\\"\\)";
+
+// Matches: d(<col_var>,<val>)
+const char* delete_command = "^d\\([a-zA-Z0-9_\\.]+\\,-?[0-9]+\\)";
 
 // Matches: i(<col_var>, number, ...)
 const char* insert_command = "^i\\([a-zA-Z0-9_\\.]+(\\,-?[0-9]+)+\\)";
 
-// Matches: u(<col_var>, <vec_pos>, <new>)
-const char* update_command = "^u\\([a-zA-Z0-9_\\.]+\\,[a-zA-Z0-9_]+\\,-?[0-9]+\\)";
+// Matches: u(<col_var>, <old>, <new>)
+const char* update_command = "^u\\([a-zA-Z0-9_\\.]+\\,-?[0-9]+\\,-?[0-9]+\\)";
 
 // temporary dsls for test
 // Matches: partition("colName")
-const char* partition_test = "^partition\\(\\\"[a-zA-Z0-9_\\.]+\\\"\\)";
+const char* partition_test = "^partition\\([a-zA-Z0-9_\\.]+\\)";
+
+// Matches: show_tbl("colName")
+const char* show_table_test = "^show_tbl\\([a-zA-Z0-9_\\.]+\\)";
 
 // TODO(USER): You will need to update the commands here for every single command you add.
 
@@ -97,17 +103,22 @@ dsl** dsl_commands_init(void)
 	commands[11]->c = shutdown_command;
 	commands[11]->g = SHUTDOWN_CMD;
 
-	commands[12]->c = delete_command;
-	commands[12]->g = DELETE_CMD;
+	commands[12]->c = delete_pos;
+	commands[12]->g = DELETE_POS_CMD;
 
 	commands[13]->c = insert_command;
 	commands[13]->g = INSERT_CMD;
 
 	commands[14]->c = update_command;
 	commands[14]->g = UPDATE_CMD;
+	
+	commands[15]->c = delete_command;
+	commands[15]->g = DELETE_CMD;
 
-	commands[15]->c = partition_test;
-	commands[15]->g = PARTITION_TEST;
+	commands[16]->c = partition_test;
+	commands[16]->g = PARTITION_TEST;
 
+	commands[17]->c = show_table_test;
+	commands[17]->g = SHOWTBL_TEST;
 	return commands;
 }

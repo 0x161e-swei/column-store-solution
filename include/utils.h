@@ -11,9 +11,10 @@
 #include <stdio.h>
 #include <string.h>
 #include "config.h"
-#define ANSI_COLOR_RED     "\x1b[31m"
-#define ANSI_COLOR_GREEN   "\x1b[32m"
-#define ANSI_COLOR_RESET   "\x1b[0m"
+#define ANSI_COLOR_RED		"\x1b[31m"
+#define ANSI_COLOR_GREEN	"\x1b[32m"
+#define ANSI_COLOR_BLUE		"\x1b[34m"
+#define ANSI_COLOR_RESET	"\x1b[0m"
 
 
 // cs165_log(out, format, ...)
@@ -32,7 +33,7 @@ void cs165_log(FILE* out, const char *format, ...);
 #ifdef LOG_ERR
 #define log_err(...) do {										\
 	fprintf(stderr, ANSI_COLOR_RED);							\
-	fprintf(stderr, "[ERROR] (%s:%d)\n", __FILE__, __LINE__);	\
+	fprintf(stderr, "[ERROR] (%s:%d): ", __FILE__, __LINE__);	\
 	fprintf(stderr, ##__VA_ARGS__);								\
 	fprintf(stderr, ANSI_COLOR_RESET);							\
 	fflush(stderr);												\
@@ -41,6 +42,18 @@ void cs165_log(FILE* out, const char *format, ...);
 #define log_err(...) do{} while(0)
 #endif
 
+
+#ifdef DEBUG
+#define debug(...) do{											\
+	fprintf(stdout, ANSI_COLOR_BLUE);							\
+	fprintf(stdout, "[DEBUG] (%s:%d): ", __FILE__, __LINE__);	\
+	fprintf(stdout, ##__VA_ARGS__);								\
+	fprintf(stdout, ANSI_COLOR_RESET);							\
+	fflush(stdout);												\
+}while(0)
+#else
+#define debug(...)
+#endif 
 // log_info(format, ...)
 // Writes the string from @format to stderr, extendable for
 // additional parameters. Like cs165_log, but specifically to stdout.
@@ -53,7 +66,7 @@ void cs165_log(FILE* out, const char *format, ...);
 #ifdef LOG_INFO
 #define log_info(...) do {										\
 	fprintf(stdout, ANSI_COLOR_GREEN);							\
-	fprintf(stdout, "[INFO] (%s:%d):\n", __FILE__, __LINE__);	\
+	fprintf(stdout, "[INFO] (%s:%d): ", __FILE__, __LINE__);	\
 	fprintf(stdout, ##__VA_ARGS__);								\
 	fprintf(stdout, ANSI_COLOR_RESET);							\
 	fflush(stdout);												\

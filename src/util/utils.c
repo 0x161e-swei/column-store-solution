@@ -61,7 +61,7 @@ void collect_file_info(const char* filename, size_t *lineCount, size_t *fieldCou
 		ssize_t read;
 		read = getline(&line, &len, fp);
 		if (0 != read )  {
-			for (uint i = 0; i < strlen(line); i++) {
+			for (unsigned int i = 0; i < strlen(line); i++) {
 				fields += (line[i] == ',');
 			}
 			if (line) free(line);

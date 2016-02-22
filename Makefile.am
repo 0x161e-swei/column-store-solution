@@ -9,7 +9,7 @@ INCDIR = include
 
 noinst_LIBRARIES = lib/libutil.a lib/librum.a lib/libdarray.a
 
-O ?= 3
+O ?= 0 
 
 AM_CFLAGS = -std=c99 -g -ggdb3 -Wall -Wextra -pedantic -pthread -O$(O)
 AM_CPPFLAGS = -I$(INCDIR)

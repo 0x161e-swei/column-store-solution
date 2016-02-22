@@ -27,6 +27,7 @@
 #include "message.h"
 #include "parser.h"
 #include "db.h"
+#include "table.h"
 #include "utils.h"
 
 #define DEFAULT_QUERY_BUFFER_SIZE 1024
@@ -113,15 +114,22 @@ char* execute_db_operator(db_operator* dbO) {
 			}
 			break;
 		}
-		case SELECT_COL: case SELECT_PRE: case FETCH: case DELETE: case INSERT: case UPDATE: {
+		case SHOWTBL: {
+			show_tbl(dbO->tables[0]);
+			free(dbO->tables);
+			break;
+		}
+		case SELECT_COL: case SELECT_PRE: case FETCH: case DELETE: 
+		case INSERT: case UPDATE: case DELETE_POS: {
 			Result *res = NULL;
-			status s = query_execute(dbO, &res);
-			if (OK != s.code) {
+			// TODO: need to clean up dbO inside query_execute
+			query_execute(dbO, &res);
+			// if (OK != s.code) {
 
-			}
-			else {
-				// Serialize the result if it is a FETCH
-			}
+			// }
+			// else {
+			// 	// Serialize the result if it is a FETCH
+			// }
 			break;
 		}
 		case TUPLE: {
@@ -205,6 +213,7 @@ bool handle_client(int client_socket) {
 					done = 1;
 				}
 				send_message.length = 0;
+				send_message.payload = NULL;
 			}
 
 			// 3. Send status of the received message (OK, UNKNOWN_QUERY, etc)
@@ -289,7 +298,7 @@ int main(void)
 	// Populate the global dsl commands
 	dsl_commands = dsl_commands_init();
 
-	Db *default_db;
+	Db *default_db = NULL;
 	OpenFlags flags = LOAD;
 	status s = open_db("data/dbinfo", &default_db, flags);
 

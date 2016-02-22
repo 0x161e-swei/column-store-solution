@@ -25,6 +25,12 @@ status create_column(Table *table, const char* name, Column** col) {
 		(*col)->partitionCount = 1;
 		(*col)->pivots = NULL;
 		(*col)->p_pos = NULL;
+		#ifdef SWAPLATER
+		(*col)->pos = NULL;
+		#endif
+		#ifdef GHOST_VALUE 
+		(*col)->ghost_count = NULL;
+		#endif
 		(*col)->isDirty = false;
 		size_t i = 0;
 		for (; i < table->col_count; i++){

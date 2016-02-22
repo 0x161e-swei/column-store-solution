@@ -1,5 +1,5 @@
 #include "index.h"
-
+#include "query.h"
 /**
  * create an index over a Column
  * tbl: 		Table the index is in
@@ -8,19 +8,21 @@
  */
 status create_index(Table *tbl, Column *col, IndexType type) {
 	status s;
-	// TODO: copy the data first...
 	if (NULL != col && NULL == col->index) {
 		switch (type) {
 			case PARTI: {
 				if (1 == col->partitionCount) {
 					// TODO: following 6 lines of code are for tests ONLY
 					Partition_inst inst;
+					log_info("waiting for partition instruction\n");
 					scanf("%d", &(inst.p_count));
+					log_info("waiting for %d pivots\n", inst.p_count);
 					inst.pivots = malloc(sizeof(int) * inst.p_count);
 					for (int i = 0; i < inst.p_count; i++) {
 						scanf("%d", &(inst.pivots[i]));
 					}
 					#ifdef GHOST_VALUE
+					log_info("waiting for %d ghost_count\n", inst.p_count);
 					inst.ghost_count = malloc(sizeof(int) * inst.p_count);
 					for (int i = 0; i < inst.p_count; i++) {
 						scanf("%d", &(inst.ghost_count[i]));
@@ -28,13 +30,17 @@ status create_index(Table *tbl, Column *col, IndexType type) {
 					#endif
 
 					#ifdef SWAPLATER
-					s = nWayPartition(col, &inst);
-					if (OK == s.code) {
-						s = swap_after_partition(tbl, col);
+					tbl->primary_indexed_col = col;
+					s = nWayPartition(tbl, col, &inst);
+					free(inst.pivots);
+					free(inst.ghost_count);
+					if (CMD_DONE == s.code) {
+						s = align_after_partition(tbl, col->pos);
 					}
 					#else 
 					s = nWayPartition(tbl, col, &inst);
 					#endif
+					tbl->primary_indexed_col = col;
 				}
 				break;
 			}
@@ -48,26 +54,70 @@ status create_index(Table *tbl, Column *col, IndexType type) {
 	return s;
 }
 
+#ifdef GHOST_VALUE
+status insert_ghost_values(Table *tbl, int total_ghost) {
+	status s;
+	// Is it necessary to do it in parallel
+	Col_ptr *cols = tbl->cols;
+	for (unsigned int i = 0; i < tbl->col_count; i++) {
+		if (cols[i] == tbl->primary_indexed_col) {
+			continue;
+		}
+		int *addon_ghosts = malloc(sizeof(int) *total_ghost);
+		for (int j = 0; j < total_ghost; j++) {
+			addon_ghosts[j] = NON_QUALIFYING_INT;
+		}
+		darray_vec_push((cols[i]->data), addon_ghosts, total_ghost);
+		free(addon_ghosts);
+	}
+	s.code = OK;
+	return s;
+}
+#endif
 /** 
  * partition a Column and keep data align in other Column LATER in another function
+ * tbl: 	the table where partitioned Column belongs to
  * col:		the Column that we are partitioning
  * inst:	the partition instruction containing pivot count, an array of pivots and
  * 			an array of ghost_value slots if applicable
  */
 #ifdef SWAPLATER
-status nWayPartition(Column *col, Partition_inst *inst) {
-	
+status nWayPartition(Table *tbl, Column *col, Partition_inst *inst) {
 	status s;
-	// TODO: code for Ghost Values
 	int p_count = inst->p_count;
 	int *pivots = inst->pivots;
-
+	col->partitionCount = p_count;
 	DArray_INT *arr = col->data;
-	// idc used for indices to data during partitioning, pos used to record the position-map
-	int *idc = malloc(sizeof(int) * p_count);
-	int *pos = malloc(sizeof(int) * arr->length);
-	col->pos = pos;
+	col->pivots = malloc(sizeof(int) * p_count);
+	col->p_pos = malloc(sizeof(size_t) * p_count);
 
+	#ifdef GHOST_VALUE
+	log_info("before inserting ghost values, length of array %zu\n", arr->length);
+	int total_gv = 0;
+	size_t actual_data_length = arr->length;
+	col->ghost_count = malloc(sizeof(int) * p_count);
+	for (int i = 0; i < p_count; i++) {
+		total_gv += inst->ghost_count[i];
+	}
+	int *addon_ghosts = malloc(sizeof(int) * total_gv);
+	int tmp_counter = 0;
+	for (int i = 0; i < p_count; i++)
+		for (int j = 0; j < inst->ghost_count[i]; j++) {
+			addon_ghosts[tmp_counter] = pivots[i];
+			tmp_counter++;
+		}
+	darray_vec_push(arr, addon_ghosts, total_gv);
+	free(addon_ghosts);
+	// inseting NON_QUALIFYING_INT into other Columns
+	insert_ghost_values(tbl, total_gv);
+	log_info("after inserting ghost values, length of array %zu\n", arr->length);
+	#endif
+
+	// idc used for indices to data during partitioning
+	size_t *idc = malloc(sizeof(size_t) * p_count);
+	// pos used to record the position-map, data now at index i used to be at pos[i]
+	size_t *pos = malloc(sizeof(size_t) * arr->length);
+	col->pos = pos;
 	for (int i = 0; i < p_count / 2; i++) 
 		idc[i] = 0;
 	for (int i = p_count / 2; i < p_count; i++) 
@@ -75,11 +125,11 @@ status nWayPartition(Column *col, Partition_inst *inst) {
 
 	while (idc[p_count / 2 - 1] <= idc[p_count / 2]) {
 		while (arr->content[idc[p_count / 2 - 1]] <= pivots[p_count / 2 - 1] && idc[p_count / 2 - 1] <= idc[p_count / 2]) {
-			int tmp_idc = idc[p_count / 2 - 1];
+			size_t tmp_idc = idc[p_count / 2 - 1];
 			int tmp_val = arr->content[tmp_idc];
 			// Init the position when the head pointers first hit the data
 			pos[idc[p_count / 2 - 1]] = idc[p_count / 2 - 1];
-			int tmp_pos = pos[tmp_idc];
+			size_t tmp_pos = pos[tmp_idc];
 			int i = p_count / 2 - 2;
 			while (i >= 0 && tmp_val <= pivots[i]) {
 				arr->content[tmp_idc] = arr->content[idc[i]];
@@ -95,12 +145,12 @@ status nWayPartition(Column *col, Partition_inst *inst) {
 		}
 
 		while (arr->content[idc[p_count / 2]] > pivots[p_count / 2 - 1] && idc[p_count / 2 - 1] <= idc[p_count / 2]) {
-			int tmp_idc = idc[p_count / 2];
+			size_t tmp_idc = idc[p_count / 2];
 			int tmp_val = arr->content[tmp_idc];
 
 			// Init the position when the head pointers first hit the data
 			pos[idc[p_count / 2]] = idc[p_count / 2];
-			int tmp_pos = pos[tmp_idc];
+			size_t tmp_pos = pos[tmp_idc];
 			int i = p_count / 2;
 			while ((i < p_count - 1) && tmp_val > pivots[i]) {
 				arr->content[tmp_idc] = arr->content[idc[i + 1]];
@@ -116,16 +166,16 @@ status nWayPartition(Column *col, Partition_inst *inst) {
 		}
 
 		if (idc[p_count / 2 - 1] <= idc[p_count / 2]) {
-			int tmp_l_idc = idc[p_count / 2];
-			int tmp_r_idc = idc[p_count / 2 - 1];
-			int r_val = arr->content[tmp_l_idc]			
+			size_t tmp_l_idc = idc[p_count / 2];
+			size_t tmp_r_idc = idc[p_count / 2 - 1];
+			int r_val = arr->content[tmp_l_idc];
 			int l_val = arr->content[tmp_r_idc];
 
 			// Init the position when the head pointers first hit the data
 			pos[tmp_r_idc] = tmp_r_idc;
 			pos[tmp_l_idc] = tmp_l_idc;
-			int r_pos = pos[tmp_l_idc];
-			int l_pos = pos[tmp_r_idc];
+			size_t r_pos = pos[tmp_l_idc];
+			size_t l_pos = pos[tmp_r_idc];
 			int i = p_count / 2;
 
 			while((i < p_count - 1) && l_val > pivots[i]) {
@@ -155,19 +205,55 @@ status nWayPartition(Column *col, Partition_inst *inst) {
 		}
 	}
 
+	memcpy(col->pivots, inst->pivots, sizeof(int) * p_count);
+	// write pivots positions to the sepcified Column
 	// put the idcs into columns p_pos as positions of the pivots...
 	for (int i = 0; i < p_count / 2; i++)
 		col->p_pos[i] = idc[i] - 1;
-	for (int i = p_count / 2 + 1; i <= p_count; i++)
+	for (int i = p_count / 2 + 1; i < p_count; i++)
 		col->p_pos[i - 1] = idc[i];
+	col->p_pos[p_count - 1] = arr->length - 1;
 	free(idc);
-	col->partitionCount = p_count;
+
+	#ifdef GHOST_VALUE
+	// move ghost values in each partition to the end of the partition
+	// as they might end up at any position in the partition after partitioned
+	// the partition algorithm is not order-preserving
+	for (int i = 0; i < p_count; i++) {
+		int g_count = 0;
+		size_t beg = (i == 0)? 0 : col->p_pos[i - 1] + 1;
+		size_t end = col->p_pos[i];
+		col->ghost_count[i] = inst->ghost_count[i];
+		while (g_count < inst->ghost_count[i]) {
+			// ghost Values have position lager than actual length
+			// find the first ghost pos from the beginning of partition
+			while (pos[beg] < actual_data_length && beg < end) beg++;
+			// find the first non-ghost pos from the end of the partition
+			while (pos[end] >= actual_data_length && end >= beg) {
+				arr->content[end] = NON_QUALIFYING_INT;
+				g_count++;
+				end--;
+			}
+			if (beg > end || g_count >= inst->ghost_count[i]) {
+				break;
+			}
+			arr->content[beg] = arr->content[end];
+			arr->content[end] = NON_QUALIFYING_INT;
+			pos[beg] = pos[beg] ^ pos[end];
+			pos[end] = pos[beg] ^ pos[end];
+			pos[beg] = pos[beg] ^ pos[end];
+			end--;
+			g_count++;
+			beg++;
+		}
+	}
+	#endif
 	s.code = CMD_DONE;
+	// debug("pos vector after partition:\n");
+	// for (size_t i = 0; i < arr->length; i++) {
+	// 	printf("%zu\n", pos[i]);
+	// }
 	return s;
-}
-
-status swap_after_partition(Table *tbl, Column *col) {
-
 }
 
 /**
@@ -177,55 +263,60 @@ status swap_after_partition(Table *tbl, Column *col) {
 void *swapsIncolumns(void *arg) {
 	Swapargs *msg = (Swapargs *)arg;
 	DArray_INT *data = msg->col->data;
-	// TODO:
 	// Create a new array...
 	DArray_INT *newdata = darray_create(data->length);
 	for (size_t i = 0; i < data->length; i++) {
-		newdata->content[newdata->length++] = data->content[msg->pos[i]];
+		// TODO: make it a more elegant set opertation
+		newdata->content[i] = data->content[msg->pos[i]];
 	}
 	darray_destory(data);
 	msg->col->data = newdata;
-	return NULL;
+	pthread_exit(NULL);
 }
 
 /**
  * make data aligned in Same Table
- * cols: 			an array of Columns in the same Table
- * partitionedName: the name of the Column thas has already been partitioned
+ * tbl: 			the table where partitioned Column belongs to
  * pos:				supposed position of data
- * col_count: 		number of Columns in the Table
  */
-status doSwaps(Col_ptr *cols, const char *partitionedName, int *pos, int col_count){
+status align_after_partition(Table *tbl, size_t *pos){
 	status s;
+	Col_ptr *cols = tbl->cols;
+	size_t col_count = tbl->col_count;
 	if (NULL == cols) {
 		s.code = ERROR;
 		return s;
 	}
+	
 	pthread_t *tids;
 	Swapargs *args;
 	tids = malloc(sizeof(pthread_t) * (col_count - 1));
 	args = malloc(sizeof(Swapargs) * (col_count - 1));
 	int t_count = 0;
 
-	for (int i = 0; i < col_count; i++) {
+	for (unsigned int i = 0; i < col_count; i++) {
 		args[t_count].col =	cols[i];
 		args[t_count].pos = pos;
-		t_count += (0 != strcmp(partitionedName, cols[i]->name));
+		if (tbl->primary_indexed_col != cols[i]) {
+			t_count++;	
+		}
 	}
 
+	log_info("whats up\n");
 	t_count = 0;
-	for (int i = 0; i < col_count; i++) {
-		if (0 != strcmp(partitionedName, cols[i]->name)) {
-			pthread_create(&tids[t_count], NULL, swapsIncolumns, (void *)(args + t_count));
+	for (unsigned int i = 0; i < col_count; i++) {
+		log_info("loop %u in create threads\n", i);
+		if (cols[i] != tbl->primary_indexed_col) {
+			pthread_create(&tids[t_count], NULL, swapsIncolumns, (void *)&args[t_count]);
 			t_count++;
 		}
 	}
 
-	for (int i = 0; i < col_count - 1; i++) {
+	for (unsigned int i = 0; i < col_count - 1; i++) {
 		pthread_join(tids[i], NULL);
 	}
 
-	s.code = OK;
+	s.code = CMD_DONE;
 	return s;
 }
 
@@ -236,29 +327,25 @@ status doSwaps(Col_ptr *cols, const char *partitionedName, int *pos, int col_cou
  * inst:	the partition instruction containing pivot count, an array of pivots and
  * 			an array of ghost_value slots if applicable
  */
+// TODO: ghost value not implemented in swap during partition time
 status nWayPartition(Table *tbl, Column *col, Partition_inst *inst) {
 	// idc used for indices to data during partitioning, pos used to record the position-map
 	int *idc;
 	status s;
 	
-	// TODO: code for Ghost Values
+	// TODO: code for Ghost Values in swap during partitioning
 	int p_count = inst->p_count;
 	int *pivots = inst->pivots;
+	col->partitionCount = p_count;
 
 	// the index of the parttioned column in the table
-	int col_index = -1;
+	size_t col_index = -1;
 	size_t col_count = tbl->col_count;
 	for (size_t k = 0; k < col_count; k++) {
 		if (tbl->cols[k] == col) {
 			col_index = k;
 			break;
 		}
-	}
-
-	if (-1 == col_index) {
-		s.code = ERROR;
-		log_err("Column not in Table!\n");
-		return s;
 	}
 
 	DArray_INT *arr = col->data;
@@ -379,8 +466,9 @@ status nWayPartition(Table *tbl, Column *col, Partition_inst *inst) {
 	// put the idcs into columns p_pos as positions of the pivots...
 	for (int i = 0; i < p_count / 2; i++)
 		col->p_pos[i] = idc[i] - 1;
-	for (int i = p_count / 2 + 1; i <= p_count; i++)
+	for (int i = p_count / 2 + 1; i < p_count; i++)
 		col->p_pos[i - 1] = idc[i];
+	col->p_pos[p_count - 1] = arr->length - 1;
 	free(idc);
 	col->partitionCount = p_count;
 	s.code = CMD_DONE;
