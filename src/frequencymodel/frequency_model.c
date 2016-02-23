@@ -286,10 +286,7 @@ void build_frequency_model_api(data* data,const int size, const int* type, const
 	for(int i = fm->block_size, j=0; i < (int)data->size; i+=fm->block_size, j++){
 		setup_partition_structure(j,i,fm->histogram_size,high_val,data,ps);
 	}
-	if(data->size % fm->block_size != 0){
-		//catch the last block in case data->size % fm->block_size != 0
-		setup_partition_structure(fm->histogram_size-1,data->size-1,fm->histogram_size,high_val,data,ps);
-	}
+	setup_partition_structure(fm->histogram_size-1,data->size-1,fm->histogram_size,high_val,data,ps);
 
 	for(int i = 0; i < size; i++) {
 		if(type[i] == 0) {
@@ -342,28 +339,6 @@ static inline void compute_score(partition_struct *ps, const forward_backward *f
 		ps->score = -DBL_MAX;
 	}
 }
-
-static inline void compute_score_gv(partition_struct *ps, const forward_backward *fb, const double sr, int* prefix, int index) {
-	if(index == 0) {
-		//prefix[index] =
-	}
-	if(ps->next_neighbor){
-		partition_struct *next = ps->next_neighbor;
-		int additional_blocks = (next->max_block-ps->min_block);
-		double score = 0.0;
-		for(int i = 0, index = ps->min_block; i <= additional_blocks; i++, index++) {
-			//compute the cost of removing the partition boundary in terms of additional read penalty
-			score += fb->backward[index]*i*sr;
-			score += fb->forward[index]*(additional_blocks-i)*sr;
-		}
-		//the score is the difference between the data movement cost of having the partition boundary,
-		//and the read penalty of not having the partition boundary
-		ps->score = ps->partition_static_cost-score;
-	} else {
-		ps->score = -DBL_MAX;
-	}
-}
-
 
 static inline partition_struct* insert_queue(partition_struct* head, partition_struct* el){
 	partition_struct* pos = head;
@@ -563,7 +538,7 @@ partition_struct* compute_partitioning_bottom_up_gv(const forward_backward *fb, 
 	//1. compute priority queue score for each partition as the IOs "saved" by merging with the neighbor to the right.
 
 	for(int i = 0; i < fm->histogram_size-1; i++) {
-		compute_score_gv(&partition_cost[i], fb, sr, prefix_in_back, i);
+		//compute_score_gv(&partition_cost[i], fb, sr, prefix_in_back, i);
 	}
 
 
