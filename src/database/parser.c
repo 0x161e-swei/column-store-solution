@@ -456,7 +456,6 @@ void workload_parse(const char *filename, int *ops, int *num1, int *num2) {
 					num1[count] = op->value1[i];
 					num2[count] = -1;
 					free(op->tables);
-					free((op->domain).cols);
 					free(op->value1);
 					break;
 				}

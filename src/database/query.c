@@ -328,6 +328,8 @@ status query_prepare(const char* query, dsl* d, db_operator* op) {
 		op->value2 = NULL;
 		op->res_name = NULL;
 		op->c = NULL;
+
+		free(str_cpy);
 		s.code = OK;
 		return s;
 	}
@@ -377,6 +379,7 @@ status query_prepare(const char* query, dsl* d, db_operator* op) {
 		// (op->c[0]).mode = NONE;
 
 		// TODO: cleanup tables and op->domain.cols in query_exec
+		free(str_cpy);
 		s.code = OK;
 		return s;
 	}
@@ -411,6 +414,7 @@ status query_prepare(const char* query, dsl* d, db_operator* op) {
 		op->position = tmp_pos;
 		op->c = NULL;
 
+		free(str_cpy);
 		s.code = OK;
 		return s;
 	}
@@ -468,6 +472,7 @@ status query_prepare(const char* query, dsl* d, db_operator* op) {
 		op->position = NULL;
 		op->c = NULL;
 
+		free(str_cpy);
 		s.code = OK;
 		return s;
 	}
@@ -525,6 +530,7 @@ status query_prepare(const char* query, dsl* d, db_operator* op) {
 		op->position = NULL;
 		op->c = NULL;
 
+		free(str_cpy);
 		s.code = OK;
 		return s;
 	}

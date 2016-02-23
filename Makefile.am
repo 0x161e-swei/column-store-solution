@@ -7,7 +7,7 @@ bin_PROGRAMS = server client
 SRCDIR = src
 INCDIR = include
 
-noinst_LIBRARIES = lib/libutil.a lib/librum.a lib/libdarray.a
+noinst_LIBRARIES = lib/libutil.a lib/librum.a lib/libdarray.a lib/libfrequencymodel.a
 
 O ?= 0 
 
@@ -39,6 +39,20 @@ lib_libdarray_a_CFLAGS = $(AM_CFLAGS)
 lib_libdarray_a_CPPFLAGS = $(AM_CPPFLAGS)
 lib_libdarray_a_SOURCES = $(DARRAY)
 
+###########################################
+#
+# src/frequencymodel
+#
+###########################################
+
+FREQUENCYMODEL = \
+	src/frequencymodel/customsort/custom_sort.c \
+	src/frequencymodel/frequency_model.c
+	
+
+lib_libfrequencymodel_a_CFLAGS = $(AM_CFLAGS)
+lib_libfrequencymodel_a_CPPFLAGS = $(AM_CPPFLAGS)
+lib_libfrequencymodel_a_SOURCES = $(FREQUENCYMODEL)
 
 
 ###########################################
@@ -60,8 +74,8 @@ RUM = \
 lib_librum_a_CFLAGS = $(AM_CFLAGS)
 lib_librum_a_CPPFLAGS = $(AM_CPPFLAGS)
 lib_librum_a_SOURCES = $(RUM)
-lib_librum_a_LIBADD = lib/libdarray.a
-
+lib_librum_a_LIBADD = lib/libdarray.a \
+						lib/libfrequencymodel.a
 
 
 ###########################################
@@ -74,6 +88,7 @@ server_CFLAGS = $(AM_CFLAGS)
 server_CPPFLAGS = $(AM_CPPFLAGS)
 server_LDADD = lib/libutil.a \
 	lib/librum.a \
+	lib/libfrequencymodel.a \
 	lib/libdarray.a
 server_SOURCES = src/server/server.c
 

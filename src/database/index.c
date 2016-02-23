@@ -1,5 +1,7 @@
+#include "../frequencymodel/frequency_model.h"
 #include "index.h"
 #include "query.h"
+
 /**
  * create an index over a Column
  * tbl: 		Table the index is in
@@ -17,23 +19,34 @@ status create_index(Table *tbl, Column *col, IndexType type, Workload w) {
 					// callfunction(const int *data, size_t size, const int* ops, const int *num1, 
 					// const int *num2, size_t size_w, Partition_inst *inst);
 					// callfunction(col->data->content, col->data->length, w.ops, w.num1, w.num2, w.count, &inst);
-					log_info("parsed workload %zu lines\n", w.count);
-					// TODO: following 6 lines of code are for tests ONLY
-					
-					log_info("waiting for partition instruction\n");
-					scanf("%d", &(inst.p_count));
-					log_info("waiting for %d pivots\n", inst.p_count);
-					inst.pivots = malloc(sizeof(int) * inst.p_count);
-					for (int i = 0; i < inst.p_count; i++) {
-						scanf("%d", &(inst.pivots[i]));
-					}
+					log_info("call partition decision function!!\n");
 					#ifdef GHOST_VALUE
-					log_info("waiting for %d ghost_count\n", inst.p_count);
-					inst.ghost_count = malloc(sizeof(int) * inst.p_count);
+					// TODO: eighth parameter as algorithm type
+					partition_data(col->data->content, col->data->length, w.ops, w.num1, w.num2, w.count, &inst);
+					#else
+					// call someone else
+					#endif
+					log_info("parsed workload %zu lines\n", w.count);
+
+					debug("partition instruction: total %i partitions\n", inst.p_count);
 					for (int i = 0; i < inst.p_count; i++) {
-						scanf("%d", &(inst.ghost_count[i]));
+						printf("%d\n", inst.pivots[i]);
 					}
-					#endif /* GHOST_VALUE */
+					// TODO: following 6 lines of code are for tests ONLY
+					// log_info("waiting for partition instruction\n");
+					// scanf("%d", &(inst.p_count));
+					// log_info("waiting for %d pivots\n", inst.p_count);
+					// inst.pivots = malloc(sizeof(int) * inst.p_count);
+					// for (int i = 0; i < inst.p_count; i++) {
+					// 	scanf("%d", &(inst.pivots[i]));
+					// }
+					// #ifdef GHOST_VALUE
+					// log_info("waiting for %d ghost_count\n", inst.p_count);
+					// inst.ghost_count = malloc(sizeof(int) * inst.p_count);
+					// for (int i = 0; i < inst.p_count; i++) {
+					// 	scanf("%d", &(inst.ghost_count[i]));
+					// }
+					// #endif /* GHOST_VALUE */
 
 					#ifdef SWAPLATER
 					// tbl->primary_indexed_col = col; done in parse
@@ -55,7 +68,10 @@ status create_index(Table *tbl, Column *col, IndexType type, Workload w) {
 					s = nWayPartition(col, &inst);
 					#endif /* GHOST_VALUE */
 					#endif /* SWAPLATER */
-					tbl->primary_indexed_col = col;
+					debug("partitionCount %zu\n", col->partitionCount);
+					for (size_t i = 0; i < col->partitionCount; i++) {
+						printf("%d %zu\n", col->pivots[i], col->p_pos[i]);
+					}
 				}
 				break;
 			}
@@ -103,7 +119,6 @@ status nWayPartition(Table *tbl, Column *col, Partition_inst *inst)
 status nWayPartition(Column *col, Partition_inst *inst)
 #endif /* GHOST_VALUE */
 {
-
 	status s;
 	int p_count = inst->p_count;
 	int *pivots = inst->pivots;
@@ -230,7 +245,7 @@ status nWayPartition(Column *col, Partition_inst *inst)
 	// write pivots positions to the sepcified Column
 	// put the idcs into columns p_pos as positions of the pivots...
 	for (int i = 0; i < p_count / 2; i++)
-		col->p_pos[i] = idc[i] - 1;
+		col->p_pos[i] = (idc[i] == 0)?0 :(idc[i] - 1);
 	for (int i = p_count / 2 + 1; i < p_count; i++)
 		col->p_pos[i - 1] = idc[i];
 	col->p_pos[p_count - 1] = arr->length - 1;
@@ -283,15 +298,17 @@ status nWayPartition(Column *col, Partition_inst *inst)
  */
 void *swapsIncolumns(void *arg) {
 	Swapargs *msg = (Swapargs *)arg;
-	DArray_INT *data = msg->col->data;
+	DArray_INT *arr = msg->col->data;
 	// Create a new array...
-	DArray_INT *newdata = darray_create(data->length);
-	for (size_t i = 0; i < data->length; i++) {
-		// TODO: make it a more elegant set opertation
-		newdata->content[i] = data->content[msg->pos[i]];
+	if (NULL != arr) {
+		DArray_INT *newdata = darray_create(arr->length);
+		for (size_t i = 0; i < arr->length; i++) {
+			newdata->content[i] = arr->content[msg->pos[i]];
+		}
+		newdata->length = arr->length;
+		darray_destory(arr);
+		msg->col->data = newdata;
 	}
-	darray_destory(data);
-	msg->col->data = newdata;
 	pthread_exit(NULL);
 }
 
@@ -308,7 +325,6 @@ status align_after_partition(Table *tbl, size_t *pos){
 		s.code = ERROR;
 		return s;
 	}
-	
 	pthread_t *tids;
 	Swapargs *args;
 	tids = malloc(sizeof(pthread_t) * (col_count - 1));
@@ -321,9 +337,10 @@ status align_after_partition(Table *tbl, size_t *pos){
 		if (tbl->primary_indexed_col != cols[i]) {
 			t_count++;	
 		}
+		if (cols[i]->data == NULL)
+			log_err("%s no data before exec!!!!!\n", cols[i]->name);
 	}
 
-	log_info("whats up\n");
 	t_count = 0;
 	for (unsigned int i = 0; i < col_count; i++) {
 		log_info("loop %u in create threads\n", i);
@@ -332,11 +349,9 @@ status align_after_partition(Table *tbl, size_t *pos){
 			t_count++;
 		}
 	}
-
 	for (unsigned int i = 0; i < col_count - 1; i++) {
 		pthread_join(tids[i], NULL);
 	}
-
 	s.code = CMD_DONE;
 	return s;
 }

@@ -8,14 +8,14 @@
 
 
 // The instruction for partition on a single column
-typedef struct _partition_inst{
-	// pivot count
-	int p_count;
-	int *pivots;
-	#ifdef GHOST_VALUE
-	int *ghost_count;
-	#endif
-} Partition_inst;
+// typedef struct _partition_inst{
+// 	// pivot count
+// 	int p_count;
+// 	int *pivots;
+// 	#ifdef GHOST_VALUE
+// 	int *ghost_count;
+// 	#endif
+// } Partition_inst;
 
 
 

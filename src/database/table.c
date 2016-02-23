@@ -73,9 +73,11 @@ status create_table(Db* db, const char* name, size_t num_columns, Table** table)
 
 status show_tbl(Table *tbl) {
 	size_t len = tbl->length;
-	if (NULL != tbl->primary_indexed_col)
+	if (NULL != tbl->primary_indexed_col){
 		// real length including ...extra data slots like ghost value
 		len = tbl->primary_indexed_col->data->length;
+		debug("partitionCount %zu\n", tbl->primary_indexed_col->partitionCount);
+	}
 	size_t cur_partition = 0;
 	debug("show table %s data:(len %zu)\n", tbl->name, tbl->length);
 	for (size_t i = 0; i < len; i++) {
