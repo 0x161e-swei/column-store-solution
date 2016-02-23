@@ -8,6 +8,7 @@
 #ifndef DATA_STRUCTURES_H_
 #define DATA_STRUCTURES_H_
 #include <stdlib.h>
+//#define GHOST_VALUE
 
 typedef struct data {
 	int* array;
@@ -28,6 +29,11 @@ struct partition_struct {
 	int max_val;
 	double partition_static_cost;
 	double score;
+#ifdef GHOST_VALUE
+	int inserts;
+	int ghost_values;
+	double partition_dynamic_cost;
+#endif
 	partition_struct* prev_neighbor;
 	partition_struct* next_neighbor;
 	partition_struct* next_queue;

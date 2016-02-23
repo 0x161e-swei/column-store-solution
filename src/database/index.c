@@ -15,16 +15,13 @@ status create_index(Table *tbl, Column *col, IndexType type, Workload w) {
 			case PARTI: {
 				if (1 == col->partitionCount) {
 					Partition_inst inst;
-					// TODO: call Partition decision function with Workload and dataset
-					// callfunction(const int *data, size_t size, const int* ops, const int *num1, 
-					// const int *num2, size_t size_w, Partition_inst *inst);
-					// callfunction(col->data->content, col->data->length, w.ops, w.num1, w.num2, w.count, &inst);
 					log_info("call partition decision function!!\n");
 					#ifdef GHOST_VALUE
 					// TODO: eighth parameter as algorithm type
-					partition_data(col->data->content, col->data->length, w.ops, w.num1, w.num2, w.count, &inst);
-					#else
 					// call someone else
+					#else
+					partition_data(col->data->content, col->data->length, w.ops, w.num1, w.num2, w.count, 0, &inst);
+					
 					#endif
 					log_info("parsed workload %zu lines\n", w.count);
 
