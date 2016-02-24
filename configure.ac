@@ -32,8 +32,6 @@ AH_TEMPLATE([DEBUG],[Define for debug])
 
 
 # Checks for libraries.
-AC_CHECK_LIB([csv], [csv_init], [],
-	AC_MSG_FAILURE([libcsv requested but library not found]), [])
 
 # Checks for header files.
 AC_CHECK_HEADERS([fcntl.h stddef.h stdint.h stdlib.h string.h sys/socket.h unistd.h])
