@@ -21,7 +21,6 @@ SOFTWARE.
 #define CS165_H
 
 #include <stdlib.h>
-#include <stdio.h>
 #include <pthread.h>
 #include <stdbool.h>
 #include "utils.h"

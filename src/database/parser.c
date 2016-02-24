@@ -3,7 +3,6 @@
 #include <regex.h>
 #include <string.h>
 #include <ctype.h>
-#include <stdio.h>
 #include "db.h"
 #include "table.h"
 #include "column.h"
@@ -263,7 +262,8 @@ status parse_dsl(char* str, dsl* d, db_operator* op)
 			ret.code = ERROR;
 		}  
 		else {
-			ret = load_data4file(filename, lineCount, fieldCount);
+			ret = parse_dataset_csv(filename, lineCount, fieldCount);
+			// ret = load_data4file(filename, lineCount, fieldCount);
 		}
 
 		// Free the str_cpy

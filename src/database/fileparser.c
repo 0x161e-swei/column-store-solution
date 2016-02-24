@@ -1,218 +1,133 @@
+#define _GNU_SOURCE
+#include <stdio.h>
 #include "fileparser.h"
 #include "db.h"
-#include "config.h"
 #include "table.h"
 #include "column.h"
-#include "uthash.h"
 
-char *readfile(const char *filename, size_t *len) {
-	FILE *fp = fopen(filename, "r");
-	if (NULL == fp) return NULL;
-	// Get file length
-	int rc = fseek(fp, 0, SEEK_END);
-	if (rc < 0) {
-		log_err("fseek(END)");
-		return NULL;
-	}
-	long l = ftell(fp);
-	if (l < 0) {
-		log_err("ftell()");
-		return NULL;
-	}
-	*len = l;
-
-	// Set file stream to the beginning
-	rc = fseek(fp, 0, SEEK_SET);
-	if (rc < 0) {
-		log_err("fseek(SET)");
-		return NULL;
-	}
-
-	/* Read the whole file
-		WARNING: maybe it would be better to 
-		do it block by block
-	*/
-	char *contents = malloc(*len);
-	if (contents == NULL) {
-		log_err("malloc");
-		return NULL;
-	}
-	size_t read = 0;
-	while (read < *len) {
-		size_t r = fread(contents + read, 1, *len - read, fp);
-		if (r == 0) {
-			if (ferror(fp)) {
-				log_err("error reading input\n");
-				free(contents);
-				fclose(fp);
-				return NULL;
-			} else if (feof(fp)) {
-				log_err("EOF encountered after %zu bytes (expected %zu)\n",
-						read, *len);
-				*len = read;
-				break;
-			}
-		}
-		read += r;
-	}
-	fclose(fp);
-	return contents;
-}
-
-void csv_process_fields(void *s,  size_t len __attribute__((unused)), void *data)
-{
-	parse_csv_info *info = (parse_csv_info *)data;
-	if (NULL != info) {
-		if (info->error) return;
-		if (1 == info->first_row) {		 // First row case
-			// All the data in the file shall belong to same table
-			if (0 == info->cur_feild){	
-				// Figure out the table name
-				unsigned int i = 0, flag = 0;
-				char *name = (char *)s;
-				while ('\0' != name[i]) {
-					if ('.' == name[i]) {
-						flag++;
-						if (2 == flag) {		// Find the second '.'
-							break;
-						}
-					}
-					i++;
-				}
-				// strncpy the name, +1 for index-diff and '\0'
-				char *tmp_name = malloc(sizeof(char) * (i + 1));
-				strncpy(tmp_name, name, i);	 // Only copy i bytes to skip second dot
-				tmp_name[i] = '\0';
-
-				// Find the table according to the name
-				Table* tmp_tbl;
-				HASH_FIND_STR(database->tables, tmp_name, tmp_tbl);
-				free(tmp_name);
-				// length == 0, in case of re-load
-				if (NULL != tmp_tbl && 0 == tmp_tbl->length) {
-					// Update the length of table according to the file loaded
-					tmp_tbl->length = info->line_count;
-				}
-				else{
-					if (NULL == tmp_tbl) {
-						log_err("Invalid table name!\n");
-					}
-					else {
-						log_err("Data already loaded!\nOriginal table has length of %zu", tmp_tbl->length);
-					}
-					info->error = 1;
-					return;
-				}	
-			}
-			
-			// Find the column according to the name
-			Column *tmp_col;
-			HASH_FIND_STR(col_hash_list, (char *)s, tmp_col);
-			if (NULL != tmp_col) {
-				log_info("init an array with %zu slots\n", info->line_count);
-				tmp_col->data = darray_create(info->line_count);
-				// mark length at first
-				tmp_col->data->length = info->line_count;
-				// Record the number of columns to load
-				// info->cols = realloc((info->cols), (info->cur_feild + 1) * sizeof(Column *));
-				// if (NULL == info->cols) {
-				// 	log_err("Mem alloc failed in loading\n");
-				// 	info->error = 1;
-				// 	return;
-				// }
-				info->cols[info->cur_feild] = tmp_col;
-			}
-			else {
-				log_err("Invail column name\n");
-				info->error = 1;	
-				return;
-			}
+status parse_field(const char *fields, size_t lineCount, size_t fieldCount, Column **cols) {
+	status ret;
+	const char *str = fields;
+	size_t i = 0;
+	char *col_name;
+	for (; i < fieldCount - 1; i++) {
+		const char *comma = strchr(str, ',');
+		int t = (int)(comma - str);
+		col_name = malloc(sizeof(char) * (t + 1));
+		strncpy(col_name, str, t);
+		col_name[t] = '\0';
+		// look for next comma
+		str = comma + 1;
+		cols[i]  = NULL;
+		grab_column(col_name, &cols[i]);
+		if (NULL != cols[i]) {
+			log_info("init an array with %zu slots\n", lineCount);
+			cols[i]->data = darray_create(lineCount);
+			// mark length at first
+			cols[i]->data->length = lineCount;
 		}
 		else {
-			// General case
-			((info->cols[info->cur_feild])->data)->content[info->cur_row] = atoi((char *)s);
-			// printf("catch data %d\n", atoi((char *)s));
+			log_err("invalid column name %s!\n", col_name);
+			for (int j = i - 1; j >= 0; j--) {
+				darray_destory(cols[j]->data);
+			}
 		}
-		info->cur_feild++;
+		free(col_name);
 	}
-}
 
-void csv_process_row(int delim __attribute__((unused)), void *data) 
-{
-	parse_csv_info *info = (parse_csv_info *)data;
-	if (NULL != info) {
-		if (info->error) return;
-		if (1 == info->first_row) {
-			info->first_row = 0;
-			// info->cols = malloc(sizeof(Column *) * info->field_count);
-			// for (size_t i = 0; i < info->field_count; i++) {
-			//	 info->cols[i] = malloc(sizeof(int) * info->line_count);
-			// }
-			info->cur_row = 0;	
+	// last field
+	const char *n = strchr(str, '\n');
+	int t = (int)(n - str);
+	col_name = malloc(sizeof(char) * (t + 1));
+	strncpy(col_name, str, t);
+	col_name[t] = '\0';
+
+	grab_column(col_name, &cols[i]);
+	if (NULL != cols[i]) {
+		log_info("init an array with %zu slots\n", lineCount);
+		cols[i]->data = darray_create(lineCount);
+		// mark length at first
+		cols[i]->data->length = lineCount;
+	}
+
+	char *dot = strrchr(col_name, '.');
+	*dot = '\0';
+	Table *tmp_tbl = NULL;
+	grab_table(col_name, &tmp_tbl);
+	// length == 0, in case of re-load
+	if (NULL != tmp_tbl && 0 == tmp_tbl->length) {
+		// Update the length of table according to the file loaded
+		tmp_tbl->length = lineCount;
+	}
+	else{
+		if (NULL == tmp_tbl) {
+			log_err("Invalid table name!\n");
 		}
 		else {
-			info->cur_row++;	
+			log_err("Data already loaded!\nOriginal table has length of %zu", tmp_tbl->length);
 		}
-		info->cur_feild = 0;
+		ret.code = ERROR;
+		return ret;
 	}
+	*dot = '.';
+	free(col_name);
+	ret.code = OK;
+	return ret;
 }
 
-status load_data4file(const char* filename, size_t line_count, size_t field_count) {
-	size_t length = 0;
+status parse_dataset_csv(const char *filename, size_t lineCount, size_t fieldCount) {
+	status ret;
 	if (NULL == database) {
-		status ret;
 		ret.code = ERROR;
 		log_err("no database exists!\n");
 		return ret;
 	}
-	char *contents = readfile(filename, &length);
 
-	if (NULL == contents) {
-		status ret;
-		ret.code = ERROR;
-		return ret;
+	FILE* fp = fopen(filename, "r");
+	if (NULL != fp) {
+		Column **cols;
+		cols = malloc(sizeof(Column *) * fieldCount);
+		size_t len = 0;
+		char *line = NULL;
+		ssize_t read;
+		// handle the first line with Column names
+		read = getline(&line, &len, fp);
+		if (0 != read && NULL != line) {
+			ret = parse_field(line, lineCount, fieldCount, cols);
+			if (line) free(line);
+			if (OK != ret.code) {
+				free(cols);
+				return ret;
+			}
+		}
+		
+		for (size_t i = 0; i < lineCount; i++) {
+			char *line = NULL;
+			read = getline(&line, &len, fp);
+			if (0 != read) {
+				char *str = line;
+				char *next = NULL;
+				size_t j = 0;
+				for (; j < fieldCount; j++) {
+					cols[j]->data->content[i] = strtol(str, &next, 10);
+					str = next + 1;
+				}
+				if (line) {
+					free(line);
+				}
+			}
+		}
+		fclose(fp);
+
+		// for (size_t i = 0; i < fieldCount; i++) {
+		// 	free(cols[i]);
+		// }
+		free(cols);
+		log_info("parsing done\n");
 	}
-
-	struct csv_parser p;
-	int rc = csv_init(&p, CSV_APPEND_NULL);
-	if (0 != rc) {
-		free(contents);
-		log_err("failed to initialize CSV parser\n");
-		status ret;
+	else {
 		ret.code = ERROR;
-		return ret;
 	}
-
-	parse_csv_info parser_info;
-	memset((void *)&parser_info, 0, sizeof(parse_csv_info));
-	parser_info.line_count = line_count;
-	parser_info.field_count = field_count;
-	parser_info.cols = malloc(sizeof(Col_ptr) * field_count);
-	
-	parser_info.first_row = 1;
-	
-	size_t byte_processed = csv_parse(&p, (void *)contents, length, csv_process_fields, csv_process_row, &parser_info);
-	rc = csv_fini(&p, csv_process_fields, csv_process_row, &parser_info);
-	
-	free(parser_info.cols);
-	free(contents);
-	log_info("parsing done\n");
-	if (0 != rc || byte_processed != length) {
-		log_err("error parsing file %s\n", csv_strerror(csv_error(&p)));
-		status ret;
-		ret.code = ERROR;
-		return ret;		
-	}
-
-	// for (size_t i = 0; i < parser_info.field_count; i++) {
-	// 	for (size_t j = 0; j < parser_info.line_count; j++) {
-	// 		// printf("%d\n", parser_info.cols[i][j]);
-	// 		printf("%d ", ((parser_info.cols[i])->data)->content[j]);
-	// 	}
-	// 	printf("\n");
-	// }
-
-	status ret;
 	ret.code = CMD_DONE;
 	return ret;
 }

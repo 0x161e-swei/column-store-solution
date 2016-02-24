@@ -1,4 +1,3 @@
-#define _GNU_SOURCE
 #include "utils.h"
 #include <stdlib.h>
 

@@ -7,8 +7,9 @@
 #ifndef __UTILS_H__
 #define __UTILS_H__
 
-#include <stdarg.h>
+#define _GNU_SOURCE
 #include <stdio.h>
+#include <stdarg.h>
 #include <string.h>
 #include "config.h"
 #define ANSI_COLOR_RED		"\x1b[31m"
