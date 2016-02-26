@@ -54,4 +54,3 @@ foo.*
 # test
 data/*
 !data/testGen.py
-!data/ddl

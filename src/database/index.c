@@ -340,8 +340,8 @@ status align_after_partition(Table *tbl, size_t *pos){
 
 	t_count = 0;
 	for (unsigned int i = 0; i < col_count; i++) {
-		log_info("loop %u in create threads\n", i);
 		if (cols[i] != tbl->primary_indexed_col) {
+			log_info("loop %u in create threads\n", i);
 			pthread_create(&tids[t_count], NULL, swapsIncolumns, (void *)&args[t_count]);
 			t_count++;
 		}
