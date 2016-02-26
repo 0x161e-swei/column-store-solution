@@ -85,8 +85,6 @@ status sync_db(Db* db __attribute__((unused))) {
 		fwrite(database->name, sizeof(char), len, dbinfo);
 		fwrite(&database->table_count, sizeof(database->table_count), 1, dbinfo);
 
-
-
 		Table *tmp, *tbl;
 		HASH_ITER(hh, (database->tables), tbl, tmp) {
 			log_info("\tsaving the table %s...\n", tbl->name);

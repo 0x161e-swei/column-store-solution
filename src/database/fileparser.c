@@ -75,7 +75,7 @@ status parse_field(const char *fields, size_t lineCount, size_t fieldCount, Colu
 	return ret;
 }
 
-status parse_dataset_csv(const char *filename, size_t lineCount, size_t fieldCount) {
+status parse_dataset_csv(const char *filename) {
 	status ret;
 	if (NULL == database) {
 		ret.code = ERROR;
@@ -85,15 +85,31 @@ status parse_dataset_csv(const char *filename, size_t lineCount, size_t fieldCou
 
 	FILE* fp = fopen(filename, "r");
 	if (NULL != fp) {
-		Column **cols;
-		cols = malloc(sizeof(Column *) * fieldCount);
 		size_t len = 0;
 		char *line = NULL;
+		char *next = NULL;
 		ssize_t read;
-		// handle the first line with Column names
 		read = getline(&line, &len, fp);
+		size_t lineCount;
+		size_t fieldCount;
+		char *numbers = line;
+		// first line with length of the Columns and number of the Columns
+		lineCount = strtol(numbers, &next, 10);
+		numbers = next + 1;
+		fieldCount = strtol(numbers, &next, 10);
+		if (lineCount <= 0 || fieldCount <= 0) {
+			ret.code = ERROR;
+			log_err("no data to load!\n");
+			return ret;
+		}
+
+		Column **cols;
+		cols = malloc(sizeof(Column *) * fieldCount);
+		// handle line with Column names
+		read = getline(&line, &len, fp);
+		char *fields = line;
 		if (0 != read && NULL != line) {
-			ret = parse_field(line, lineCount, fieldCount, cols);
+			ret = parse_field(fields, lineCount, fieldCount, cols);
 			if (line) free(line);
 			if (OK != ret.code) {
 				free(cols);
@@ -106,7 +122,6 @@ status parse_dataset_csv(const char *filename, size_t lineCount, size_t fieldCou
 			read = getline(&line, &len, fp);
 			if (0 != read) {
 				char *str = line;
-				char *next = NULL;
 				size_t j = 0;
 				for (; j < fieldCount; j++) {
 					cols[j]->data->content[i] = strtol(str, &next, 10);

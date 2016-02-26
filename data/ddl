@@ -1,6 +1,0 @@
-create(db,"foo")
-create(tbl,"tb1",foo,2)
-create(col,"a",foo.tb1,unsorted)
-create(col,"b",foo.tb1,unsorted)
-load("data/dataset")
-quit

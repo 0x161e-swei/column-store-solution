@@ -254,17 +254,18 @@ status parse_dsl(char* str, dsl* d, db_operator* op)
 		// This gives us the filename
 		const char* filename = strtok(args, quotes);
 		log_info("load(\"%s\")\n", filename);
-		size_t lineCount = 0;
-		size_t fieldCount = 0;
-		collect_file_info(filename, &lineCount, &fieldCount);
+		// size_t lineCount = 0;
+		// size_t fieldCount = 0;
+		// collect_file_info(filename, &lineCount, &fieldCount);
 	
-		if (1 >= lineCount) {
-			ret.code = ERROR;
-		}  
-		else {
-			ret = parse_dataset_csv(filename, lineCount, fieldCount);
+		// if (1 >= lineCount) {
+		// 	ret.code = ERROR;
+		// }
+		// else {
+		ret = parse_dataset_csv(filename);
+			// ret = parse_dataset_csv(filename, lineCount, fieldCount);
 			// ret = load_data4file(filename, lineCount, fieldCount);
-		}
+		// }
 
 		// Free the str_cpy
 		free(str_cpy);
@@ -489,9 +490,9 @@ void workload_parse(const char *filename, int *ops, int *num1, int *num2) {
 			count++;
 		}
 		fclose(fp);
-		debug("after workload parsed:\n");
-		for (size_t ii = 0; ii < count; ii++) {
-			printf("%d %d %d\n", ops[ii], num1[ii], num2[ii]);
-		}
+		// debug("after workload parsed:\n");
+		// for (size_t ii = 0; ii < count; ii++) {
+		// 	printf("%d %d %d\n", ops[ii], num1[ii], num2[ii]);
+		// }
 	}
 }
