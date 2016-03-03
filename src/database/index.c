@@ -295,6 +295,10 @@ status nWayPartition(Column *col, Partition_inst *inst)
  */
 void *swapsIncolumns(void *arg) {
 	Swapargs *msg = (Swapargs *)arg;
+	if (msg->len != 0 && NULL == msg->col->data) {
+		load_column4disk(msg->col, msg->len);	
+	}
+	log_info("in thread ...\n");
 	DArray_INT *arr = msg->col->data;
 	// Create a new array...
 	if (NULL != arr) {
@@ -331,6 +335,7 @@ status align_after_partition(Table *tbl, size_t *pos){
 	for (unsigned int i = 0; i < col_count; i++) {
 		args[t_count].col =	cols[i];
 		args[t_count].pos = pos;
+		args[t_count].len = tbl->length;
 		if (tbl->primary_indexed_col != cols[i]) {
 			t_count++;	
 		}

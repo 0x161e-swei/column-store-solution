@@ -30,6 +30,7 @@ status nWayPartition(Column *col, Partition_inst *inst);
 typedef struct _swapargs {
 	Column *col;
 	size_t *pos;
+	size_t len;
 } Swapargs;
 
 status align_after_partition(Table *tbl, size_t *pos);

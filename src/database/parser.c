@@ -385,10 +385,11 @@ status parse_dsl(char* str, dsl* d, db_operator* op)
 		w.count = lineCount + 1;
 		// Load data from disk if not in memory
 		if (tmp_tbl->length != 0) {
-			for (unsigned int j = 0; j < tmp_tbl->col_count; j++) {
-				if (NULL == tmp_tbl->cols[j]->data)
-					load_column4disk(tmp_tbl->cols[j], tmp_tbl->length);
-			}
+			// do the loading later
+			// for (unsigned int j = 0; j < tmp_tbl->col_count; j++) {
+			// 	if (NULL == tmp_tbl->cols[j]->data)
+			// 		load_column4disk(tmp_tbl->cols[j], tmp_tbl->length);
+			// }
 		}
 		else {
 			log_err("empty table to partition\n");
