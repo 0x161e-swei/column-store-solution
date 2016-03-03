@@ -714,7 +714,7 @@ status load_column4disk(Column *col, size_t len) {
 	colfile = malloc(sizeof(char) * (6 + namelen));
 	strncpy(colfile, dataprefix, 6);
 	strncat(colfile, col->name, namelen);
-	log_info("loading column %s from disks!\n", colfile);
+	// debug("loading column %s from disks!\n", colfile);
 
 	col->data = darray_create(len);
 	FILE *fp = fopen(colfile, "rb");

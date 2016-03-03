@@ -1,6 +1,7 @@
 #include "../frequencymodel/frequency_model.h"
 #include "index.h"
 #include "query.h"
+#include <time.h>
 
 /**
  * create an index over a Column
@@ -10,20 +11,24 @@
  */
 status create_index(Table *tbl, Column *col, IndexType type, Workload w) {
 	status s;
+	clock_t tic, toc;
 	if (NULL != col && NULL == col->index) {
 		switch (type) {
 			case PARTI: {
 				if (1 == col->partitionCount) {
 					Partition_inst inst;
-					log_info("call partition decision function!!\n");
+					debug("call partition decision function!!\n");
 					#ifdef GHOST_VALUE
 					// TODO: eighth parameter as algorithm type
 					// call someone else
 					#else
+					tic = clock();
+
 					partition_data(col->data->content, col->data->length, w.ops, w.num1, w.num2, w.count, 0, &inst);
-					
+
+					toc = clock();
+					debug("partition decision function comsumed %lf\n", (double)(toc -tic) * 1000.0 / CLOCKS_PER_SEC);
 					#endif
-					log_info("parsed workload %zu lines\n", w.count);
 
 					debug("partition instruction: total %i partitions\n", inst.p_count);
 					// for (int i = 0; i < inst.p_count; i++) {
@@ -46,17 +51,32 @@ status create_index(Table *tbl, Column *col, IndexType type, Workload w) {
 					// #endif /* GHOST_VALUE */
 
 					#ifdef SWAPLATER
-					// tbl->primary_indexed_col = col; done in parse
-
 					#ifdef GHOST_VALUE
+					tic = clock();
+
 					s = nWayPartition(tbl, col, &inst);
+
+					toc = clock();
+					debug("partition with ghostvalue comsumed %lf\n", (double)(toc -tic) * 1000.0 / CLOCKS_PER_SEC);
+
 					free(inst.ghost_count);
 					#else
+					tic = clock();
+
 					s = nWayPartition(col, &inst);
+
+					toc = clock();
+					debug("partition without ghostvalue comsumed %lf\n", (double)(toc -tic) * 1000.0 / CLOCKS_PER_SEC);
+					
 					#endif /* GHOST_VALUE */
 					free(inst.pivots);
 					if (CMD_DONE == s.code) {
+						tic = clock();
+
 						s = align_after_partition(tbl, col->pos);
+
+						toc = clock();
+						debug("align without ghostvalue comsumed %lf\n", (double)(toc -tic) * 1000.0 / CLOCKS_PER_SEC);
 					}
 					#else
 					#ifdef GHOST_VALUE
@@ -125,7 +145,7 @@ status nWayPartition(Column *col, Partition_inst *inst)
 	col->p_pos = malloc(sizeof(size_t) * p_count);
 
 	#ifdef GHOST_VALUE
-	log_info("before inserting ghost values, length of array %zu\n", arr->length);
+	debug("before inserting ghost values, length of array %zu\n", arr->length);
 	int total_gv = 0;
 	size_t actual_data_length = arr->length;
 	col->ghost_count = malloc(sizeof(int) * p_count);
@@ -143,7 +163,7 @@ status nWayPartition(Column *col, Partition_inst *inst)
 	free(addon_ghosts);
 	// inseting NON_QUALIFYING_INT into other Columns
 	insert_ghost_values(tbl, total_gv);
-	log_info("after inserting ghost values, length of array %zu\n", arr->length);
+	debug("after inserting ghost values, length of array %zu\n", arr->length);
 	#endif
 
 	// idc used for indices to data during partitioning
@@ -282,10 +302,6 @@ status nWayPartition(Column *col, Partition_inst *inst)
 	}
 	#endif
 	s.code = CMD_DONE;
-	// debug("pos vector after partition:\n");
-	// for (size_t i = 0; i < arr->length; i++) {
-	// 	printf("%zu\n", pos[i]);
-	// }
 	return s;
 }
 
@@ -298,7 +314,6 @@ void *swapsIncolumns(void *arg) {
 	if (msg->len != 0 && NULL == msg->col->data) {
 		load_column4disk(msg->col, msg->len);	
 	}
-	log_info("in thread ...\n");
 	DArray_INT *arr = msg->col->data;
 	// Create a new array...
 	if (NULL != arr) {
@@ -339,14 +354,11 @@ status align_after_partition(Table *tbl, size_t *pos){
 		if (tbl->primary_indexed_col != cols[i]) {
 			t_count++;	
 		}
-		if (cols[i]->data == NULL)
-			log_err("%s no data before exec!!!!!\n", cols[i]->name);
 	}
 
 	t_count = 0;
 	for (unsigned int i = 0; i < col_count; i++) {
 		if (cols[i] != tbl->primary_indexed_col) {
-			log_info("loop %u in create threads\n", i);
 			pthread_create(&tids[t_count], NULL, swapsIncolumns, (void *)&args[t_count]);
 			t_count++;
 		}

@@ -96,8 +96,9 @@ def dataGen(dis):
 	fdata.write('\n')
 	# write data
 	for i in range(datasize  / 10):
+		w = ''
 		for k in range(10):
-			w = str(int(data[i * 10 + k]))
+			w += str(int(data[i * 10 + k]))
 			# write data in other column
 			for j in range(1, columnNum):
 				w = w + ',' + str(data[i * 10 + k])
