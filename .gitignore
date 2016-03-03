@@ -55,4 +55,3 @@ foo.*
 data/*
 !data/dataGen.py
 !data/workGen.py
-!data/gen.cfg
