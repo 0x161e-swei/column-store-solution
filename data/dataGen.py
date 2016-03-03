@@ -27,9 +27,9 @@ columnNameDict = 	{
 col_name = 'foo.tb1.a'
 tbl_name = 'foo.tb1'
 configSection = 'dataset'
-config = ConfigParser.ConfigParser(allow_no_value=True)
 data_filename = 'dataset'
 setup_filename = 'setupddl'
+config = ConfigParser.ConfigParser(allow_no_value=True)
 
 
 def readInt(option, default):
@@ -64,7 +64,6 @@ def readFloat(option, default):
 
 def dataGen(dis):
 	data = []
-	data2 = random.sample(xrange(dataDomain), datasize)
 	global data_filename
 	global setup_filename
 	zipf_s = 1.2
@@ -99,12 +98,13 @@ def dataGen(dis):
 		fdata.write(str(int(data[i])))
 		# write data in other column
 		for j in range(1, columnNum):
-			fdata.write(',' + str(data2[i]))
+			fdata.write(',' + str(data[i]))
 		fdata.write('\n')
 	fdata.close()
 	
 
 def ddlGen():
+	global setup_filename
 	# generate the ddl to setup the database
 	setup_filename = setup_filename + str(datasize) + '_' + str(columnNum)
 	fddl = open(setup_filename, 'w')
