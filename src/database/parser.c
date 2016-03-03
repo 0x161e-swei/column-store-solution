@@ -387,8 +387,8 @@ status parse_dsl(char* str, dsl* d, db_operator* op)
 		if (tmp_tbl->length != 0) {
 			// do the loading later
 			// for (unsigned int j = 0; j < tmp_tbl->col_count; j++) {
-			// 	if (NULL == tmp_tbl->cols[j]->data)
-			// 		load_column4disk(tmp_tbl->cols[j], tmp_tbl->length);
+				if (NULL == tmp_col->data)
+					load_column4disk(tmp_col, tmp_tbl->length);
 			// }
 		}
 		else {
