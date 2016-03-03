@@ -26,9 +26,9 @@ status create_index(Table *tbl, Column *col, IndexType type, Workload w) {
 					log_info("parsed workload %zu lines\n", w.count);
 
 					debug("partition instruction: total %i partitions\n", inst.p_count);
-					for (int i = 0; i < inst.p_count; i++) {
-						printf("%d\n", inst.pivots[i]);
-					}
+					// for (int i = 0; i < inst.p_count; i++) {
+					//	printf("%d\n", inst.pivots[i]);
+					// }
 					// TODO: following 6 lines of code are for tests ONLY
 					// log_info("waiting for partition instruction\n");
 					// scanf("%d", &(inst.p_count));
@@ -66,9 +66,9 @@ status create_index(Table *tbl, Column *col, IndexType type, Workload w) {
 					#endif /* GHOST_VALUE */
 					#endif /* SWAPLATER */
 					debug("partitionCount %zu\n", col->partitionCount);
-					for (size_t i = 0; i < col->partitionCount; i++) {
-						printf("%d %zu\n", col->pivots[i], col->p_pos[i]);
-					}
+					// for (size_t i = 0; i < col->partitionCount; i++) {
+					//	printf("%d %zu\n", col->pivots[i], col->p_pos[i]);
+					// }
 				}
 				break;
 			}
