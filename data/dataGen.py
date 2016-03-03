@@ -85,6 +85,7 @@ def dataGen(dis):
 		data_filename += '_gaus_'
 		setup_filename += '_gaus_'
 	data_filename = data_filename + str(datasize) + '_' + str(columnNum)
+	print "gen done"
 	fdata = open(data_filename, 'w')
 	fdata.write(str(datasize) + ',' + str(columnNum) + '\n')
 	# write the column names
@@ -94,12 +95,14 @@ def dataGen(dis):
 		fdata.write(',' + tbl_name + '.' + columnNameDict[i])
 	fdata.write('\n')
 	# write data
-	for i in range(datasize):
-		fdata.write(str(int(data[i])))
-		# write data in other column
-		for j in range(1, columnNum):
-			fdata.write(',' + str(data[i]))
-		fdata.write('\n')
+	for i in range(datasize  / 10):
+		for k in range(10):
+			w = str(int(data[i * 10 + k]))
+			# write data in other column
+			for j in range(1, columnNum):
+				w = w + ',' + str(data[i * 10 + k])
+			w += '\n'
+		fdata.write(w)
 	fdata.close()
 	
 
