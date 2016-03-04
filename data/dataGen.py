@@ -5,6 +5,7 @@ import math
 import random
 import numpy
 import ConfigParser
+from array import *
 
 # number of workload
 lines = 100
@@ -30,7 +31,7 @@ configSection = 'dataset'
 data_filename = 'dataset'
 setup_filename = 'setupddl'
 config = ConfigParser.ConfigParser(allow_no_value=True)
-
+data = []
 
 def readInt(option, default):
 	target = default
@@ -63,7 +64,7 @@ def readFloat(option, default):
 
 
 def dataGen(dis):
-	data = []
+	global data
 	global data_filename
 	global setup_filename
 	zipf_s = 1.2
@@ -86,6 +87,9 @@ def dataGen(dis):
 		setup_filename += '_gaus_'
 	data_filename = data_filename + str(datasize) + '_' + str(columnNum)
 	print "gen done"
+
+
+def genText():
 	fdata = open(data_filename, 'w')
 	fdata.write(str(datasize) + ',' + str(columnNum) + '\n')
 	# write the column names
@@ -104,8 +108,44 @@ def dataGen(dis):
 				w = w + ',' + str(data[i * 10 + k])
 			w += '\n'
 		fdata.write(w)
-	fdata.close()
-	
+	fdata.close()		
+
+
+def genBin():
+	fp = open('dbinfo', 'wb')
+	nInt = array('i')
+	nInt.append(3)	# length of database name for foo
+	fp.write(nInt)
+	fp.write('foo') # database name
+	nInt.remove(3)
+	nSizet = array('l')
+	nSizet.append(1) # table count
+	nInt.append(7) # length of table name for foo.tb1
+	fp.write(nSizet)
+	fp.write(nInt)
+	nSizet.remove(1)
+	nInt.remove(7)
+	fp.write('foo.tb1') # table name 
+	nSizet.append(datasize)  # table length
+	nSizet.append(columnNum) # column count
+	fp.write(nSizet)
+	nSizet.remove(datasize)
+	nSizet.remove(columnNum)
+	for i in range(columnNum):
+		nameCol = tbl_name + '.' + columnNameDict[i]
+		l = len(nameCol)
+		nInt.append(l)
+		fp.write(nInt)
+		nInt.remove(l)
+		fp.write(nameCol)
+	fp.close()
+	arr = array('i', data)
+	for i in range(columnNum):
+		filname = tbl_name + '.' + columnNameDict[i]
+		fdata = open(filname, 'wb')
+		arr.tofile(fdata)
+		fdata.close()
+
 
 def ddlGen():
 	global setup_filename
@@ -132,5 +172,15 @@ if __name__ == '__main__':
 		dis = 'uniform'
 	dataGen(dis)
 	ddlGen()
-	
+	binary = 1
+	binary = readInt('binary', binary)
+	if binary == 1:
+		genBin()
+	else:
+		genText()
+
+
+
+
+
 

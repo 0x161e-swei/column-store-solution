@@ -437,7 +437,7 @@ status query_prepare(const char* query, dsl* d, db_operator* op) {
 			return s;
 		}
 
-		log_info("insert tbale found, %s\n", tmp_tbl->name);
+		// log_info("insert tbale found, %s\n", tmp_tbl->name);
 
 		unsigned int i = 0;
 		op->value1 = malloc(sizeof(int) * tmp_tbl->col_count);
@@ -447,7 +447,7 @@ status query_prepare(const char* query, dsl* d, db_operator* op) {
 			char* num_str = strtok(NULL, comma);
 			if (NULL != num_str) {
 				op->value1[i] = atoi(num_str);
-				log_info("insert number found %d\n", op->value1[i]);
+				// log_info("insert number found %d\n", op->value1[i]);
 				i++;
 			}
 			else {

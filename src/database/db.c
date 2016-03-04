@@ -83,7 +83,7 @@ status sync_db(Db* db __attribute__((unused))) {
 		int len = strlen(database->name);
 		fwrite(&len, sizeof(len), 1, dbinfo);
 		fwrite(database->name, sizeof(char), len, dbinfo);
-		fwrite(&database->table_count, sizeof(database->table_count), 1, dbinfo);
+		fwrite(&database->table_count, sizeof(database->table_count), 1, dbinfo);	// size_t
 
 		Table *tmp, *tbl;
 		HASH_ITER(hh, (database->tables), tbl, tmp) {
@@ -95,8 +95,8 @@ status sync_db(Db* db __attribute__((unused))) {
 			len = strlen(tbl->name);
 			fwrite(&len, sizeof(len), 1, dbinfo);
 			fwrite(tbl->name, sizeof(char), len, dbinfo);
-			fwrite(&(tbl->length), sizeof(tbl->length), 1, dbinfo);
-			fwrite(&(tbl->col_count), sizeof(tbl->col_count), 1, dbinfo);
+			fwrite(&(tbl->length), sizeof(tbl->length), 1, dbinfo);				// size_t
+			fwrite(&(tbl->col_count), sizeof(tbl->col_count), 1, dbinfo);		// size_t
 
 			for (size_t i = 0; i < tbl->col_count; i++) {
 				if (NULL != tbl->cols[i]) {
