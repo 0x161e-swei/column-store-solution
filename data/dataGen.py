@@ -6,6 +6,8 @@ import random
 import numpy
 import ConfigParser
 from array import *
+import os
+import shutil
 
 # number of workload
 lines = 100
@@ -111,8 +113,9 @@ def genText():
 	fdata.close()		
 
 
-def genBin():
-	fp = open('dbinfo', 'wb')
+def genBin(dir_path):
+	info = dir_path + 'dbinfo'
+	fp = open(info , 'wb')
 	nInt = array('i')
 	nInt.append(3)	# length of database name for foo
 	fp.write(nInt)
@@ -141,7 +144,7 @@ def genBin():
 	fp.close()
 	arr = array('i', data)
 	for i in range(columnNum):
-		filname = tbl_name + '.' + columnNameDict[i]
+		filname = dir_path + tbl_name + '.' + columnNameDict[i]
 		fdata = open(filname, 'wb')
 		arr.tofile(fdata)
 		fdata.close()
@@ -170,17 +173,19 @@ if __name__ == '__main__':
 	if dis is None:
 		print 'empty distribution option, default to uniform'
 		dis = 'uniform'
+	dir_path = str(datasize) + '_' + str(columnNum) + '_' + str(dis) + '/'
+	try:
+		os.mkdir(dir_path)
+	except OSError:
+		shutil.rmtree(dir_path)
+		os.mkdir(dir_path)
+	data_filename = dir_path + data_filename
+	setup_filename = dir_path + setup_filename
 	dataGen(dis)
 	ddlGen()
 	binary = 1
 	binary = readInt('binary', binary)
 	if binary == 1:
-		genBin()
+		genBin(dir_path)
 	else:
 		genText()
-
-
-
-
-
-
