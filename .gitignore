@@ -53,6 +53,6 @@ foo.*
 
 # test
 data/*
-data/gen.cfg
-!data/dataGen.py
-!data/workGen.py
+testtool/*
+!testtool/dataGen.py
+!testtool/workGen.py

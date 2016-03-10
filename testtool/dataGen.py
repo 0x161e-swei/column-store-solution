@@ -173,7 +173,13 @@ if __name__ == '__main__':
 	if dis is None:
 		print 'empty distribution option, default to uniform'
 		dis = 'uniform'
-	dir_path = str(datasize) + '_' + str(columnNum) + '_' + str(dis) + '/'
+	binary = 1
+	binary = readInt('binary', binary)
+	if binary == 1:	# binary data format
+		dir_path = 'b_'
+	else:	# text data format
+		dir_path = 't_'
+	dir_path += str(datasize) + '_' + str(columnNum) + '_' + str(dis) + '/'
 	try:
 		os.mkdir(dir_path)
 	except OSError:
@@ -183,8 +189,6 @@ if __name__ == '__main__':
 	setup_filename = dir_path + setup_filename
 	dataGen(dis)
 	ddlGen()
-	binary = 1
-	binary = readInt('binary', binary)
 	if binary == 1:
 		genBin(dir_path)
 	else:
