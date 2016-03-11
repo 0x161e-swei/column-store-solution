@@ -15,7 +15,8 @@ status create_index(Table *tbl, Column *col, IndexType type, Workload w) {
 	if (NULL != col && NULL == col->index) {
 		switch (type) {
 			case PARTI: {
-				if (1 == col->partitionCount) {
+				// by 0 != partitionCount, we can repartition a partitioned column
+				if (0 != col->partitionCount) {
 					Partition_inst inst;
 					debug("call partition decision function!!\n");
 					#ifdef GHOST_VALUE
@@ -89,6 +90,9 @@ status create_index(Table *tbl, Column *col, IndexType type, Workload w) {
 					// for (size_t i = 0; i < col->partitionCount; i++) {
 					//	printf("%d %zu\n", col->pivots[i], col->p_pos[i]);
 					// }
+				}
+				else {
+					s.code = ERROR;
 				}
 				break;
 			}
