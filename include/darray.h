@@ -46,19 +46,19 @@
 
 typedef struct _darray_int {
 	const size_t element_size;
-	size_t capacity;
-	size_t length;
+	unsigned int capacity;
+	unsigned int length;
 	int *content;
 } DArray_INT;
 
-DArray_INT *darray_create(size_t reserve_size);
+DArray_INT *darray_create(unsigned int reserve_size);
 
-bool _darray_reserve(DArray_INT *arr, size_t n);
+bool _darray_reserve(DArray_INT *arr, unsigned int n);
 
 bool _darray_expand(DArray_INT *arr);
 
 bool darray_destory(DArray_INT *arr);
 
-void _darray_vec_push(DArray_INT *arr, const void *src, size_t n);
+void _darray_vec_push(DArray_INT *arr, const void *src, unsigned int n);
 
 #endif /* _DARRAY_H_ */

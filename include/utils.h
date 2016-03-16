@@ -80,6 +80,6 @@ void cs165_log(FILE* out, const char *format, ...);
 
 // count_file_lines(filename)
 // Count the number lines in a file fast
-void collect_file_info(const char* filename, size_t *lineCount, size_t *fieldCount);
+void collect_file_info(const char* filename, unsigned int *lineCount, unsigned int *fieldCount);
 
 #endif /* __UTILS_H__ */

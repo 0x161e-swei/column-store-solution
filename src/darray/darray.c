@@ -1,7 +1,7 @@
 #include "darray.h"
 
 
-DArray_INT *darray_create(size_t reserve_size) {
+DArray_INT *darray_create(unsigned int reserve_size) {
 	static DArray_INT generic_int_array = {	.element_size = sizeof(int), 
 										.capacity = 0, .length = 0, 
 										.content = NULL,
@@ -20,9 +20,9 @@ DArray_INT *darray_create(size_t reserve_size) {
 	return NULL;
 }
 
-bool _darray_reserve(DArray_INT *arr, size_t n) {
+bool _darray_reserve(DArray_INT *arr, unsigned int n) {
 	check(n > arr->capacity, "reserved size smaller than capacity");
-	size_t size = 1024;
+	unsigned int size = 1024;
 	while (size < n) size <<= 1;
 	int *tmp_ptr = realloc(arr->content, size * arr->element_size);
 	check(NULL != tmp_ptr, "Out of memory");
@@ -39,7 +39,7 @@ bool _darray_expand(DArray_INT *arr)
 {
 	// if (arr->length + 1 > arr->capacity) {
 		int *ptr = NULL;
-		size_t n = (arr->capacity) << 1;
+		unsigned int n = (arr->capacity) << 1;
 		ptr = realloc(arr->content, n * arr->element_size);
 		check(NULL != ptr, "Out of memory");
 		// printf("expand from %zu to %zu \n", arr->length, n);
@@ -63,8 +63,8 @@ bool darray_destory(DArray_INT *arr) {
 	return false;
 }
 
-void _darray_vec_push(DArray_INT *arr, const void *src, size_t n) {
-	// size_t i = arr->length, j = 0;
+void _darray_vec_push(DArray_INT *arr, const void *src, unsigned int n) {
+	// unsigned int i = arr->length, j = 0;
 	// for (; i < arr->length + n * arr->element_size; i++, j++) {
 	// 	*((char *)arr->content + i) = *((char *)src + j);
 	// }

@@ -439,7 +439,7 @@ status query_prepare(const char* query, dsl* d, db_operator* op) {
 
 		// log_info("insert tbale found, %s\n", tmp_tbl->name);
 
-		unsigned int i = 0;
+		uint i = 0;
 		op->value1 = malloc(sizeof(int) * tmp_tbl->col_count);
 		// Grab all the integers
 		
@@ -801,7 +801,7 @@ status col_scan(comparator *f, Column *col, Result **r) {
 		*r = malloc(sizeof(Result));
 		(*r)->token = NULL;
 		(*r)->num_tuples = 0;
-		for (size_t i = 0; i < (col->data)->length; i++) {
+		for (uint i = 0; i < (col->data)->length; i++) {
 			if (compare(f, (col->data)->content[i])) {
 				// TODO: Results storing needs improving later
 				(*r)->num_tuples++;
@@ -810,9 +810,9 @@ status col_scan(comparator *f, Column *col, Result **r) {
 			}
 		}
 		s.code = OK;
-		log_info("col_scan %zu tuple qualified\n", (*r)->num_tuples);
-		for (size_t ii = 0; ii < (*r)->num_tuples; ii++) {
-			log_info("pos selected %zu\n", (*r)->token[ii].pos);
+		log_info("col_scan %u tuple qualified\n", (*r)->num_tuples);
+		for (uint ii = 0; ii < (*r)->num_tuples; ii++) {
+			log_info("pos selected %u\n", (*r)->token[ii].pos);
 		}
 		return s;
 	}
@@ -824,7 +824,7 @@ status col_scan(comparator *f, Column *col, Result **r) {
 status col_point_query(Column *col, int val, Result **r) {
 	status s;
 	if (NULL != col) {
-		size_t beg = 0, end = 0;
+		pos_t beg = 0, end = 0;
 		*r = malloc(sizeof(Result));
 		(*r)->token = NULL;
 		(*r)->num_tuples = 0;
@@ -851,7 +851,7 @@ status col_point_query(Column *col, int val, Result **r) {
 		else {	// unpartitioned case
 			end = (col->data)->length;
 		}
-		for (size_t i = beg; i < end; i++) {
+		for (pos_t i = beg; i < end; i++) {
 			if (val == (col->data)->content[i]) {
 				// TODO: Results storing needs improving later
 				(*r)->num_tuples++;
@@ -860,9 +860,9 @@ status col_point_query(Column *col, int val, Result **r) {
 			}
 		}
 		s.code = OK;
-		log_info("point query %zu tuple qualified\n", (*r)->num_tuples);
-		for (size_t ii = 0; ii < (*r)->num_tuples; ii++) {
-			log_info("pos selected %zu\n", (*r)->token[ii].pos);
+		log_info("point query %u tuple qualified\n", (*r)->num_tuples);
+		for (uint ii = 0; ii < (*r)->num_tuples; ii++) {
+			log_info("pos selected %u\n", (*r)->token[ii].pos);
 		}
 		return s;
 	}
@@ -880,9 +880,9 @@ status col_range_query(Column *col, int low, int high, Result **r) {
 		(*r)->num_tuples = 0;
 		// for partitioned Column
 		if (col->partitionCount > 1) {
-			size_t beg_l = 0, end_l = 0;
-			size_t beg_r = 0, end_r = 0;
-			size_t partition_to_query = 0;
+			pos_t beg_l = 0, end_l = 0;
+			pos_t beg_r = 0, end_r = 0;
+			pos_t partition_to_query = 0;
 			(*r)->partitionNum = malloc(sizeof(size_t) * 2);
 			while (partition_to_query < col->partitionCount 
 				&& col->pivots[partition_to_query] < low) {
@@ -901,21 +901,21 @@ status col_range_query(Column *col, int low, int high, Result **r) {
 			end_r = col->p_pos[partition_to_query] + 1;
 
 
-			for (size_t i = beg_l; i < end_l; i++) {
+			for (pos_t i = beg_l; i < end_l; i++) {
 				if (low <= (col->data)->content[i] && high > (col->data)->content[i]) {
 					// do something
 				}
 			}
-			for (size_t i = beg_r; i < end_r; i++) {
+			for (pos_t i = beg_r; i < end_r; i++) {
 				if (low <= (col->data)->content[i] && high > (col->data)->content[i]) {
 					// do something
 				}
 			}
 		}
 		else {	// unpartitioned case
-			size_t beg = 0, end = 0;
+			pos_t beg = 0, end = 0;
 			end = (col->data)->length;
-			for (size_t i = beg; i < end; i++) {
+			for (pos_t i = beg; i < end; i++) {
 				if (low <= (col->data)->content[i] && high > (col->data)->content[i]) {
 					// TODO: Results storing needs improving later
 					(*r)->num_tuples++;
@@ -925,9 +925,9 @@ status col_range_query(Column *col, int low, int high, Result **r) {
 			}
 		}
 		s.code = OK;
-		log_info("point query %zu tuple qualified\n", (*r)->num_tuples);
-		for (size_t ii = 0; ii < (*r)->num_tuples; ii++) {
-			log_info("pos selected %zu\n", (*r)->token[ii].pos);
+		log_info("point query %u tuple qualified\n", (*r)->num_tuples);
+		for (uint ii = 0; ii < (*r)->num_tuples; ii++) {
+			log_info("pos selected %u\n", (*r)->token[ii].pos);
 		}
 		return s;
 	}
@@ -950,7 +950,7 @@ status col_scan_with_pos(comparator *f, Result *res, Result *pos, Result **r) {
 		*r = malloc(sizeof(Result));
 		(*r)->token = NULL;
 		(*r)->num_tuples = 0;
-		size_t i = 0;
+		uint i = 0;
 		while (i < pos->num_tuples) {
 			// if (compare(f, (col->data)->content[pos->token[i].pos])) {
 			if (compare(f, res->token[i].val)) {    
@@ -962,7 +962,7 @@ status col_scan_with_pos(comparator *f, Result *res, Result *pos, Result **r) {
 			i++;
 		}
 		s.code = OK;
-		log_info("col_scan_with_pos %zu tuple qualified\n", (*r)->num_tuples);
+		log_info("col_scan_with_pos %u tuple qualified\n", (*r)->num_tuples);
 		return s;
 	}
 
@@ -981,7 +981,7 @@ status fetch_val(Column *col, Result *pos, Result **r) {
 	if (NULL != col && NULL != pos) {
 		*r = malloc(sizeof(Result));
 		(*r)->num_tuples = pos->num_tuples;
-		size_t i = 0;
+		uint i = 0;
 		(*r)->token = malloc((*r)->num_tuples * sizeof(Payload));
 		log_info("fetched data:\n");
 		while (i < pos->num_tuples) {
@@ -1003,14 +1003,14 @@ status fetch_val(Column *col, Result *pos, Result **r) {
 char* tuple(db_operator *query) {
 	if (NULL != query && NULL != (query->domain).res[0]) {
 		Result *r = (query->domain).res[0];
-		size_t total_space = 1024;
-		size_t used_space = 1, i = 0;
+		uint total_space = 1024;
+		uint used_space = 1, i = 0;
 		char *ret = NULL;
 		ret = realloc(ret, sizeof(char) * total_space);
 		ret[0] = '\0';
 		
 		for (i = 0; i < r->num_tuples; i++) {
-			char num[20];
+			char num[25];
 			sprintf(num, "%d\n", r->token[i].val);
 			used_space += strlen(num);
 			if (used_space > total_space){
@@ -1118,9 +1118,9 @@ status delete_with_pos(Table *tbl, Result *pos) {
 	// do the deletion afterwards on other Columns, could be in parallel
 	status s;
 	size_t partition_to_delete = 0;
-	size_t total_delete = pos->num_tuples;
-	size_t *swap_position_record_from = malloc(sizeof(size_t) * total_delete);
-	size_t *swap_position_record_to = malloc(sizeof(size_t) * total_delete);
+	uint total_delete = pos->num_tuples;
+	pos_t *swap_position_record_from = malloc(sizeof(pos_t) * total_delete);
+	pos_t *swap_position_record_to = malloc(sizeof(pos_t) * total_delete);
 	Column *partitionedCol = tbl->primary_indexed_col;
 	DArray_INT *arr = partitionedCol->data;
 	// Find the partition to perform the deletion
@@ -1135,15 +1135,15 @@ status delete_with_pos(Table *tbl, Result *pos) {
 	}
 
 	log_info("deletion in partition %zu\n", partition_to_delete);
-	size_t head = 0;
-	// size_t beg = (partition_to_delete == 0)? 0: partitionedCol->p_pos[partition_to_delete - 1] + 1;
+	pos_t head = 0;
+	// pos_t beg = (partition_to_delete == 0)? 0: partitionedCol->p_pos[partition_to_delete - 1] + 1;
 	#ifdef GHOST_VALUE
-	size_t end = partitionedCol->p_pos[partition_to_delete] - partitionedCol->ghost_count[partition_to_delete];
+	pos_t end = partitionedCol->p_pos[partition_to_delete] - partitionedCol->ghost_count[partition_to_delete];
 	#else
-	size_t end = partitionedCol->p_pos[partition_to_delete];
+	pos_t end = partitionedCol->p_pos[partition_to_delete];
 	#endif
-	size_t last_item_to_delete = total_delete - 1;
-	size_t delete_item_count = 0;
+	pos_t last_item_to_delete = total_delete - 1;
+	uint delete_item_count = 0;
 
 	// move the data specified by pos to the end of the partition
 	while (delete_item_count < total_delete) {
@@ -1220,20 +1220,20 @@ status delete_with_pos(Table *tbl, Result *pos) {
  * partition_to_delete:	index of the partion to perform the deletion, if no GHOST_VALUE defined
  */
 #ifdef GHOST_VALUE
-status delete_other_cols(Table *tbl, size_t *from, size_t *to, size_t total_delete)
+status delete_other_cols(Table *tbl, pos_t *from, pos_t *to, uint total_delete)
 #else 
-status delete_other_cols(Table *tbl, size_t *from, size_t *to, size_t total_delete, size_t partition_to_delete)
+status delete_other_cols(Table *tbl, pos_t *from, pos_t *to, uint total_delete, size_t partition_to_delete)
 #endif
 {
 	status s;
 	Column *partitionedCol = tbl->primary_indexed_col;
 	// for each Colunm in the table but the partitioned one
-	for (unsigned int k = 0; k < tbl->col_count; k++) {
+	for (uint k = 0; k < tbl->col_count; k++) {
 		Column *tmp_col = tbl->cols[k];
 		if (tmp_col == partitionedCol) continue;
 		DArray_INT *arr = tmp_col->data;
 		// do swap within the partition
-		for (unsigned int i = 0; i < total_delete; i++) {
+		for (uint i = 0; i < total_delete; i++) {
 			arr->content[to[i]] = arr->content[from[i]];
 			#ifdef GHOST_VALUE
 			arr->content[from[i]] = NON_QUALIFYING_INT;
@@ -1243,9 +1243,9 @@ status delete_other_cols(Table *tbl, size_t *from, size_t *to, size_t total_dele
 		// the destition of memcpy is the 
 		int *dst = &(arr->content[partitionedCol->p_pos[partition_to_delete] + 1]);
 		int *src = NULL;
-		for (unsigned int i = partition_to_delete; i < partitionedCol->partitionCount - 1; i++) {
-			int num_cpy = total_delete;
-			int dest_inc = partitionedCol->p_pos[i + 1] - partitionedCol->p_pos[i];
+		for (size_t i = partition_to_delete; i < partitionedCol->partitionCount - 1; i++) {
+			uint num_cpy = total_delete;
+			uint dest_inc = partitionedCol->p_pos[i + 1] - partitionedCol->p_pos[i];
 			if (dest_inc < num_cpy){
 				num_cpy = dest_inc;
 			}
@@ -1320,12 +1320,12 @@ status insert_tuple(Table *tbl, int *vals) {
 	size_t partition_to_steal = current_par;
 	if (current_par >= partition_to_insert) {
 		// insert_pos points to the first ghost value in the current_partition
-		size_t insert_pos = partitionedCol->p_pos[current_par] - partitionedCol->ghost_count[current_par] + 1;
+		pos_t insert_pos = partitionedCol->p_pos[current_par] - partitionedCol->ghost_count[current_par] + 1;
 		partitionedCol->ghost_count[current_par]--;
 		// following while will not execute if no need to steal, i.e. current_par == partition_to_insert
 		while (current_par > partition_to_insert) {		// steal the hole forwards
 			// from points to the fisrt number in current_partition
-			size_t from = ++partitionedCol->p_pos[current_par - 1];
+			pos_t from = ++partitionedCol->p_pos[current_par - 1];
 			// move data from the head to the end, then the head becomes the end of the left partition
 			arr->content[insert_pos] = arr->content[from];
 			current_par--;
@@ -1335,11 +1335,11 @@ status insert_tuple(Table *tbl, int *vals) {
 	}
 	else { 
 		// insert_pos points to the last ghost value in the current_partition
-		size_t insert_pos = partitionedCol->p_pos[current_par]--;
+		pos_t insert_pos = partitionedCol->p_pos[current_par]--;
 		partitionedCol->ghost_count[current_par]--;
 		while (current_par < partition_to_insert) { 	// steal the hole backwards
 			// from points to the end of the current_partition
-			size_t from = partitionedCol->p_pos[current_par + 1]--;
+			pos_t from = partitionedCol->p_pos[current_par + 1]--;
 			// move data from the end to the head, then the end becomes the head of the right partition
 			arr->content[insert_pos] = arr->content[from];
 			current_par++;
@@ -1353,11 +1353,11 @@ status insert_tuple(Table *tbl, int *vals) {
 	#else
 	darray_push(arr, 0);	// make sure there is enough space
 	// insert_pos points to the hole(end) in the partition i
-	unsigned int i = partitionedCol->partitionCount - 1;
-	size_t insert_pos = ++partitionedCol->p_pos[i];
+	uint i = partitionedCol->partitionCount - 1;
+	pos_t insert_pos = ++partitionedCol->p_pos[i];
 	for (; i > partition_to_insert; i--) {
 		// from points to the fisrt number in partition i
-		size_t from = ++partitionedCol->p_pos[i - 1];
+		pos_t from = ++partitionedCol->p_pos[i - 1];
 		// move the data at the head to the end, thus the head becomes a hole
 		arr->content[insert_pos] = arr->content[from];
 		insert_pos = from;
@@ -1397,18 +1397,18 @@ status insert_other_cols(Table *tbl, int *vals, size_t partition_to_insert)
 	status s;
 	Column *partitionedCol = tbl->primary_indexed_col;
 	// for each Colunm in the table except the partitioned one
-	for (unsigned int k = 0; k < tbl->col_count; k++) {
+	for (uint k = 0; k < tbl->col_count; k++) {
 		Column *tmp_col = tbl->cols[k];
 		if (tmp_col == partitionedCol) continue;
 		DArray_INT *arr = tmp_col->data;
 		#ifdef GHOST_VALUE
 		if (partition_to_steal >= partition_to_insert) {
 			// insert_pos points to the first hole in the partition_to_steal
-			size_t insert_pos = partitionedCol->p_pos[partition_to_steal] - partitionedCol->ghost_count[partition_to_steal];
+			pos_t insert_pos = partitionedCol->p_pos[partition_to_steal] - partitionedCol->ghost_count[partition_to_steal];
 			// following while will not execute if no need to steal, i.e. partition_to_steal == partition_to_insert
 			while (partition_to_steal > partition_to_insert) {		// steal the hole forwards
 				// from points to the fisrt number in partition_to_steal
-				size_t from = partitionedCol->p_pos[partition_to_steal - 1];
+				pos_t from = partitionedCol->p_pos[partition_to_steal - 1];
 				// move data from the head to the end, then the head becomes the end of the left partition
 				arr->content[insert_pos] = arr->content[from];
 				partition_to_steal--;
@@ -1418,8 +1418,8 @@ status insert_other_cols(Table *tbl, int *vals, size_t partition_to_insert)
 		}
 		else {
 			// puls one to get the original last ghost value hole in the partition_to_steal
-			size_t insert_pos = partitionedCol->p_pos[partition_to_steal] + 1;
-			size_t from = partitionedCol->p_pos[partition_to_steal + 1] + 1;
+			pos_t insert_pos = partitionedCol->p_pos[partition_to_steal] + 1;
+			pos_t from = partitionedCol->p_pos[partition_to_steal + 1] + 1;
 			while (partition_to_steal < partition_to_insert - 1) {		// steal the hole forwards
 				// from points to the original fisrt number in partition_to_steal
 				from = partitionedCol->p_pos[partition_to_steal + 1] + 1;
@@ -1434,7 +1434,7 @@ status insert_other_cols(Table *tbl, int *vals, size_t partition_to_insert)
 			arr->content[insert_pos] = vals[k];
 		}
 		#else
-		for (unsigned int i = partitionedCol->partitionCount - 1; i > partition_to_insert; i--) {
+		for (size_t i = partitionedCol->partitionCount - 1; i > partition_to_insert; i--) {
 			arr->content[partitionedCol->p_pos[i]] = arr->content[partitionedCol->p_pos[i - 1]];
 		}
 		arr->content[partitionedCol->p_pos[partition_to_insert]] = vals[k];
@@ -1454,13 +1454,13 @@ status scan_partition(Column *col, size_t part_id, Result **r) {
 	status s;
 	s.code = ERROR;
 	if (NULL != col && part_id < col->partitionCount) {
-		size_t pos_s = (part_id == 0)?0 :col->p_pos[part_id - 1] + 1;
-		size_t pos_e = col->p_pos[part_id + 1]; 
+		pos_t pos_s = (part_id == 0)?0 :col->p_pos[part_id - 1] + 1;
+		pos_t pos_e = col->p_pos[part_id + 1]; 
 		*r = malloc(sizeof(Result));
 		(*r)->num_tuples = pos_e - pos_s + 1;
-		size_t j = 0;
+		uint j = 0;
 		(*r)->token = malloc((*r)->num_tuples * sizeof(Payload));
-		for (size_t i = pos_s; i < pos_e; i++) {
+		for (pos_t i = pos_s; i < pos_e; i++) {
 			(*r)->token[j++].pos = i;
 		}
 		s.code = OK;
@@ -1479,18 +1479,18 @@ status scan_partition_greaterThan(Column *col, int val, size_t part_id, Result *
 	status s;
 	s.code = ERROR;
 	if (NULL != col && part_id < col->partitionCount) {
-		size_t pos_s;
+		pos_t pos_s;
 		if (1 == col->partitionCount) {
 			pos_s = 0;
 		}
 		else {
 			pos_s = (part_id == 0)?0 :col->p_pos[part_id - 1] + 1;
 		}
-		size_t pos_e = col->p_pos[part_id];
+		pos_t pos_e = col->p_pos[part_id];
 		*r = malloc(sizeof(Result));
 		(*r)->num_tuples = 0;
-		size_t j = 0;
-		for (size_t i = pos_s; i < pos_e; i++) {
+		uint j = 0;
+		for (pos_t i = pos_s; i < pos_e; i++) {
 			if (col->data->content[i] > val) {
 				// TODO: reallocate it in better way
 				(*r)->token = realloc((*r)->token, sizeof(Payload) * (j + 1));
@@ -1516,7 +1516,7 @@ status scan_partition_lessThan(Column *col, int val, size_t part_id, Result **r)
 	s.code = ERROR;
 	if (NULL != col && part_id < col->partitionCount) {
 		// start position
-		size_t pos_s = 0;
+		pos_t pos_s = 0;
 		if (1 == col->partitionCount) {
 			pos_s = 0;
 		}
@@ -1524,11 +1524,11 @@ status scan_partition_lessThan(Column *col, int val, size_t part_id, Result **r)
 			pos_s = (part_id == 0)?0 :col->p_pos[part_id - 1] + 1;
 		}
 		// end position
-		size_t pos_e = col->p_pos[part_id];
+		pos_t pos_e = col->p_pos[part_id];
 		*r = malloc(sizeof(Result));
 		(*r)->num_tuples = 0;
-		size_t j = 0;
-		for (size_t i = pos_s; i < pos_e; i++) {
+		uint j = 0;
+		for (pos_t i = pos_s; i < pos_e; i++) {
 			if (col->data->content[i] < val) {
 				// TODO: reallocate it in better way
 				(*r)->token = realloc((*r)->token, sizeof(Payload) *(j + 1));
@@ -1553,14 +1553,14 @@ status scan_partition_pointQuery(Column *col, int val, size_t part_id, Result **
 	status s;
 	s.code = ERROR;
 	if (NULL != col && part_id < col->partitionCount) {
-		size_t pos_s = (part_id == 0)?0 :col->p_pos[part_id - 1] + 1;
-		size_t pos_e = col->p_pos[part_id]; 
+		pos_t pos_s = (part_id == 0)?0 :col->p_pos[part_id - 1] + 1;
+		pos_t pos_e = col->p_pos[part_id]; 
 		*r = malloc(sizeof(Result));
 		(*r)->partitionNum = malloc(sizeof(size_t));
 		(*r)->partitionNum[0] = part_id;
 		(*r)->num_tuples = 0;
-		size_t j = 0;
-		for (size_t i = pos_s; i < pos_e; i++) {
+		uint j = 0;
+		for (pos_t i = pos_s; i < pos_e; i++) {
 			if (col->data->content[i] == val) {
 				(*r)->token = realloc((*r)->token, sizeof(Payload) * (j + 1));
 				(*r)->token[j].pos = i;

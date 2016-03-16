@@ -5,10 +5,10 @@
 #include "table.h"
 #include "column.h"
 
-status parse_field(const char *fields, size_t lineCount, size_t fieldCount, Column **cols) {
+status parse_field(const char *fields, uint lineCount, uint fieldCount, Column **cols) {
 	status ret;
 	const char *str = fields;
-	size_t i = 0;
+	uint i = 0;
 	char *col_name;
 	for (; i < fieldCount - 1; i++) {
 		const char *comma = strchr(str, ',');
@@ -21,7 +21,7 @@ status parse_field(const char *fields, size_t lineCount, size_t fieldCount, Colu
 		cols[i]  = NULL;
 		grab_column(col_name, &cols[i]);
 		if (NULL != cols[i]) {
-			log_info("init an array with %zu slots\n", lineCount);
+			log_info("init an array with %u slots\n", lineCount);
 			cols[i]->data = darray_create(lineCount);
 			// mark length at first
 			cols[i]->data->length = lineCount;
@@ -44,7 +44,7 @@ status parse_field(const char *fields, size_t lineCount, size_t fieldCount, Colu
 
 	grab_column(col_name, &cols[i]);
 	if (NULL != cols[i]) {
-		log_info("init an array with %zu slots\n", lineCount);
+		log_info("init an array with %u slots\n", lineCount);
 		cols[i]->data = darray_create(lineCount);
 		// mark length at first
 		cols[i]->data->length = lineCount;
@@ -64,7 +64,7 @@ status parse_field(const char *fields, size_t lineCount, size_t fieldCount, Colu
 			log_err("Invalid table name!\n");
 		}
 		else {
-			log_err("Data already loaded!\nOriginal table has length of %zu", tmp_tbl->length);
+			log_err("Data already loaded!\nOriginal table has length of %u", tmp_tbl->length);
 		}
 		ret.code = ERROR;
 		return ret;
@@ -90,8 +90,8 @@ status parse_dataset_csv(const char *filename) {
 		char *next = NULL;
 		ssize_t read;
 		read = getline(&line, &len, fp);
-		size_t lineCount;
-		size_t fieldCount;
+		uint lineCount;
+		uint fieldCount;
 		char *numbers = line;
 		// first line with length of the Columns and number of the Columns
 		lineCount = strtol(numbers, &next, 10);
@@ -117,12 +117,12 @@ status parse_dataset_csv(const char *filename) {
 			}
 		}
 		
-		for (size_t i = 0; i < lineCount; i++) {
+		for (uint i = 0; i < lineCount; i++) {
 			char *line = NULL;
 			read = getline(&line, &len, fp);
 			if (0 != read) {
 				char *str = line;
-				size_t j = 0;
+				uint j = 0;
 				for (; j < fieldCount; j++) {
 					cols[j]->data->content[i] = strtol(str, &next, 10);
 					str = next + 1;
@@ -134,7 +134,7 @@ status parse_dataset_csv(const char *filename) {
 		}
 		fclose(fp);
 
-		// for (size_t i = 0; i < fieldCount; i++) {
+		// for (uint ize_t i = 0; i < fieldCount; i++) {
 		// 	free(cols[i]);
 		// }
 		free(cols);

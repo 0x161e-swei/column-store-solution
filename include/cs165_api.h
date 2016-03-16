@@ -28,6 +28,9 @@ SOFTWARE.
 #include "dsl.h"
 #include "darray.h"
 
+typedef unsigned int uint;
+typedef unsigned int pos_t;
+
 /**
  * EXTRA
  * DataType
@@ -109,13 +112,12 @@ typedef struct _column {
 	// int* data;
 	DArray_INT *data;
 	
-	
 	int *pivots;
+	pos_t *p_pos;
 	size_t partitionCount;
-	size_t *p_pos;
-
+	
 	#ifdef SWAPLATER
-	size_t *pos;
+	pos_t *pos;
 	#endif
 
 	#ifdef GHOST_VALUE
@@ -145,7 +147,7 @@ typedef struct _column {
 typedef struct _table {
 	const char* name;
 	size_t col_count;
-	size_t length;
+	uint length;
 	Col_ptr* cols;
 	Col_ptr primary_indexed_col;
 	UT_hash_handle hh;
@@ -241,14 +243,14 @@ typedef struct comparator {
 
 typedef union payload{
 	int val;
-	size_t pos;
+	pos_t pos;
 } Payload;
 
 typedef struct result {
 	const char* res_name; 
 	Payload* token;
 	size_t *partitionNum;
-	size_t num_tuples;
+	uint num_tuples;
 	UT_hash_handle hh;
 } Result, *Res_ptr;
 

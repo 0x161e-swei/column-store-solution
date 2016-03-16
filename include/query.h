@@ -26,10 +26,10 @@ status delete_with_pos(Table *tbl, Result *pos);
 status update_with_pos(Column *col, int val, Result *pos);
 
 #ifdef GHOST_VALUE
-status delete_other_cols(Table *tbl, size_t *from, size_t *to, size_t total_delete);
+status delete_other_cols(Table *tbl, pos_t *from, pos_t *to, uint total_delete);
 status insert_other_cols(Table *tbl, int *vals, size_t partition_to_insert, size_t partition_to_steal);
 #else
-status delete_other_cols(Table *tbl, size_t *from, size_t *to, size_t total_delete, size_t partition_to_delete);
+status delete_other_cols(Table *tbl, pos_t *from, pos_t *to, uint total_delete, size_t partition_to_delete);
 status insert_other_cols(Table *tbl, int *vals, size_t partition_to_insert);
 #endif
 

@@ -50,13 +50,13 @@ void cs165_log(FILE* out, const char *format, ...) {
 // }
 
 
-void collect_file_info(const char* filename, size_t *lineCount, size_t *fieldCount) {
+void collect_file_info(const char* filename, unsigned int *lineCount, unsigned int *fieldCount) {
 	FILE* fp = fopen(filename, "r");
 
 	if (NULL != fp) {
 		size_t len = 0;
 		char *line = NULL;
-		size_t fields = 1;
+		unsigned int fields = 1;
 		ssize_t read;
 		read = getline(&line, &len, fp);
 		if (0 != read) {
@@ -66,7 +66,7 @@ void collect_file_info(const char* filename, size_t *lineCount, size_t *fieldCou
 			if (line) free(line);
 		}
 
-		size_t lines = 0;
+		unsigned int lines = 0;
 		while (EOF != (fscanf(fp, "%*[^\n]"), fscanf(fp, "%*c")))
 			++lines;
 		fclose(fp);

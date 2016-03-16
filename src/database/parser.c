@@ -363,8 +363,8 @@ status parse_dsl(char* str, dsl* d, db_operator* op)
 		// 
 		const char* filename = strtok(args, quotes);
 		log_info("workload file: \"%s\"\n", filename);
-		size_t lineCount = 0;
-		size_t fieldCount = 0;
+		uint lineCount = 0;
+		uint fieldCount = 0;
 		collect_file_info(filename, &lineCount, &fieldCount);
 
 		if (1 >= lineCount) {

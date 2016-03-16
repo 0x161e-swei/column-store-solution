@@ -95,7 +95,7 @@ status sync_db(Db* db __attribute__((unused))) {
 			len = strlen(tbl->name);
 			fwrite(&len, sizeof(len), 1, dbinfo);
 			fwrite(tbl->name, sizeof(char), len, dbinfo);
-			fwrite(&(tbl->length), sizeof(tbl->length), 1, dbinfo);				// size_t
+			fwrite(&(tbl->length), sizeof(tbl->length), 1, dbinfo);				// uint
 			fwrite(&(tbl->col_count), sizeof(tbl->col_count), 1, dbinfo);		// size_t
 
 			for (size_t i = 0; i < tbl->col_count; i++) {
@@ -198,7 +198,7 @@ char* show_db() {
 			strncat(res, tbl->name, strlen(tbl->name));
 
 			char len_s[40];
-			sprintf(len_s, " length: %zu", tbl->length);
+			sprintf(len_s, " length: %u", tbl->length);
 
 			// reallocate the size of the char array, +1 for \n
 			allocated_size += strlen(len_s) + 1;
@@ -253,10 +253,11 @@ status open_db(const char* filename, Db** db, OpenFlags flags) {
 				// t->name = tbl_name;
 				
 				/* Read the length of columns in the table
-					Caution: sizeof(size_t) is different from sizeof(int) 
+					type: uint
 				 */
 				size_t col_len = 0;
-				num = fread(&col_len, sizeof(size_t), 1, dbinfo);
+				num = fread(&col_len, sizeof(uint), 1, dbinfo);
+				
 				/* Read the number of columns in the table
 					Caution: sizeof(size_t) is different from sizeof(int) 
 				 */
@@ -265,7 +266,7 @@ status open_db(const char* filename, Db** db, OpenFlags flags) {
 				s = create_table(database, tbl_name, col_count, &t);
 				t->length = col_len;
 				free(tbl_name);
-				log_info("\ttable %s found with length %zu and %zu columns\n", t->name, t->length, t->col_count);
+				log_info("\ttable %s found with length %u and %zu columns\n", t->name, t->length, t->col_count);
 
 				for (unsigned int j = 0; j < t->col_count; j++) {
 					int col_name_len;

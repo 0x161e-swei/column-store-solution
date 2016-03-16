@@ -29,11 +29,11 @@ status nWayPartition(Column *col, Partition_inst *inst);
 #ifdef SWAPLATER
 typedef struct _swapargs {
 	Column *col;
-	size_t *pos;
-	size_t len;
+	pos_t *pos;
+	uint len;
 } Swapargs;
 
-status align_after_partition(Table *tbl, size_t *pos);
+status align_after_partition(Table *tbl, pos_t *pos);
 void *swapsIncolumns(void *arg);	// for threads processing
 #else
 
