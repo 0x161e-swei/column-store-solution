@@ -17,9 +17,9 @@ status parse_dsl(char* str, dsl* d, db_operator* op);
 status parse_command_string(char* str, dsl** commands, db_operator* op)
 {
 	log_info("Parsing: %s\n", str);
-
+	status s;
 	// Create a regular expression to parse the string
-	regex_t regex;
+	
 	int ret;
 
 	// Track the number of matches; a string must match all
@@ -27,6 +27,7 @@ status parse_command_string(char* str, dsl** commands, db_operator* op)
 	regmatch_t m;
 
 	for (int i = 0; i < NUM_DSL_COMMANDS; ++i) {
+		regex_t regex;
 		dsl* d = commands[i];
 		if (regcomp(&regex, d->c, REG_EXTENDED) != 0) {
 			log_err("Could not compile regex\n");
@@ -36,6 +37,7 @@ status parse_command_string(char* str, dsl** commands, db_operator* op)
 		ret = regexec(&regex, str, n_matches, &m, 0);
 
 		// If we have a match, then figure out which one it is!
+		regfree(&regex);
 		if (ret == 0) {
 			log_info("Found Command: %d\n", i);
 			// Here, we actually strip the command as appropriately
@@ -44,8 +46,7 @@ status parse_command_string(char* str, dsl** commands, db_operator* op)
 		}
 	}
 
-	// Nothing was found!
-	status s;
+	// Nothing was found
 	s.code = UNKNOWN_CMD;
 	return s;
 }
@@ -489,8 +490,12 @@ void workload_parse(const char *filename, int *ops, int *num1, int *num2) {
 				// }
 			}
 			count++;
+			if (line) free(line);
+			line = NULL;
 		}
+		if (line) free(line);
 		fclose(fp);
+		free(op);
 		// debug("after workload parsed:\n");
 		// for (size_t ii = 0; ii < count; ii++) {
 		// 	printf("%d %d %d\n", ops[ii], num1[ii], num2[ii]);

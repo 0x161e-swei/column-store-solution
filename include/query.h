@@ -60,7 +60,7 @@ static inline char *prepare_col(char *args, Table **tbl, Column **col) {
 	char* tbl_var = malloc(sizeof(char) * (i + 1));
 	strncpy(tbl_var, col_var, i);
 	tbl_var[i] = '\0';
-	printf("table name in select %s\n", tbl_var);
+	debug("table name%s\n", tbl_var);
 	
 	Table* tmp_tbl = NULL;
 	status s = grab_table(tbl_var, &tmp_tbl);

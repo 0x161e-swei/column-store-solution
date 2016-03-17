@@ -358,7 +358,7 @@ status query_prepare(const char* query, dsl* d, db_operator* op) {
 		}
 		else {
 			s.code = WRONG_FORMAT;
-			log_err("wrong select format\n");
+			log_err("wrong delete format\n");
 			return s;
 		}
 

@@ -29,6 +29,9 @@ status create_index(Table *tbl, Column *col, IndexType type, Workload w) {
 
 					toc = clock();
 					debug("partition decision function comsumed %lf\n", (double)(toc -tic) * 1000.0 / CLOCKS_PER_SEC);
+					free(w.ops);
+					free(w.num1);
+					free(w.num2);
 					#endif
 
 					debug("partition instruction: total %i partitions\n", inst.p_count);
@@ -371,6 +374,8 @@ status align_after_partition(Table *tbl, pos_t *pos){
 	for (uint i = 0; i < col_count - 1; i++) {
 		pthread_join(tids[i], NULL);
 	}
+	// TODO: free threads or maintain thread pool
+	free(args);
 	s.code = CMD_DONE;
 	return s;
 }
