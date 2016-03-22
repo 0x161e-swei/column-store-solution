@@ -34,6 +34,7 @@ typedef struct _swapargs {
 } Swapargs;
 
 status align_after_partition(Table *tbl, pos_t *pos);
+status align_test_col(Table *tbl, pos_t *pos);
 void *swapsIncolumns(void *arg);	// for threads processing
 #else
 

@@ -77,8 +77,8 @@ status create_index(Table *tbl, Column *col, IndexType type, Workload w) {
 					if (CMD_DONE == s.code) {
 						tic = clock();
 
-						s = align_after_partition(tbl, col->pos);
-
+						// s = align_after_partition(tbl, col->pos);
+						s = align_test_col(tbl, col->pos);
 						toc = clock();
 						debug("align without ghostvalue comsumed %lf\n", (double)(toc -tic) * 1000.0 / CLOCKS_PER_SEC);
 					}
@@ -379,7 +379,69 @@ status align_after_partition(Table *tbl, pos_t *pos){
 	s.code = CMD_DONE;
 	return s;
 }
+/**
+ * sequential aligning data in the same Table
+ * first col_count / 2 Columns are aligned in sequential write and 
+ * the rest of the Columns are aligned in random write
+ */
+status align_test_col(Table *tbl, pos_t *pos) {
+	status s;
+	clock_t tic, toc;
+	Col_ptr *cols = tbl->cols;
+	size_t col_count = tbl->col_count;
+	if (NULL == cols) {
+		s.code = ERROR;
+		return s;
+	}
+	pos_t *inverse_pos = malloc(sizeof(pos_t) * tbl->length);
+	for (uint i = 0; i < tbl->length; i++) {
+		inverse_pos[pos[i]] = i;
+	}
+	
+	// sequential write + sequential read and random read
+	double period_1 = 0;
+	for (size_t i = 1; i < col_count / 2; i++){
+		if (tbl->length != 0 && NULL == cols[i]->data) {
+			load_column4disk(cols[i], tbl->length);
+		}
+		DArray_INT *old_arr = cols[i]->data;
+		DArray_INT *new_arr = darray_create(old_arr->length);
+		tic = clock();
+		for (uint j = 0; j < old_arr->length; j++) {
+			new_arr->content[j] = old_arr->content[pos[j]];
+		}
+		toc = clock();
+		period_1 = period_1 + (double)(toc -tic) * 1000.0 / CLOCKS_PER_SEC; 
+		new_arr->length = old_arr->length;
+		darray_destory(old_arr);
+		cols[i]->data = new_arr;
+	}
+	period_1 /= (col_count / 2 - 1);
 
+	// random write + two  sequential read
+	double period_2 = 0;
+	for (size_t i = col_count / 2; i < col_count; i++) {
+		if (tbl->length != 0 && NULL == cols[i]->data) {
+                        load_column4disk(cols[i], tbl->length);
+                }
+                DArray_INT *old_arr = cols[i]->data;
+                DArray_INT *new_arr = darray_create(old_arr->length);
+		tic = clock();		
+		for (uint j = 0; j < old_arr->length; j++) {
+			new_arr->content[inverse_pos[j]] = old_arr->content[j];
+		}
+		toc = clock();
+		period_2 = period_2 + (double)(toc -tic) * 1000.0 / CLOCKS_PER_SEC; 
+		new_arr->length = old_arr->length;
+		darray_destory(old_arr);
+		cols[i]->data = new_arr;
+	}
+	period_2 /= (col_count / 2);
+	debug("time spent in both periods, %lf and %lf\n", period_1, period_2);
+
+	s.code = CMD_DONE;
+	return s;	
+}
 #else
 /**
  * do partitioning on a Column and swap as partitioning goes on
