@@ -820,6 +820,31 @@ status col_scan(comparator *f, Column *col, Result **r) {
 	return s;
 }
 
+/**
+ * do binary search in the sorted array of pivots
+ * pivots:	sorted array of pivots
+ * len:		length of the array, i.e. the number of the partitions
+ * val:		the search value
+ * return: part_id, if of a partition that contain the val
+ */
+size_t binary_search_pivots(int *pivots, size_t len, int val){
+	size_t beg = 0, end = len - 1, mid;
+	status s;
+	while (beg < end) {
+		mid = (beg + end) / 2;
+		if (val > pivots[mid]) {
+			beg = mid + 1;
+		}
+		else if (val < pivots[mid]){
+			end = mid;
+		}
+		else {
+			return mid;
+		}
+	}
+	return beg;
+}
+
 // TODO: is it necessary to have an extra point query for delete?
 status col_point_query(Column *col, int val, Result **r) {
 	status s;
@@ -831,16 +856,11 @@ status col_point_query(Column *col, int val, Result **r) {
 		(*r)->partitionNum = NULL; 
 		// for partitioned Column
 		if (col->partitionCount > 1) {
-
-			size_t partition_to_query = 0;
-			while (partition_to_query < col->partitionCount 
-				&& col->pivots[partition_to_query] < val) {
-				partition_to_query++;
-			}
+			size_t partition_to_query = binary_search_pivots(col->pivots, col->partitionCount, val);
 			(*r)->partitionNum = malloc(sizeof(size_t));
 			(*r)->partitionNum[0] = partition_to_query;
 			beg = (partition_to_query == 0)? 0: (col->p_pos[partition_to_query - 1] + 1);
-			// TODO: use NON_QUALIFYING_INT or mark the posision
+			// use NON_QUALIFYING_INT
 			end = col->p_pos[partition_to_query] + 1;
 			// #ifdef GHOST_VALUE
 			// end = col->p_pos[partition_to_query] - col->ghost_count[partition_to_query] + 1;
@@ -882,32 +902,30 @@ status col_range_query(Column *col, int low, int high, Result **r) {
 		if (col->partitionCount > 1) {
 			pos_t beg_l = 0, end_l = 0;
 			pos_t beg_r = 0, end_r = 0;
-			pos_t partition_to_query = 0;
-			(*r)->partitionNum = malloc(sizeof(size_t) * 2);
-			while (partition_to_query < col->partitionCount 
-				&& col->pivots[partition_to_query] < low) {
-				partition_to_query++;
-			}
-			(*r)->partitionNum[0] = partition_to_query;
-			// TODO: check if in the same partition
-			beg_l = (partition_to_query == 0)? 0: (col->p_pos[partition_to_query - 1] + 1);
-			end_l = col->p_pos[partition_to_query] + 1;
-			while (partition_to_query < col->partitionCount 
-				&& col->pivots[partition_to_query] < high) {
-				partition_to_query++;
-			}
-			(*r)->partitionNum[1] = partition_to_query;
-			beg_r = (partition_to_query == 0)? 0: (col->p_pos[partition_to_query - 1] + 1);
-			end_r = col->p_pos[partition_to_query] + 1;
+			size_t partition_to_query_l = binary_search_pivots(col->pivots, col->partitionCount, low);
+			beg_l = (partition_to_query_l == 0)? 0: (col->p_pos[partition_to_query_l - 1] + 1);
+			end_l = col->p_pos[partition_to_query_l] + 1;
 
+			size_t partition_to_query_r = binary_search_pivots(col->pivots, col->partitionCount, high);
+			if (partition_to_query_l != partition_to_query_r) {
+				beg_r = (partition_to_query_r == 0)? 0: (col->p_pos[partition_to_query_r - 1] + 1);
+				end_r = col->p_pos[partition_to_query_r] + 1;
+				(*r)->partitionNum = malloc(sizeof(size_t) * 2);
+				(*r)->partitionNum[0] = partition_to_query_l;
+				(*r)->partitionNum[1] = partition_to_query_r;
+			}
+			else {
+				(*r)->partitionNum = malloc(sizeof(size_t));
+				(*r)->partitionNum[0] = partition_to_query_l;
+			}
 
 			for (pos_t i = beg_l; i < end_l; i++) {
-				if (low <= (col->data)->content[i] && high > (col->data)->content[i]) {
+				if (low <= (col->data)->content[i]) {
 					// do something
 				}
 			}
 			for (pos_t i = beg_r; i < end_r; i++) {
-				if (low <= (col->data)->content[i] && high > (col->data)->content[i]) {
+				if (high > (col->data)->content[i]) {
 					// do something
 				}
 			}

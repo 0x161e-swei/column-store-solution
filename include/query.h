@@ -33,6 +33,7 @@ status delete_other_cols(Table *tbl, pos_t *from, pos_t *to, uint total_delete, 
 status insert_other_cols(Table *tbl, int *vals, size_t partition_to_insert);
 #endif
 
+size_t binary_search_pivots(int *pivots, size_t len, int val);
 /**
  * prepare the Column together with the Table it belongs to
  * args:	a char array to parse
