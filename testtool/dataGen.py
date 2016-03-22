@@ -129,10 +129,11 @@ def genBin(dir_path):
 	nSizet.remove(1)
 	nInt.remove(7)
 	fp.write('foo.tb1') # table name 
-	nSizet.append(datasize)  # table length
+	nInt.append(datasize)  # table length
 	nSizet.append(columnNum) # column count
+	fp.write(nInt)
 	fp.write(nSizet)
-	nSizet.remove(datasize)
+	nInt.remove(datasize)
 	nSizet.remove(columnNum)
 	for i in range(columnNum):
 		nameCol = tbl_name + '.' + columnNameDict[i]
