@@ -2,7 +2,7 @@
 
 AUTOMAKE_OPTIONS = subdir-objects
 
-bin_PROGRAMS = server client
+bin_PROGRAMS = opt_part_server client demo_opt_part_server
 
 SRCDIR = src
 INCDIR = include
@@ -75,7 +75,8 @@ lib_librum_a_CFLAGS = $(AM_CFLAGS)
 lib_librum_a_CPPFLAGS = $(AM_CPPFLAGS)
 lib_librum_a_SOURCES = $(RUM)
 lib_librum_a_LIBADD = lib/libdarray.a \
-						lib/libfrequencymodel.a
+		lib/libfrequencymodel.a \
+		lib/libutil.a
 
 
 ###########################################
@@ -84,13 +85,24 @@ lib_librum_a_LIBADD = lib/libdarray.a \
 #
 ###########################################
 
-server_CFLAGS = $(AM_CFLAGS)
-server_CPPFLAGS = $(AM_CPPFLAGS)
-server_LDADD = lib/libutil.a \
+opt_part_server_CFLAGS = $(AM_CFLAGS)
+opt_part_server_CPPFLAGS = $(AM_CPPFLAGS)
+opt_part_server_LDADD = lib/libutil.a \
 	lib/librum.a \
 	lib/libfrequencymodel.a \
 	lib/libdarray.a
-server_SOURCES = src/server/server.c
+opt_part_server_SOURCES = src/server/server.c
+
+
+demo_opt_part_server_CFLAGS = $(AM_CFLAGS)
+demo_opt_part_server_CPPFLAGS = $(AM_CPPFLAGS)
+demo_opt_part_server_LDADD =  	lib/librum.a \
+	lib/libfrequencymodel.a \
+	lib/libdarray.a \
+	lib/libutil.a \
+	-levent
+demo_opt_part_server_SOURCES = src/server/rum_demo_server.c
+
 
 client_CFLAGS = $(AM_CFLAGS)
 client_CPPFLAGS = $(AM_CPPFLAGS)

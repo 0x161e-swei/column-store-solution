@@ -4,7 +4,10 @@
 #include <stdio.h>
 #include "cs165_api.h"
 #include "dsl.h"
-#include "utils.h"
+
+// Prototype for Helper function that executes that actual parsing after
+// parse_command_string has found a matching regex.
+status parse_dsl(char* str, dsl* d, db_operator* op);
 
 // This parses the command string and then update the db_operator if it requires
 // a specific query plan to be executed.

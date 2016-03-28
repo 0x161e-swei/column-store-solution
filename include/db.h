@@ -6,5 +6,6 @@
 status grab_db(const char* db_name, Db** db);
 
 extern Db *database;
+extern char *data_path;
 
 #endif // DB_H__

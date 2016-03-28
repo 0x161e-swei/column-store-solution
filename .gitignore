@@ -30,8 +30,9 @@ stamp-h1
 # Executables
 *.out
 bin/*
-/server
 /client
+/demo_opt_part_server
+/opt_part_server
 configure
 
 #ide stuff

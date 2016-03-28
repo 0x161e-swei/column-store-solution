@@ -302,7 +302,12 @@ int main(void)
 
 	Db *default_db = NULL;
 	OpenFlags flags = LOAD;
-	status s = open_db("data/dbinfo", &default_db, flags);
+	data_path = malloc(sizeof(char) * 6);
+	strcpy(data_path, "data/");
+	char *dbinfo = malloc(sizeof(char) * 12);
+	strncpy(dbinfo, data_path, strlen(data_path));
+	strncat(dbinfo, "dbinfo", 6);
+	status s = open_db(dbinfo, &default_db, flags);
 
 	if (ERROR == s.code) {
 		log_info("No database found on server or database info corrupted\n");
@@ -310,7 +315,6 @@ int main(void)
 	else {
 		log_info("Database found on server\n");
 	}
-
 
 	log_info("Waiting for a connection %d ...\n", server_socket);
 
@@ -326,7 +330,7 @@ int main(void)
 		}
 
 		if (NULL == database) {
-			open_db("data/dbinfo", &default_db, flags);
+			open_db(dbinfo, &default_db, flags);
 		}
 
 		shutdown_server = handle_client(client_socket);

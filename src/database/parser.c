@@ -8,9 +8,8 @@
 #include "column.h"
 #include "fileparser.h"
 #include "query.h"
-// Prototype for Helper function that executes that actual parsing after
-// parse_command_string has found a matching regex.
-status parse_dsl(char* str, dsl* d, db_operator* op);
+#include "utils.h"
+
 
 // Finds a possible matching DSL command by using regular expressions.
 // If it finds a match, it calls parse_command to actually process the dsl.
