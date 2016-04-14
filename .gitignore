@@ -32,8 +32,9 @@ stamp-h1
 bin/*
 /server
 /client
-configure
-
+/opt_part_server
+/demo_opt_part_server
+/configure
 #ide stuff
 tags
 Tags
