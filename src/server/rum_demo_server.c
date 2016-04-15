@@ -39,26 +39,29 @@ static char* workloadMap[] = {	"workload0",
 
 static struct command commands[] = {
 	// setup connection between nodejs server and demo_server
-	{ "connect", "Just connect", conn_func									},
+	{ "connect", "Just connect", 							conn_func		},
 
 	// dataset would be a prepared binary file
 	// only called if user has decided the dataset (size and distribution)
-	{ "dataSet", "Apply the dataSet", dataSet_func							},
+	{ "dataSet", "Apply the dataSet", 						dataSet_func	},
 
 	// workload would ba a prepare ascii file
 	// onlyl called if user has decided the workload (size and distribution)
-	{ "workload", "Select the workload", workload_func						},
+	{ "workload", "Select the workload", 					workload_func	},
 	
 	// apply the specified algorithm
-	{ "part_algo","apply partition-decision algorithm", part_algo_func		},
+	{ "part_algo","apply partition-decision algorithm", 	part_algo_func	},
 
 	// apply the partition decision
-	{ "phys_part","exec physical partition", phys_part_func					},
+	{ "phys_part","exec physical partition", 				phys_part_func	},
 
 	// exec the specified workload on the specified dataset
-	{ "exec_work","Execute workload", exec_work_func						},
+	{ "exec_work","Execute workload", 						exec_work_func	},
 
-	{ "userConstrain", "User Constrain", userConstrain_func                 },
+
+	{"part_info", "Get partition info", 					part_info_func	},
+
+	{ "userConstrain", "User Constrain", 					userConstrain_func},
 	{ "userRUM", "User define RUM", userRUM_func                            },
 	{ "userSatisfy", "User is ok with current RUM", userSatisfy_func        },
 	{ "echo", "Prints the command line.", echo_func							},
@@ -235,6 +238,13 @@ static void open_file(const char* file)
 	}
 }
 
+
+/**
+ * The workload is stored in another directory. 
+ * The nodejs server gives a number to specify which workload to use
+ * What database server actually does is using the number mapping to a file/directory and
+ * then load and apply the workload to the already choosed dataset
+ */
 static void workload_func(struct cmdsocket *cmdsocket, struct command *command, const char *params)
 {
 	log_info("%s %s\n", command->name, params);
@@ -267,6 +277,10 @@ static void workload_func(struct cmdsocket *cmdsocket, struct command *command, 
 	// current_workload = *params - '0';
 }
 
+/**
+ * The nodejs server gives a number to specify the dataset to use
+ * the server actually use the number to find a path where the dataseta is stored
+ */
 static void dataSet_func(struct cmdsocket *cmdsocket, struct command *command, const char *params)
 {
 	log_info("%s %s\n", command->name, params);
@@ -294,7 +308,7 @@ static void part_algo_func(struct cmdsocket *cmdsocket, struct command *command,
 	int partition_algo = *params - '0';
 	char dsl[150];
 	// TODO: the database should maintain the instruction of current decision for future execution
-	sprintf(dsl, "partition_decision(foo.tb1.a,%s,%d)", workloadMap[current_workload], partition_algo);
+	sprintf(dsl, "partition_decision(foo.tb1.a,\"%s\",%d)", workloadMap[current_workload], partition_algo);
 	exec_dsl(cmdsocket, dsl);
 }
 
@@ -306,9 +320,16 @@ static void phys_part_func(struct cmdsocket *cmdsocket , struct command *command
 	exec_dsl(cmdsocket, dsl);
 }
 
+static void part_info_func(struct cmdsocket *cmdsocket , struct command *command, const char *params)
+{
+	log_info("%s %s\n", command->name, params);
+}
+
 static void exec_work_func(struct cmdsocket *cmdsocket, struct command *command, const char *params)
 {
 	log_info("%s %s\n", command->name, params);
+	// we could probably do it in another way, which is the server(innterface) 
+	// itself loads the workload text file and than fire the workload through exec_dsl
 	char dsl[150];
 	sprintf(dsl, "exec_work(%s)", workloadMap[current_workload]);
 	exec_dsl(cmdsocket, dsl);

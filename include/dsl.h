@@ -13,7 +13,7 @@
 
 // Currently we have 4 DSL commands to parse.
 // TODO(USER): you will need to increase this to track the commands you support.
-#define NUM_DSL_COMMANDS (18)
+#define NUM_DSL_COMMANDS (21)
 
 // This helps group similar DSL commands together.
 // For example, some queries can be parsed together:
@@ -42,7 +42,10 @@ typedef enum DSLGroup {
 	INSERT_CMD,
 	UPDATE_CMD,
 	PARTITION_TEST,
-	SHOWTBL_TEST
+	SHOWTBL_TEST,
+	PART_DECI,
+	EXEC_WORK,
+	PART_PHYS,
 
 	// TODO(USER): Add more here...
 } DSLGroup;
@@ -75,8 +78,10 @@ extern const char* delete_command;
 extern const char* delete_pos;
 extern const char* insert_command;
 extern const char* update_command;
-
 extern const char* partition_test;
 extern const char* show_table_test;
+extern const char* partition_command;
+extern const char* part_deci_command;
+extern const char* execwork_command;
 
 #endif // DSL_H__

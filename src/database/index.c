@@ -1,7 +1,85 @@
-#include "../frequencymodel/frequency_model.h"
 #include "index.h"
 #include "query.h"
 #include <time.h>
+
+Partition_inst part_inst;
+
+status do_physical_partition(Table *tbl, Column *col) {
+	status s;
+	clock_t tic, toc;
+	#ifdef SWAPLATER
+	#ifdef GHOST_VALUE
+	tic = clock();
+
+	s = nWayPartition(tbl, col, &part_inst);
+
+	toc = clock();
+	debug("partition with ghostvalue comsumed %lf\n", (double)(toc -tic) * 1000.0 / CLOCKS_PER_SEC);
+
+	free(part_inst.ghost_count);
+	#else
+	tic = clock();
+
+	s = nWayPartition(col, &part_inst);
+
+	toc = clock();
+	debug("partition without ghostvalue comsumed %lf\n", (double)(toc -tic) * 1000.0 / CLOCKS_PER_SEC);
+	
+	#endif /* GHOST_VALUE */
+	free(part_inst.pivots);
+	if (CMD_DONE == s.code) {
+		tic = clock();
+
+		// s = align_after_partition(tbl, col->pos);
+		s = align_test_col(tbl, col->pos);
+		toc = clock();
+		debug("align without ghostvalue comsumed %lf\n", (double)(toc -tic) * 1000.0 / CLOCKS_PER_SEC);
+	}
+	else {
+		log_err("cannot partition on the data!\n");
+	}
+	#else
+	#ifdef GHOST_VALUE
+	s = nWayPartition(tbl, col, &part_inst);
+	#else
+	s = nWayPartition(col, &part_inst);
+	#endif /* GHOST_VALUE */
+	#endif /* SWAPLATER */
+
+	return s;
+}
+
+status do_parition_decision(Table *tbl, Column *col, int algo, const char *wordload) {
+	status ret;
+	uint lineCount = 0;
+	uint fieldCount = 0;
+	collect_file_info(wordload, &lineCount, &fieldCount);
+
+	if (1 >= lineCount) {
+		log_err("cannot workload file\n");
+		ret.code = ERROR;
+		return ret;
+	}
+	
+	lineCount++;
+	int *op_type = malloc(sizeof(int) * lineCount);
+	int *num1 = malloc(sizeof(int) * lineCount);
+	int *num2 = malloc(sizeof(int) * lineCount);
+	workload_parse(wordload, op_type, num1, num2);
+
+	if (tbl->length != 0) {
+		// do the loading later
+		// for (unsigned int j = 0; j < tmp_tbl->col_count; j++) {
+			if (NULL == col->data)
+				load_column4disk(col, tbl->length);
+		// }
+	}
+
+	partition_data(col->data->content, col->data->length, op_type, num1, num2, lineCount, algo, &part_inst);
+	return ret;
+}
+
+
 
 /**
  * create an index over a Column
@@ -17,7 +95,7 @@ status create_index(Table *tbl, Column *col, IndexType type, Workload w) {
 			case PARTI: {
 				// by 0 != partitionCount, we can repartition a partitioned column
 				if (0 != col->partitionCount) {
-					Partition_inst inst;
+					
 					debug("call partition decision function!!\n");
 					#ifdef GHOST_VALUE
 					// TODO: eighth parameter as algorithm type
@@ -25,7 +103,7 @@ status create_index(Table *tbl, Column *col, IndexType type, Workload w) {
 					#else
 					tic = clock();
 
-					partition_data(col->data->content, col->data->length, w.ops, w.num1, w.num2, w.count, 0, &inst);
+					partition_data(col->data->content, col->data->length, w.ops, w.num1, w.num2, w.count, 0, &part_inst);
 
 					toc = clock();
 					debug("partition decision function comsumed %lf\n", (double)(toc -tic) * 1000.0 / CLOCKS_PER_SEC);
@@ -34,23 +112,23 @@ status create_index(Table *tbl, Column *col, IndexType type, Workload w) {
 					free(w.num2);
 					#endif
 
-					debug("partition instruction: total %i partitions\n", inst.p_count);
-					// for (int i = 0; i < inst.p_count; i++) {
-					//	printf("%d\n", inst.pivots[i]);
+					debug("partition instruction: total %i partitions\n", part_inst.p_count);
+					// for (int i = 0; i < part_inst.p_count; i++) {
+					//	printf("%d\n", part_inst.pivots[i]);
 					// }
 					// TODO: following 6 lines of code are for tests ONLY
 					// log_info("waiting for partition instruction\n");
-					// scanf("%d", &(inst.p_count));
-					// log_info("waiting for %d pivots\n", inst.p_count);
-					// inst.pivots = malloc(sizeof(int) * inst.p_count);
-					// for (int i = 0; i < inst.p_count; i++) {
-					// 	scanf("%d", &(inst.pivots[i]));
+					// scanf("%d", &(part_inst.p_count));
+					// log_info("waiting for %d pivots\n", part_inst.p_count);
+					// part_inst.pivots = malloc(sizeof(int) * part_inst.p_count);
+					// for (int i = 0; i < part_inst.p_count; i++) {
+					// 	scanf("%d", &(part_inst.pivots[i]));
 					// }
 					// #ifdef GHOST_VALUE
-					// log_info("waiting for %d ghost_count\n", inst.p_count);
-					// inst.ghost_count = malloc(sizeof(int) * inst.p_count);
-					// for (int i = 0; i < inst.p_count; i++) {
-					// 	scanf("%d", &(inst.ghost_count[i]));
+					// log_info("waiting for %d ghost_count\n", part_inst.p_count);
+					// part_inst.ghost_count = malloc(sizeof(int) * part_inst.p_count);
+					// for (int i = 0; i < part_inst.p_count; i++) {
+					// 	scanf("%d", &(part_inst.ghost_count[i]));
 					// }
 					// #endif /* GHOST_VALUE */
 
@@ -58,22 +136,22 @@ status create_index(Table *tbl, Column *col, IndexType type, Workload w) {
 					#ifdef GHOST_VALUE
 					tic = clock();
 
-					s = nWayPartition(tbl, col, &inst);
+					s = nWayPartition(tbl, col, &part_inst);
 
 					toc = clock();
 					debug("partition with ghostvalue comsumed %lf\n", (double)(toc -tic) * 1000.0 / CLOCKS_PER_SEC);
 
-					free(inst.ghost_count);
+					free(part_inst.ghost_count);
 					#else
 					tic = clock();
 
-					s = nWayPartition(col, &inst);
+					s = nWayPartition(col, &part_inst);
 
 					toc = clock();
 					debug("partition without ghostvalue comsumed %lf\n", (double)(toc -tic) * 1000.0 / CLOCKS_PER_SEC);
 					
 					#endif /* GHOST_VALUE */
-					free(inst.pivots);
+					free(part_inst.pivots);
 					if (CMD_DONE == s.code) {
 						tic = clock();
 
@@ -84,9 +162,9 @@ status create_index(Table *tbl, Column *col, IndexType type, Workload w) {
 					}
 					#else
 					#ifdef GHOST_VALUE
-					s = nWayPartition(tbl, col, &inst);
+					s = nWayPartition(tbl, col, &part_inst);
 					#else
-					s = nWayPartition(col, &inst);
+					s = nWayPartition(col, &part_inst);
 					#endif /* GHOST_VALUE */
 					#endif /* SWAPLATER */
 					debug("partitionCount %zu\n", col->partitionCount);

@@ -78,4 +78,5 @@ void cs165_log(FILE* out, const char *format, ...);
 
 void collect_file_info(const char* filename, unsigned int *lineCount, unsigned int *fieldCount);
 
+void doSomething(int *op_type, int *num1, int *num2, unsigned int lineCount);
 #endif /* __UTILS_H__ */

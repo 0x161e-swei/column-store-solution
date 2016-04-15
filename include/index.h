@@ -5,7 +5,7 @@
 #include "column.h"
 #include "table.h"
 #include "db.h"
-
+#include "../src/frequencymodel/frequency_model.h"
 
 // The instruction for partition on a single column
 // typedef struct _partition_inst{
@@ -18,6 +18,10 @@
 // } Partition_inst;
 
 
+extern Partition_inst part_inst;
+
+status do_physical_partition(Table *tbl, Column *col);
+status do_parition_decision(Table *tbl, Column *col, int algo, const char *wordload);
 
 #ifdef GHOST_VALUE
 status nWayPartition(Table *tbl, Column *col, Partition_inst *inst);

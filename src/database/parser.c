@@ -9,6 +9,7 @@
 #include "fileparser.h"
 #include "query.h"
 #include "utils.h"
+#include "index.h"
 
 
 // Finds a possible matching DSL command by using regular expressions.
@@ -219,11 +220,6 @@ status parse_dsl(char* str, dsl* d, db_operator* op)
 		// TODO(USER): Uncomment this section after you're able to grab the tbl1
 		Column* col1 = NULL;
 		s = create_column(tbl1, full_name, &col1);
-		if (OK != s.code) {
-			// Something went wrong
-			log_err("cannot create the column\n");
-			return s;
-		}
 
 		// TODO(USER): You must track your variable in a variable pool now!
 		// This means later on when I refer to <full_name>, I should get this
@@ -338,6 +334,61 @@ status parse_dsl(char* str, dsl* d, db_operator* op)
 		ret.code = OK;
 		return ret;
 	}
+	else if (d->g == PART_PHYS) {
+		status ret;
+		// Create a working copy, +1 for '\0'
+		char* str_cpy = malloc(strlen(str) + 1);
+		strncpy(str_cpy, str, strlen(str) + 1);
+
+		// This gives us everything inside the ("colname")
+		strtok(str_cpy, open_paren);
+		char* args = strtok(NULL, close_paren);
+
+		// prepare table and column
+		Table *tmp_tbl = NULL;
+		Column *tmp_col = NULL;
+		args = prepare_col(args, &tmp_tbl, &tmp_col);
+
+		ret = do_physical_partition(tmp_tbl, tmp_tbl);
+		return ret;
+	}
+	else if (d->g == PART_DECI) {
+		status ret;
+		// Create a working copy, +1 for '\0'
+		char* str_cpy = malloc(strlen(str) + 1);
+		strncpy(str_cpy, str, strlen(str) + 1);
+
+		// This gives us everything inside the ("colname")
+		strtok(str_cpy, open_paren);
+		char* args = strtok(NULL, close_paren);
+
+		// prepare table and column
+		Table *tmp_tbl = NULL;
+		Column *tmp_col = NULL;
+		args = prepare_col(args, &tmp_tbl, &tmp_col);
+
+		if (NULL == tmp_tbl || NULL == tmp_tbl) {
+			log_err("wrong column/table name in partition test\n");
+			ret.code = ERROR;
+			return ret;
+		}
+
+		tmp_tbl->primary_indexed_col = tmp_col;
+		// 
+		const char* filename = strtok(args, quotes);
+	
+		char *algo = strtok(NULL, comma);
+		int num = 0;
+		if (algo != NULL) {
+			num = atoi(algo);
+		}	
+
+		ret = do_parition_decision(tmp_tbl, tmp_col, num, filename);
+		free(str_cpy);
+		str_cpy = NULL;
+
+		return ret;
+	}
 	else if (d->g == PARTITION_TEST) {
 		status ret;
 		// Create a working copy, +1 for '\0'
@@ -372,17 +423,26 @@ status parse_dsl(char* str, dsl* d, db_operator* op)
 			ret.code = ERROR;
 			return ret;
 		}
-		
-		int *op_type = malloc(sizeof(int) * (lineCount + 1));
-		int *num1 = malloc(sizeof(int) * (lineCount + 1));
-		int *num2 = malloc(sizeof(int) * (lineCount + 1));
+		lineCount++;	
+		int *op_type = malloc(sizeof(int) * lineCount);
+		int *num1 = malloc(sizeof(int) * lineCount);
+		int *num2 = malloc(sizeof(int) * lineCount);
 		workload_parse(filename, op_type, num1, num2);
 		
+
+		// The following lines commented out are used for workload pre-processing for front-end server
+		// printf("parse done \n");
+		// doSomething(op_type, num1, num2, lineCount + 1);
+
+		// printf("job done\n");
+		// ret.code = OK;
+		// return ret;
+
 		Workload w;
 		w.ops = op_type;
 		w.num1 = num1;
 		w.num2 = num2;
-		w.count = lineCount + 1;
+		w.count = lineCount;
 		// Load data from disk if not in memory
 		if (tmp_tbl->length != 0) {
 			// do the loading later

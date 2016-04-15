@@ -56,6 +56,12 @@ const char* partition_test = "^partition\\([a-zA-Z0-9_\\.]+\\,\\\"[a-zA-Z0-9_/\\
 // Matches: show_tbl(<col_var>)
 const char* show_table_test = "^show_tbl\\([a-zA-Z0-9_\\.]+\\)";
 
+const char* partition_command = "^partition([a-zA-Z0-9_\\.]+\\)";
+
+const char* part_deci_command = "^partition_decision([a-zA-Z0-9_\\.]+\\,\\\"[a-zA-Z0-9_/\\.]+\\\"\\,[0-9]\\)";
+
+const char* execwork_command = "^exec_work(\\\"[a-zA-Z0-9_/\\.]+\\\"\\)";
+
 // TODO(USER): You will need to update the commands here for every single command you add.
 
 dsl** dsl_commands_init(void)
@@ -120,5 +126,15 @@ dsl** dsl_commands_init(void)
 
 	commands[17]->c = show_table_test;
 	commands[17]->g = SHOWTBL_TEST;
+
+	commands[18]->c = partition_command;
+	commands[18]->g = PART_PHYS;
+
+	commands[19]->c = part_deci_command;
+	commands[19]->g = PART_DECI;
+
+	commands[20]->c = execwork_command;
+	commands[20]->g = EXEC_WORK;
+
 	return commands;
 }

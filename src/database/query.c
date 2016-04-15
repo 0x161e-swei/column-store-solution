@@ -458,9 +458,9 @@ status query_prepare(const char* query, dsl* d, db_operator* op) {
 			}
 		}
 		debug("numbers to insert in Table %s:\n",tmp_tbl->name);
-		for (size_t i = 0; i < tmp_tbl->col_count; i++) {
-			printf("%d ", op->value1[i]);
-		}
+		// for (size_t i = 0; i < tmp_tbl->col_count; i++) {
+		// 	printf("%d ", op->value1[i]);
+		// }
 
 		op->type = INSERT;
 		op->tables = malloc(sizeof(Tbl_ptr));

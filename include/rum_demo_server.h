@@ -37,6 +37,7 @@ static void workload_func(struct cmdsocket *cmdsocket, struct command *command, 
 static void dataSet_func(struct cmdsocket *cmdsocket, struct command *command, const char *params);
 static void part_algo_func(struct cmdsocket *cmdsocket, struct command *command, const char *params);
 static void phys_part_func(struct cmdsocket *cmdsocket, struct command *command, const char *params);
+static void part_info_func(struct cmdsocket *cmdsocket , struct command *command, const char *params);
 static void exec_work_func(struct cmdsocket *cmdsocket, struct command *command, const char *params);
 static void userConstrain_func(struct cmdsocket *cmdsocket, struct command *command, const char *params);
 static void userRUM_func(struct cmdsocket *cmdsocket, struct command *command, const char *params);

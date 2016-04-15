@@ -79,3 +79,127 @@ void collect_file_info(const char* filename, unsigned int *lineCount, unsigned i
 	}
 	return;
 }
+
+
+void doSomething(int *op_type, int *num1, int *num2, unsigned int lineCount) {
+	int *pq = malloc(sizeof(int) * 100000000);
+	int *rq = malloc(sizeof(int) * 100000000);
+	int *in = malloc(sizeof(int) * 100000000);
+	int *up = malloc(sizeof(int) * 100000000);
+	int *de = malloc(sizeof(int) * 100000000);
+	memset(pq, 0, 100000000);
+	memset(rq, 0, 100000000);
+	memset(in, 0, 100000000);
+	memset(up, 0, 100000000);
+	memset(de, 0, 100000000);
+	printf("inside function memset done\n");
+	for (uint i = 0; i < lineCount; i++) {
+		switch (op_type[i]) {
+			case 0: {
+				int k = num1[i] / 100;
+				if (k >= 100000000) {
+					k = 100000000 - 1;
+					pq[k]++;
+				}
+				else {
+					pq[k]++;	
+				}
+				break;
+			}
+			case 1: {
+				int k = num1[i] / 100;
+				int j = num2[i] / 100;
+				if (k >= 100000000 || j >= 100000000) {
+					k = 100000000 - 1;
+					rq[k]++;
+				}
+				else {
+					for (int x = k; x <= j; x++)
+						rq[x]++;	
+				}
+				break;
+			}
+			case 2: {
+				int k = num1[i] / 100;
+				if (k >= 100000000) {
+					k = 100000000 - 1;
+					in[k]++;
+				}
+				else {
+					in[k]++;	
+				}
+				break;
+			}
+			case 3: {
+				int k = num1[i] / 100;
+				if (k >= 100000000) {
+					k = 100000000 - 1;
+					up[k]++;
+				}
+				else {
+					up[k]++;	
+				}
+				k = num2[i] / 100;
+				if (k >= 100000000) {
+					k = 100000000 - 1;
+					up[k]++;
+				}
+				else {
+					up[k]++;	
+				}
+				break;
+			}
+			case 4: {
+				int k = num1[i] / 100;
+				if (k >= 100000000) {
+					k = 100000000 - 1;
+					de[k]++;
+				}
+				else {
+					de[k]++;	
+				}
+				break;
+			}
+			default: {
+				break;
+			}
+		}	
+	}
+	printf("sort done\n");
+	int len = lineCount;
+	FILE *f = fopen("data/pq", "w+");
+	if (NULL != f){
+		fwrite(&len, sizeof(len), 1, f);
+		fwrite(pq, sizeof(int), len, f);
+	}
+	free(pq);
+	fclose(f);
+	f = fopen("data/rq", "w+");
+	if (NULL != f){
+		fwrite(&len, sizeof(len), 1, f);
+		fwrite(rq, sizeof(int), len, f);
+	}
+	fclose(f);
+	free(rq);
+	f = fopen("data/in", "w+");
+	if (NULL != f){
+		fwrite(&len, sizeof(len), 1, f);
+		fwrite(in, sizeof(int), len, f);
+	}
+	fclose(f);
+	free(in);
+	f = fopen("data/up", "w+");
+	if (NULL != f){
+		fwrite(&len, sizeof(len), 1, f);
+		fwrite(up, sizeof(int), len, f);
+	}
+	fclose(f);
+	free(up);
+	f = fopen("data/de", "w+");
+	if (NULL != f){
+		fwrite(&len, sizeof(len), 1, f);
+		fwrite(de, sizeof(int), len, f);
+	}
+	fclose(f);
+	free(de);
+}

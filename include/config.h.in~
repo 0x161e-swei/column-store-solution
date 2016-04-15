@@ -1,16 +1,10 @@
 /* include/config.h.in.  Generated from configure.ac by autoheader.  */
 
-/* Define for debug */
-#undef DEBUG
-
 /* Define to 1 if you have the <fcntl.h> header file. */
 #undef HAVE_FCNTL_H
 
 /* Define to 1 if you have the <inttypes.h> header file. */
 #undef HAVE_INTTYPES_H
-
-/* Define to 1 if you have the `csv' library (-lcsv). */
-#undef HAVE_LIBCSV
 
 /* Define to 1 if your system has a GNU libc compatible `malloc' function, and
    to 0 otherwise. */
@@ -73,9 +67,6 @@
 
 /* Define for log_err */
 #undef LOG_ERR
-
-/* Define for log_info */
-#undef LOG_INFO
 
 /* Name of package */
 #undef PACKAGE
