@@ -302,11 +302,12 @@ int main(void)
 
 	Db *default_db = NULL;
 	OpenFlags flags = LOAD;
-	data_path = malloc(sizeof(char) * 6);
-	strcpy(data_path, "data/");
-	char *dbinfo = malloc(sizeof(char) * 12);
-	strncpy(dbinfo, data_path, strlen(data_path));
+	data_path = malloc(sizeof(char) * 15);
+	strcpy(data_path, "data/dataset0/");
+	char *dbinfo = malloc(sizeof(char) * 21);
+	strncpy(dbinfo, data_path, strlen(data_path) + 1);
 	strncat(dbinfo, "dbinfo", 6);
+	debug("loading db from %s\n", dbinfo);
 	status s = open_db(dbinfo, &default_db, flags);
 
 	if (ERROR == s.code) {
@@ -341,6 +342,7 @@ int main(void)
 		if (NULL != default_db)
 			sync_db(default_db);
 	}
-
+	free(data_path);
+	free(dbinfo);
 	return 0;
 }

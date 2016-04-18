@@ -18,7 +18,7 @@
 // } Partition_inst;
 
 
-extern Partition_inst part_inst;
+extern Partition_inst *part_inst;
 
 status do_physical_partition(Table *tbl, Column *col);
 status do_parition_decision(Table *tbl, Column *col, int algo, const char *wordload);

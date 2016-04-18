@@ -1,4 +1,5 @@
 #include "query.h"
+
 #define BUFFERSIZE 3096
 
 // Global results hash list to keep track of query results
@@ -708,11 +709,10 @@ status query_execute(db_operator* op, Result** results) {
  */
 status load_column4disk(Column *col, size_t len) {
 	status s;
-	static char dataprefix[] = "data/";
 	char *colfile = NULL;
 	int namelen = strlen(col->name);
-	colfile = malloc(sizeof(char) * (6 + namelen));
-	strncpy(colfile, dataprefix, 6);
+	colfile = malloc(sizeof(char) * (strlen(data_path) + 1 + namelen));
+	strncpy(colfile, data_path, strlen(data_path) + 1);
 	strncat(colfile, col->name, namelen);
 	// debug("loading column %s from disks!\n", colfile);
 
@@ -723,7 +723,7 @@ status load_column4disk(Column *col, size_t len) {
 	size_t read = len;
 	char *buffer = malloc(sizeof(int) * BUFFERSIZE);
 	if (NULL == fp) {
-		log_info("cannot open file!\n");
+		log_err("cannot open file!\n");
 		s.code = ERROR;
 		return s;
 	}

@@ -20,21 +20,24 @@
 #include "table.h"
 #include "utils.h"
 #include "dsl.h"
+#include "index.h"
+
 
 dsl** dsl_commands;
 
-char *current_file 				= NULL;
-unsigned int current_workload 	= 0;
-int current_dataset				= -1;
+
+char *current_file		= NULL;
+int current_workload	= -1;
+int current_dataset		= -1;
 
 // TODO: add more dataset and workload mapping
-static char* datasetMap[] = {	"dataset0",
-								"dataset1",
-								"dataset2",
+const char* datasetMap[] = {	"data/dataset0/",
+								"data/dataset1/",
+								"data/dataset2/",
 							};
-static char* workloadMap[] = {	"workload0", 
-								"workload1", 
-								"workload2",
+const char* workloadMap[] = {	"data/workload0/workload",
+								"data/workload1/workload",
+								"data/workload2/workload",
 							};
 
 static struct command commands[] = {
@@ -143,6 +146,7 @@ char* execute_db_operator(db_operator* dbO) {
 
 void exec_dsl(struct cmdsocket *cmdsocket, char *dsl)
 {
+	debug("in side execs\n");
 	db_operator *dbo = malloc(sizeof(db_operator));	
 	status parse_status;
 	parse_status = parse_command_string(dsl, dsl_commands, dbo);
@@ -189,7 +193,7 @@ void exec_dsl(struct cmdsocket *cmdsocket, char *dsl)
 	}
 
 	evbuffer_add_printf(cmdsocket->buffer, "{\"event\": \"dsl_result\",");
-	evbuffer_add_printf(cmdsocket->buffer, "\"res\": %s", res);
+	evbuffer_add_printf(cmdsocket->buffer, "\"res\": \"%s\"", res);
 	evbuffer_add_printf(cmdsocket->buffer, "}\n");
 	flush_cmdsocket(cmdsocket);
 	free(res);
@@ -198,8 +202,14 @@ void exec_dsl(struct cmdsocket *cmdsocket, char *dsl)
 void setup_database(unsigned int dataset_num) {
 	data_path = datasetMap[dataset_num];
 	Db *default_db;
-	OpenFlags flags = LOAD;	
-	open_db(data_path, &default_db, flags);
+	OpenFlags flags = LOAD;
+	// +7 for 'dbinfo\0'
+	char *dbinfo = malloc(strlen(data_path) + 7);
+	strncpy(dbinfo, data_path, strlen(data_path) + 1);
+	strncat(dbinfo, "dbinfo", 6);
+	log_info("loading db from %s\n", dbinfo);
+	open_db(dbinfo, &default_db, flags);
+	free(dbinfo);
 }
 
 // str must have at least len bytes to copy
@@ -248,33 +258,9 @@ static void open_file(const char* file)
 static void workload_func(struct cmdsocket *cmdsocket, struct command *command, const char *params)
 {
 	log_info("%s %s\n", command->name, params);
-
-	// the middleware will send a name of the workload specified by the user in params
-	FILE *fp;
-	if ((fp = fopen("../../data/workLoadData5.json", "rb")) == NULL)
-	{
-		exit(0);
+	if (current_workload != (*params - '0')) {
+		current_workload = *params - '0';
 	}
-	fseek(fp, 0, SEEK_END);
-	size_t fileLen = ftell(fp);
-	char *tmp = (char *) malloc(sizeof(char) * fileLen);
-	fseek(fp, 0, SEEK_SET);
-	size_t total_read = fread(tmp, sizeof(char), fileLen, fp);
-	while (total_read < fileLen) {
-		size_t r = fread(tmp + sizeof(char) * total_read, sizeof(char), fileLen - total_read, fp);
-		total_read += r;
-	}
-	fclose(fp);
-
-	// the server should parse the workload and return the frequency model, etc.
-	evbuffer_add_printf(cmdsocket->buffer, "{\"event\": \"workload\",");
-	evbuffer_add_printf(cmdsocket->buffer, "\"workLoad\":");
-	evbuffer_add_printf(cmdsocket->buffer, "%s", tmp);
-	evbuffer_add_printf(cmdsocket->buffer, "}\n");
-	flush_cmdsocket(cmdsocket);
-	free(tmp);
-
-	// current_workload = *params - '0';
 }
 
 /**
@@ -284,18 +270,19 @@ static void workload_func(struct cmdsocket *cmdsocket, struct command *command, 
 static void dataSet_func(struct cmdsocket *cmdsocket, struct command *command, const char *params)
 {
 	log_info("%s %s\n", command->name, params);
-	evbuffer_add_printf(cmdsocket->buffer, "{\"event\": \"dataSet\",");
-	evbuffer_add_printf(cmdsocket->buffer, "\"fileName\": \"../Data/DataSet1.json\"");
-	evbuffer_add_printf(cmdsocket->buffer, "}\n");
-	flush_cmdsocket(cmdsocket);
+	// evbuffer_add_printf(cmdsocket->buffer, "{\"event\": \"dataSet\",");
+	// evbuffer_add_printf(cmdsocket->buffer, "\"fileName\": \"../Data/DataSet1.json\"");
+	// evbuffer_add_printf(cmdsocket->buffer, "}\n");
+	// flush_cmdsocket(cmdsocket);
 
 	if (-1 == current_dataset) {
+		log_info("no previous database loaded!\n");
 		current_dataset = *params - '0';
 		setup_database(current_dataset);
 	}
-	else {
+	else if ((*params - '0') != current_dataset) {
+		log_info("previous database already loaded!\nDropping the previous DB...\n");
 		// drop the current database and setup a new one
-		// TODO: drop database
 		sync_db(database);
 		current_dataset = *params - '0';
 		setup_database(current_dataset);
@@ -308,21 +295,52 @@ static void part_algo_func(struct cmdsocket *cmdsocket, struct command *command,
 	int partition_algo = *params - '0';
 	char dsl[150];
 	// TODO: the database should maintain the instruction of current decision for future execution
-	sprintf(dsl, "partition_decision(foo.tb1.a,\"%s\",%d)", workloadMap[current_workload], partition_algo);
-	exec_dsl(cmdsocket, dsl);
+	if (current_dataset >= 0 && current_workload >=0) {
+		sprintf(dsl, "partition_decision(foo.tb1.a,\"%s\",%d)", workloadMap[current_workload], partition_algo);
+		exec_dsl(cmdsocket, dsl);
+	}
 }
 
+/**
+ * According to the partition instruction produced by the latest function call of part_algo_func,
+ * To physically partition the data
+ */
 static void phys_part_func(struct cmdsocket *cmdsocket , struct command *command, const char *params)
 {
 	log_info("%s %s\n", command->name, params);
-	char dsl[150];
-	sprintf(dsl, "partition(foo.tb1.a)");
-	exec_dsl(cmdsocket, dsl);
+	if (NULL != part_inst) {
+		char dsl[150];
+		sprintf(dsl, "partition(foo.tb1.a)");
+		exec_dsl(cmdsocket, dsl);
+		if (part_inst->pivots) {
+			free(part_inst->pivots);
+		}
+		#ifdef GHOST_VALUE
+		if (part_inst->ghost_count) {
+			free(part_inst->ghost_count);
+		}
+		#endif
+		free(part_inst);
+	}
 }
 
 static void part_info_func(struct cmdsocket *cmdsocket , struct command *command, const char *params)
 {
 	log_info("%s %s\n", command->name, params);
+	Table *tmp_tbl = NULL;
+	grab_table("foo.tb1", &tmp_tbl);
+	if (NULL != tmp_tbl && NULL != tmp_tbl->primary_indexed_col) {
+		evbuffer_add_printf(cmdsocket->buffer, "{\"event\": \"partInfo\",");
+		evbuffer_add_printf(cmdsocket->buffer, "\"number\": %zu", tmp_tbl->primary_indexed_col->partitionCount);
+		evbuffer_add_printf(cmdsocket->buffer, "\"sizes\": [");
+		unsigned int i = 0;
+		for (; i < tmp_tbl->primary_indexed_col->partitionCount - 1; i++) {
+			evbuffer_add_printf(cmdsocket->buffer, "%d,", tmp_tbl->primary_indexed_col->pivots[i]);
+		}
+		evbuffer_add_printf(cmdsocket->buffer, "%d", tmp_tbl->primary_indexed_col->pivots[i]);
+		evbuffer_add_printf(cmdsocket->buffer, "]}\n");
+		flush_cmdsocket(cmdsocket);
+	}
 }
 
 static void exec_work_func(struct cmdsocket *cmdsocket, struct command *command, const char *params)
@@ -331,8 +349,10 @@ static void exec_work_func(struct cmdsocket *cmdsocket, struct command *command,
 	// we could probably do it in another way, which is the server(innterface) 
 	// itself loads the workload text file and than fire the workload through exec_dsl
 	char dsl[150];
-	sprintf(dsl, "exec_work(%s)", workloadMap[current_workload]);
-	exec_dsl(cmdsocket, dsl);
+	if (current_dataset >= 0 && current_workload >=0) {
+		sprintf(dsl, "exec_work(%s)", workloadMap[current_workload]);
+		exec_dsl(cmdsocket, dsl);
+	}
 }
 
 static void userConstrain_func(struct cmdsocket *cmdsocket, struct command *command, const char *params)
@@ -767,6 +787,9 @@ int main()
 	local_addr.sin6_family = AF_INET6;
 	local_addr.sin6_port = htons(listenport);
 	local_addr.sin6_addr = in6addr_any;
+
+	// Populate the global dsl commands
+	dsl_commands = dsl_commands_init();
 
 	// Begin listening for connections
 	listenfd = socket(AF_INET6, SOCK_STREAM, 0);

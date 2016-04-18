@@ -2,7 +2,7 @@
 #include "query.h"
 #include <time.h>
 
-Partition_inst part_inst;
+Partition_inst *part_inst = NULL;
 
 status do_physical_partition(Table *tbl, Column *col) {
 	status s;
@@ -11,22 +11,22 @@ status do_physical_partition(Table *tbl, Column *col) {
 	#ifdef GHOST_VALUE
 	tic = clock();
 
-	s = nWayPartition(tbl, col, &part_inst);
+	s = nWayPartition(tbl, col, part_inst);
 
 	toc = clock();
 	debug("partition with ghostvalue comsumed %lf\n", (double)(toc -tic) * 1000.0 / CLOCKS_PER_SEC);
 
-	free(part_inst.ghost_count);
+	free(part_inst->ghost_count);
 	#else
 	tic = clock();
 
-	s = nWayPartition(col, &part_inst);
+	s = nWayPartition(col, part_inst);
 
 	toc = clock();
 	debug("partition without ghostvalue comsumed %lf\n", (double)(toc -tic) * 1000.0 / CLOCKS_PER_SEC);
 	
 	#endif /* GHOST_VALUE */
-	free(part_inst.pivots);
+	free(part_inst->pivots);
 	if (CMD_DONE == s.code) {
 		tic = clock();
 
@@ -40,23 +40,23 @@ status do_physical_partition(Table *tbl, Column *col) {
 	}
 	#else
 	#ifdef GHOST_VALUE
-	s = nWayPartition(tbl, col, &part_inst);
+	s = nWayPartition(tbl, col, part_inst);
 	#else
-	s = nWayPartition(col, &part_inst);
+	s = nWayPartition(col, part_inst);
 	#endif /* GHOST_VALUE */
 	#endif /* SWAPLATER */
 
 	return s;
 }
 
-status do_parition_decision(Table *tbl, Column *col, int algo, const char *wordload) {
+status do_parition_decision(Table *tbl, Column *col, int algo, const char *workload) {
 	status ret;
 	uint lineCount = 0;
 	uint fieldCount = 0;
-	collect_file_info(wordload, &lineCount, &fieldCount);
+	collect_file_info(workload, &lineCount, &fieldCount);
 
 	if (1 >= lineCount) {
-		log_err("cannot workload file\n");
+		log_err("cannot workload file %s\n", workload);
 		ret.code = ERROR;
 		return ret;
 	}
@@ -65,7 +65,7 @@ status do_parition_decision(Table *tbl, Column *col, int algo, const char *wordl
 	int *op_type = malloc(sizeof(int) * lineCount);
 	int *num1 = malloc(sizeof(int) * lineCount);
 	int *num2 = malloc(sizeof(int) * lineCount);
-	workload_parse(wordload, op_type, num1, num2);
+	workload_parse(workload, op_type, num1, num2);
 
 	if (tbl->length != 0) {
 		// do the loading later
@@ -74,8 +74,13 @@ status do_parition_decision(Table *tbl, Column *col, int algo, const char *wordl
 				load_column4disk(col, tbl->length);
 		// }
 	}
-
-	partition_data(col->data->content, col->data->length, op_type, num1, num2, lineCount, algo, &part_inst);
+	if (NULL != part_inst) {
+		free(part_inst);
+		part_inst = NULL;
+	}
+	part_inst = malloc(sizeof(Partition_inst));
+	partition_data(col->data->content, col->data->length, op_type, num1, num2, lineCount, algo, part_inst);
+	ret.code = CMD_DONE;
 	return ret;
 }
 
@@ -90,20 +95,21 @@ status do_parition_decision(Table *tbl, Column *col, int algo, const char *wordl
 status create_index(Table *tbl, Column *col, IndexType type, Workload w) {
 	status s;
 	clock_t tic, toc;
-	if (NULL != col && NULL == col->index) {
+	if (NULL != col && NULL == col->index && NULL != col->data) {
 		switch (type) {
 			case PARTI: {
 				// by 0 != partitionCount, we can repartition a partitioned column
 				if (0 != col->partitionCount) {
-					
+					// TODO: do we need to free this one?
+					part_inst = malloc(sizeof(Partition_inst));	
 					debug("call partition decision function!!\n");
 					#ifdef GHOST_VALUE
 					// TODO: eighth parameter as algorithm type
 					// call someone else
 					#else
 					tic = clock();
-
-					partition_data(col->data->content, col->data->length, w.ops, w.num1, w.num2, w.count, 0, &part_inst);
+					debug("%d %d", col->data->length, w.count);
+					partition_data(col->data->content, col->data->length, w.ops, w.num1, w.num2, w.count, 0, part_inst);
 
 					toc = clock();
 					debug("partition decision function comsumed %lf\n", (double)(toc -tic) * 1000.0 / CLOCKS_PER_SEC);
@@ -112,23 +118,23 @@ status create_index(Table *tbl, Column *col, IndexType type, Workload w) {
 					free(w.num2);
 					#endif
 
-					debug("partition instruction: total %i partitions\n", part_inst.p_count);
-					// for (int i = 0; i < part_inst.p_count; i++) {
-					//	printf("%d\n", part_inst.pivots[i]);
+					debug("partition instruction: total %i partitions\n", part_inst->p_count);
+					// for (int i = 0; i < part_inst->p_count; i++) {
+					//	printf("%d\n", part_inst->pivots[i]);
 					// }
 					// TODO: following 6 lines of code are for tests ONLY
 					// log_info("waiting for partition instruction\n");
-					// scanf("%d", &(part_inst.p_count));
-					// log_info("waiting for %d pivots\n", part_inst.p_count);
-					// part_inst.pivots = malloc(sizeof(int) * part_inst.p_count);
-					// for (int i = 0; i < part_inst.p_count; i++) {
-					// 	scanf("%d", &(part_inst.pivots[i]));
+					// scanf("%d", &(part_inst->p_count));
+					// log_info("waiting for %d pivots\n", part_inst->p_count);
+					// part_inst->pivots = malloc(sizeof(int) * part_inst->p_count);
+					// for (int i = 0; i < part_inst->p_count; i++) {
+					// 	scanf("%d", &(part_inst->pivots[i]));
 					// }
 					// #ifdef GHOST_VALUE
-					// log_info("waiting for %d ghost_count\n", part_inst.p_count);
-					// part_inst.ghost_count = malloc(sizeof(int) * part_inst.p_count);
-					// for (int i = 0; i < part_inst.p_count; i++) {
-					// 	scanf("%d", &(part_inst.ghost_count[i]));
+					// log_info("waiting for %d ghost_count\n", part_inst->p_count);
+					// part_inst->ghost_count = malloc(sizeof(int) * part_inst->p_count);
+					// for (int i = 0; i < part_inst->p_count; i++) {
+					// 	scanf("%d", &(part_inst->ghost_count[i]));
 					// }
 					// #endif /* GHOST_VALUE */
 
@@ -136,22 +142,22 @@ status create_index(Table *tbl, Column *col, IndexType type, Workload w) {
 					#ifdef GHOST_VALUE
 					tic = clock();
 
-					s = nWayPartition(tbl, col, &part_inst);
+					s = nWayPartition(tbl, col, part_inst);
 
 					toc = clock();
 					debug("partition with ghostvalue comsumed %lf\n", (double)(toc -tic) * 1000.0 / CLOCKS_PER_SEC);
 
-					free(part_inst.ghost_count);
+					free(part_inst->ghost_count);
 					#else
 					tic = clock();
 
-					s = nWayPartition(col, &part_inst);
+					s = nWayPartition(col, part_inst);
 
 					toc = clock();
 					debug("partition without ghostvalue comsumed %lf\n", (double)(toc -tic) * 1000.0 / CLOCKS_PER_SEC);
 					
 					#endif /* GHOST_VALUE */
-					free(part_inst.pivots);
+					free(part_inst->pivots);
 					if (CMD_DONE == s.code) {
 						tic = clock();
 
@@ -162,12 +168,14 @@ status create_index(Table *tbl, Column *col, IndexType type, Workload w) {
 					}
 					#else
 					#ifdef GHOST_VALUE
-					s = nWayPartition(tbl, col, &part_inst);
+					s = nWayPartition(tbl, col, part_inst);
 					#else
-					s = nWayPartition(col, &part_inst);
+					s = nWayPartition(col, part_inst);
 					#endif /* GHOST_VALUE */
 					#endif /* SWAPLATER */
 					debug("partitionCount %zu\n", col->partitionCount);
+					free(part_inst);
+					part_inst = NULL;
 					// for (size_t i = 0; i < col->partitionCount; i++) {
 					//	printf("%d %zu\n", col->pivots[i], col->p_pos[i]);
 					// }

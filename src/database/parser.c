@@ -16,7 +16,7 @@
 // If it finds a match, it calls parse_command to actually process the dsl.
 status parse_command_string(char* str, dsl** commands, db_operator* op)
 {
-	log_info("Parsing: %s\n", str);
+	// log_info("Parsing: %s", str);
 	status s;
 	// Create a regular expression to parse the string
 	
@@ -30,7 +30,7 @@ status parse_command_string(char* str, dsl** commands, db_operator* op)
 		regex_t regex;
 		dsl* d = commands[i];
 		if (regcomp(&regex, d->c, REG_EXTENDED) != 0) {
-			log_err("Could not compile regex\n");
+			log_err("Could not compile regex %s\n", d->c);
 		}
 
 		// Bind regular expression associated with the string

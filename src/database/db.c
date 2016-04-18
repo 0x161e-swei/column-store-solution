@@ -7,8 +7,8 @@
 // There will be changes that you will need to include here.
 
 // the only global db 
-Db *database;
-char *data_path;
+Db *database = NULL;
+const char *data_path = NULL;
 
 status grab_db(const char* db_name, Db** db) {
 	status s;
@@ -76,7 +76,7 @@ status sync_db(Db* db __attribute__((unused))) {
 	FILE *dbinfo;
 	status s;
 	clear_res_list();
-	char *dbinfo_name = malloc(sizeof(char) * 12);
+	char *dbinfo_name = malloc(sizeof(char) * strlen(data_path) + 7);
 	strncpy(dbinfo_name, data_path, strlen(data_path) + 1);
 	strncat(dbinfo_name, "dbinfo", 6);
 	if (NULL != database && NULL != (dbinfo = fopen(dbinfo_name, "w+"))) {
