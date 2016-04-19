@@ -49,11 +49,11 @@ perf*
 **/.deps/*
  
 # runtime products
-dbinfo
-foo.*
 
 # test
 data/*
+!data/dataset1/
+!data/workload10000
 testtool/*
 !testtool/dataGen.py
 !testtool/workGen.py

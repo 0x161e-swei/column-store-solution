@@ -303,7 +303,7 @@ int main(void)
 	Db *default_db = NULL;
 	OpenFlags flags = LOAD;
 	data_path = malloc(sizeof(char) * 15);
-	strcpy(data_path, "data/dataset0/");
+	strcpy(data_path, "data/dataset1/");
 	char *dbinfo = malloc(sizeof(char) * 21);
 	strncpy(dbinfo, data_path, strlen(data_path) + 1);
 	strncat(dbinfo, "dbinfo", 6);
