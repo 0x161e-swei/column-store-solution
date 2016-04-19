@@ -3,6 +3,7 @@
 #include <time.h>
 
 Partition_inst *part_inst = NULL;
+frequency_model *freq_model = NULL;
 
 status do_physical_partition(Table *tbl, Column *col) {
 	status s;
@@ -78,8 +79,13 @@ status do_parition_decision(Table *tbl, Column *col, int algo, const char *workl
 		free(part_inst);
 		part_inst = NULL;
 	}
+	// get the frequency_model first
+	// TODO: might move it to a independent function interface for future reuse 
+	freq_model = sorted_data_frequency_model(col->data->content, col->data->length, op_type, num1, num2, lineCount);
+
 	part_inst = malloc(sizeof(Partition_inst));
-	partition_data(col->data->content, col->data->length, op_type, num1, num2, lineCount, algo, part_inst);
+	partition_data(freq_model, 0, part_inst, col->data->length);
+
 	ret.code = CMD_DONE;
 	return ret;
 }
@@ -109,7 +115,13 @@ status create_index(Table *tbl, Column *col, IndexType type, Workload w) {
 					#else
 					tic = clock();
 					debug("%d %d", col->data->length, w.count);
-					partition_data(col->data->content, col->data->length, w.ops, w.num1, w.num2, w.count, 0, part_inst);
+					
+					// frequency_model *sorted_data_frequency_model
+					// args: const int* data_in, size_t data_size, const int* type, const int* first, const int* second, size_t work_size
+					freq_model = sorted_data_frequency_model(col->data->content, col->data->length, w.ops, w.num1, w.num2, w.count);
+					
+					// partition_data(frequency_model* fm,const int algo, Partition_inst *out, size_t data_size); 
+					partition_data(freq_model, 0, part_inst, col->data->length);
 
 					toc = clock();
 					debug("partition decision function comsumed %lf\n", (double)(toc -tic) * 1000.0 / CLOCKS_PER_SEC);
@@ -176,6 +188,9 @@ status create_index(Table *tbl, Column *col, IndexType type, Workload w) {
 					debug("partitionCount %zu\n", col->partitionCount);
 					free(part_inst);
 					part_inst = NULL;
+					free_frequency_model(freq_model);
+					if (freq_model) free(freq_model);
+					freq_model = NULL;	
 					// for (size_t i = 0; i < col->partitionCount; i++) {
 					//	printf("%d %zu\n", col->pivots[i], col->p_pos[i]);
 					// }
@@ -236,6 +251,7 @@ status nWayPartition(Column *col, Partition_inst *inst)
 	col->partitionCount = p_count;
 	DArray_INT *arr = col->data;
 	col->pivots = malloc(sizeof(int) * p_count);
+	col->part_size = malloc(sizeof(int) * p_count);
 	col->p_pos = malloc(sizeof(pos_t) * p_count);
 
 	#ifdef GHOST_VALUE
@@ -269,10 +285,10 @@ status nWayPartition(Column *col, Partition_inst *inst)
 		idc[i] = 0;
 	for (uint i = p_count / 2; i < p_count; i++) 
 		idc[i] = arr->length - 1;
-
+	
 	while (idc[p_count / 2 - 1] <= idc[p_count / 2]) {
 		while (arr->content[idc[p_count / 2 - 1]] <= pivots[p_count / 2 - 1] && idc[p_count / 2 - 1] <= idc[p_count / 2]) {
-			pos_t tmp_idc = idc[p_count / 2 - 1];
+			pos_t tmp_idc = idc[p_count / 2 - 1]	;
 			int tmp_val = arr->content[tmp_idc];
 			// Init the position when the head pointers first hit the data
 			pos[idc[p_count / 2 - 1]] = idc[p_count / 2 - 1];
@@ -353,6 +369,7 @@ status nWayPartition(Column *col, Partition_inst *inst)
 	}
 
 	memcpy(col->pivots, inst->pivots, sizeof(int) * p_count);
+	memcpy(col->part_size, inst->part_sizes, sizeof(int) * p_count);
 	// write pivots positions to the sepcified Column
 	// put the idcs into columns p_pos as positions of the pivots...
 	for (uint i = 0; i < p_count / 2; i++)

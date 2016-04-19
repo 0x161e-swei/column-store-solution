@@ -113,6 +113,7 @@ typedef struct _column {
 	DArray_INT *data;
 	
 	int *pivots;
+	int *part_size;
 	pos_t *p_pos;
 	size_t partitionCount;
 	

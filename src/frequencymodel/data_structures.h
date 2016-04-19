@@ -27,12 +27,14 @@ struct partition_struct {
 	int min_block;
 	int max_block;
 	int max_val;
+	int part_size;
 	double partition_static_cost;
 	double score;
 #ifdef GHOST_VALUE
 	int inserts;
 	int ghost_values;
-	double partition_dynamic_cost;
+	int next_partitions;
+	double prefix_in_back;
 #endif
 	partition_struct* prev_neighbor;
 	partition_struct* next_neighbor;
@@ -50,6 +52,7 @@ typedef struct workload_api {
 typedef struct _partition_inst{
 	// pivot count
 	int p_count;
+	int *part_sizes;
 	int *pivots;
 	#ifdef GHOST_VALUE
 	int *ghost_count;
@@ -68,6 +71,7 @@ typedef struct frequency_model {
 	int* ud;
 	int* uf;
 	int* ub;
+	int* max_val;
 } frequency_model;
 
 typedef struct prefix {

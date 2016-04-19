@@ -331,9 +331,18 @@ static void part_info_func(struct cmdsocket *cmdsocket , struct command *command
 	grab_table("foo.tb1", &tmp_tbl);
 	if (NULL != tmp_tbl && NULL != tmp_tbl->primary_indexed_col) {
 		evbuffer_add_printf(cmdsocket->buffer, "{\"event\": \"partInfo\",");
+		// mgiht not need this
 		evbuffer_add_printf(cmdsocket->buffer, "\"number\": %zu", tmp_tbl->primary_indexed_col->partitionCount);
+		
 		evbuffer_add_printf(cmdsocket->buffer, "\"sizes\": [");
 		unsigned int i = 0;
+		for (; i < tmp_tbl->primary_indexed_col->partitionCount - 1; i++) {
+			evbuffer_add_printf(cmdsocket->buffer, "%d,", tmp_tbl->primary_indexed_col->part_size[i]);
+		}
+		evbuffer_add_printf(cmdsocket->buffer, "%d", tmp_tbl->primary_indexed_col->part_size[i]);
+
+		evbuffer_add_printf(cmdsocket->buffer, "],\"pivots\": [");
+		i = 0;
 		for (; i < tmp_tbl->primary_indexed_col->partitionCount - 1; i++) {
 			evbuffer_add_printf(cmdsocket->buffer, "%d,", tmp_tbl->primary_indexed_col->pivots[i]);
 		}

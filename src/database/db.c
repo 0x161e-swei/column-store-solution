@@ -8,7 +8,7 @@
 
 // the only global db 
 Db *database = NULL;
-const char *data_path = NULL;
+char *data_path = NULL;
 
 status grab_db(const char* db_name, Db** db) {
 	status s;
