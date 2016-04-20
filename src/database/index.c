@@ -114,7 +114,7 @@ status create_index(Table *tbl, Column *col, IndexType type, Workload w) {
 					// call someone else
 					#else
 					tic = clock();
-					debug("%d %d", col->data->length, w.count);
+					debug("%d %d\n", col->data->length, w.count);
 					
 					// frequency_model *sorted_data_frequency_model
 					// args: const int* data_in, size_t data_size, const int* type, const int* first, const int* second, size_t work_size
