@@ -146,7 +146,7 @@ char* execute_db_operator(db_operator* dbO) {
 
 void exec_dsl(struct cmdsocket *cmdsocket, char *dsl)
 {
-	debug("in side execs\n");
+	debug("in side execs %s\n", dsl);
 	db_operator *dbo = malloc(sizeof(db_operator));	
 	status parse_status;
 	parse_status = parse_command_string(dsl, dsl_commands, dbo);
@@ -184,19 +184,42 @@ void exec_dsl(struct cmdsocket *cmdsocket, char *dsl)
 			sprintf(res, "%s", "command done!");
 			break;
 		}
-		case OK:
+		case OK: {
 			log_info("query to be executed!\n");
 			res = execute_db_operator(dbo);
+		}
+		case PARTALGO_DONE: {
+			log_info("partition algorithm called!\n");
+			evbuffer_add_printf(cmdsocket->buffer, "{\"event\": \"visualize\",");
+			evbuffer_add_printf(cmdsocket->buffer, "\"sizes\": [");
+			unsigned int i = 0;
+			for (; i < part_inst->p_count- 1; i++) {
+				evbuffer_add_printf(cmdsocket->buffer, "%d,", part_inst->part_sizes[i]);
+			}
+			evbuffer_add_printf(cmdsocket->buffer, "%d", part_inst->part_sizes[i]);
+
+			evbuffer_add_printf(cmdsocket->buffer, "],\"pivots\": [");
+			i = 0;
+			for (; i < part_inst->p_count - 1; i++) {
+				evbuffer_add_printf(cmdsocket->buffer, "%d,", part_inst->pivots[i]);
+			}
+			evbuffer_add_printf(cmdsocket->buffer, "%d", part_inst->pivots[i]);
+			evbuffer_add_printf(cmdsocket->buffer, "]}\n");
+			break;
+		}
 		default: {
 			break;
 		}
 	}
 
-	evbuffer_add_printf(cmdsocket->buffer, "{\"event\": \"dsl_result\",");
-	evbuffer_add_printf(cmdsocket->buffer, "\"res\": \"%s\"", res);
-	evbuffer_add_printf(cmdsocket->buffer, "}\n");
+	if (parse_status.code != PARTALGO_DONE) {
+		evbuffer_add_printf(cmdsocket->buffer, "{\"event\": \"dsl_result\",");
+		evbuffer_add_printf(cmdsocket->buffer, "\"res\": \"%s\"", res);
+		evbuffer_add_printf(cmdsocket->buffer, "}\n");
+		flush_cmdsocket(cmdsocket);
+		free(res);
+	}
 	flush_cmdsocket(cmdsocket);
-	free(res);
 }
 
 void setup_database(unsigned int dataset_num) {
@@ -261,6 +284,10 @@ static void workload_func(struct cmdsocket *cmdsocket, struct command *command, 
 	if (current_workload != (*params - '0')) {
 		current_workload = *params - '0';
 	}
+	evbuffer_add_printf(cmdsocket->buffer, "{\"event\": \"message\",");
+	evbuffer_add_printf(cmdsocket->buffer, "\"msg\":\"Workload specified!\""); // evaluated RUM
+	evbuffer_add_printf(cmdsocket->buffer, "}\n");
+	flush_cmdsocket(cmdsocket);
 }
 
 /**
@@ -287,6 +314,10 @@ static void dataSet_func(struct cmdsocket *cmdsocket, struct command *command, c
 		current_dataset = *params - '0';
 		setup_database(current_dataset);
 	}
+	evbuffer_add_printf(cmdsocket->buffer, "{\"event\": \"message\",");
+	evbuffer_add_printf(cmdsocket->buffer, "\"msg\":\"Dataset Loaded!\""); // evaluated RUM
+	evbuffer_add_printf(cmdsocket->buffer, "}\n");
+	flush_cmdsocket(cmdsocket);
 }
 
 static void part_algo_func(struct cmdsocket *cmdsocket, struct command *command, const char *params)
@@ -299,6 +330,7 @@ static void part_algo_func(struct cmdsocket *cmdsocket, struct command *command,
 		sprintf(dsl, "partition_decision(foo.tb1.a,\"%s\",%d)", workloadMap[current_workload], partition_algo);
 		exec_dsl(cmdsocket, dsl);
 	}
+
 }
 
 /**
@@ -331,8 +363,6 @@ static void part_info_func(struct cmdsocket *cmdsocket , struct command *command
 	grab_table("foo.tb1", &tmp_tbl);
 	if (NULL != tmp_tbl && NULL != tmp_tbl->primary_indexed_col) {
 		evbuffer_add_printf(cmdsocket->buffer, "{\"event\": \"partInfo\",");
-		// mgiht not need this
-		evbuffer_add_printf(cmdsocket->buffer, "\"number\": %zu", tmp_tbl->primary_indexed_col->partitionCount);
 		
 		evbuffer_add_printf(cmdsocket->buffer, "\"sizes\": [");
 		unsigned int i = 0;

@@ -186,6 +186,7 @@ typedef enum StatusCode {
 	QUIT,
 	/* A shutdown command was executed */
 	SHUTDOWN,
+	PARTALGO_DONE
 } StatusCode;
 
 // status declares an error code and associated message

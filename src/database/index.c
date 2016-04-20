@@ -85,8 +85,8 @@ status do_parition_decision(Table *tbl, Column *col, int algo, const char *workl
 
 	part_inst = malloc(sizeof(Partition_inst));
 	partition_data(freq_model, 0, part_inst, col->data->length);
-
-	ret.code = CMD_DONE;
+	debug("partition decision done\n");
+	ret.code = PARTALGO_DONE;
 	return ret;
 }
 
