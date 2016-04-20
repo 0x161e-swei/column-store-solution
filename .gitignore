@@ -49,8 +49,6 @@ perf*
 **/.deps/*
  
 # runtime products
-dbinfo
-foo.*
 
 # test
 data/*
