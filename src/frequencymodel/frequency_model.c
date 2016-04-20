@@ -376,11 +376,12 @@ static inline void delete_queue(partition_struct* next){
 	if(next->next_queue) {
 		if(next->prev_queue) {
 			next->prev_queue->next_queue = next->next_queue;
+			next->next_queue->prev_queue = next->prev_queue;
 		} else {
 			//next is first in the queue
 			next->next_queue->prev_queue = NULL;
 		}
-	} else if(next->prev_neighbor) {
+	} else if(next->prev_queue) {
 		//next is last in the queue
 		next->prev_queue->next_queue = NULL;
 	}
