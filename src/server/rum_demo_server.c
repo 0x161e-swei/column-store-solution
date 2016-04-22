@@ -330,6 +330,12 @@ static void part_algo_func(struct cmdsocket *cmdsocket, struct command *command,
 		sprintf(dsl, "partition_decision(foo.tb1.a,\"%s\",%d)", workloadMap[current_workload], partition_algo);
 		exec_dsl(cmdsocket, dsl);
 	}
+	else {
+		evbuffer_add_printf(cmdsocket->buffer, "{\"event\": \"message\",");
+		evbuffer_add_printf(cmdsocket->buffer, "\"msg\":\"NO database loaded or no workload specified!\""); // error msg
+		evbuffer_add_printf(cmdsocket->buffer, "}\n");
+		flush_cmdsocket(cmdsocket);
+	}
 
 }
 
@@ -353,6 +359,13 @@ static void phys_part_func(struct cmdsocket *cmdsocket , struct command *command
 		}
 		#endif
 		free(part_inst);
+	}
+	else {
+		evbuffer_add_printf(cmdsocket->buffer, "{\"event\": \"message\",");
+		evbuffer_add_printf(cmdsocket->buffer, "\"msg\":\"NO partition instruction found!\""); // error msg
+		evbuffer_add_printf(cmdsocket->buffer, "}\n");
+		flush_cmdsocket(cmdsocket);
+
 	}
 }
 
@@ -391,6 +404,12 @@ static void exec_work_func(struct cmdsocket *cmdsocket, struct command *command,
 	if (current_dataset >= 0 && current_workload >=0) {
 		sprintf(dsl, "exec_work(%s)", workloadMap[current_workload]);
 		exec_dsl(cmdsocket, dsl);
+	}
+	else {
+		evbuffer_add_printf(cmdsocket->buffer, "{\"event\": \"message\",");
+		evbuffer_add_printf(cmdsocket->buffer, "\"msg\":\"NO database loaded or no workload specified!\""); // error msg
+		evbuffer_add_printf(cmdsocket->buffer, "}\n");
+		flush_cmdsocket(cmdsocket);
 	}
 }
 
