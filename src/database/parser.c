@@ -11,10 +11,13 @@
 #include "utils.h"
 #include "index.h"
 
-
+#ifdef DEMO
+status parse_command_string(struct cmdsocket *cmdSoc, char* str, dsl** commands, db_operator* op)
+#else
 // Finds a possible matching DSL command by using regular expressions.
 // If it finds a match, it calls parse_command to actually process the dsl.
 status parse_command_string(char* str, dsl** commands, db_operator* op)
+#endif
 {
 	// log_info("Parsing: %s", str);
 	status s;
@@ -42,7 +45,11 @@ status parse_command_string(char* str, dsl** commands, db_operator* op)
 			log_info("Found Command: %d\n", i);
 			// Here, we actually strip the command as appropriately
 			// based on the DSL to get the variable names.
+			#ifdef DEMO
+			return parse_dsl(cmdSoc, str, d, op);
+			#else
 			return parse_dsl(str, d, op);
+			#endif
 		}
 	}
 
@@ -51,7 +58,11 @@ status parse_command_string(char* str, dsl** commands, db_operator* op)
 	return s;
 }
 
+#ifdef DEMO
+status parse_dsl(struct cmdsocket *cmdSoc, char* str, dsl* d, db_operator* op)
+#else
 status parse_dsl(char* str, dsl* d, db_operator* op)
+#endif
 {
 	// Use the commas to parse out the string
 	char open_paren[2] = "(";
@@ -354,8 +365,11 @@ status parse_dsl(char* str, dsl* d, db_operator* op)
 			ret.code = ERROR;
 			return ret;
 		}
-
+		#ifdef DEMO
+		ret = do_physical_partition(cmdSoc, tmp_tbl, tmp_col);
+		#else
 		ret = do_physical_partition(tmp_tbl, tmp_col);
+		#endif
 		return ret;
 	}
 	else if (d->g == PART_DECI) {
@@ -388,8 +402,11 @@ status parse_dsl(char* str, dsl* d, db_operator* op)
 		if (algo != NULL) {
 			num = atoi(algo);
 		}	
-
+		#ifdef DEMO
+		ret = do_parition_decision(cmdSoc, tmp_tbl, tmp_col, num, filename);
+		#else
 		ret = do_parition_decision(tmp_tbl, tmp_col, num, filename);
+		#endif
 		free(str_cpy);
 		str_cpy = NULL;
 
@@ -494,7 +511,11 @@ void workload_parse(const char *filename, int *ops, int *num1, int *num2) {
 	db_operator *op = malloc(sizeof(db_operator));	
 	if (NULL != fp) {
 		while (-1 != (read = getline(&line, &len, fp))) {
+			#ifdef DEMO
+			parse_command_string(NULL, line, dsl_commands, op);
+			#else
 			parse_command_string(line, dsl_commands, op);
+			#endif
 			switch(op->type) {
 				case SELECT_COL: {
 					// TODO: 

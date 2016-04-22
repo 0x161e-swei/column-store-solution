@@ -231,7 +231,10 @@ bool handle_client(int client_socket) {
 					exit(1);
 				}
 				// TODO: HOW TO FREE THIS STR
-				// free(res);
+			}
+			if (res != NULL) {
+				free(res);
+				res = NULL;
 			}
 		}
 	} while (!done);

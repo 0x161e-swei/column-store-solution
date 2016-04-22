@@ -1,56 +1,82 @@
 #include "index.h"
 #include "query.h"
+#include "parser.h"
 #include <time.h>
+
 
 Partition_inst *part_inst = NULL;
 frequency_model *freq_model = NULL;
 
-status do_physical_partition(Table *tbl, Column *col) {
+#ifdef DEMO
+status do_physical_partition(struct cmdsocket *cmdSoc, Table *tbl, Column *col)
+#else
+status do_physical_partition(Table *tbl, Column *col)
+#endif
+{
 	status s;
 	clock_t tic, toc;
 	#ifdef SWAPLATER
-	#ifdef GHOST_VALUE
-	tic = clock();
+		#ifdef GHOST_VALUE
+			tic = clock();
+			s = nWayPartition(tbl, col, part_inst);
+			toc = clock();
+			debug("partition with ghostvalue comsumed %lf\n", (double)(toc -tic) * 1000.0 / CLOCKS_PER_SEC);
+			#ifdef DEMO
+				evbuffer_add_printf(cmdSoc->buffer, "{\"event\": \"message\",");
+				evbuffer_add_printf(cmdSoc->buffer, "\"msg\": \"physical partition with ghost value done in %lf seconds!\"", (double)(toc -tic) * 1000.0 / CLOCKS_PER_SEC);
+				evbuffer_add_printf(cmdSoc->buffer, "}\n");
+				flush_cmdsocket(cmdSoc);
+			#endif // DEMO
+			free(part_inst->ghost_count);
+		#else
+			tic = clock();
+			s = nWayPartition(col, part_inst);
+			toc = clock();
 
-	s = nWayPartition(tbl, col, part_inst);
+			debug("partition without ghostvalue comsumed %lf\n", (double)(toc -tic) * 1000.0 / CLOCKS_PER_SEC);
+			#ifdef DEMO
+				evbuffer_add_printf(cmdSoc->buffer, "{\"event\": \"message\",");
+				evbuffer_add_printf(cmdSoc->buffer, "\"msg\": \"physical partition without ghost value done in %lf seconds!\"", (double)(toc -tic) * 1000.0 / CLOCKS_PER_SEC);
+				evbuffer_add_printf(cmdSoc->buffer, "}\n");
+				flush_cmdsocket(cmdSoc);
+			#endif // DEMO
+		#endif /* GHOST_VALUE */
 
-	toc = clock();
-	debug("partition with ghostvalue comsumed %lf\n", (double)(toc -tic) * 1000.0 / CLOCKS_PER_SEC);
+		free(part_inst->pivots);
+		if (CMD_DONE == s.code) {
+			tic = clock();
 
-	free(part_inst->ghost_count);
-	#else
-	tic = clock();
-
-	s = nWayPartition(col, part_inst);
-
-	toc = clock();
-	debug("partition without ghostvalue comsumed %lf\n", (double)(toc -tic) * 1000.0 / CLOCKS_PER_SEC);
-	
-	#endif /* GHOST_VALUE */
-	free(part_inst->pivots);
-	if (CMD_DONE == s.code) {
-		tic = clock();
-
-		// s = align_after_partition(tbl, col->pos);
-		s = align_test_col(tbl, col->pos);
-		toc = clock();
-		debug("align without ghostvalue comsumed %lf\n", (double)(toc -tic) * 1000.0 / CLOCKS_PER_SEC);
-	}
-	else {
-		log_err("cannot partition on the data!\n");
-	}
-	#else
-	#ifdef GHOST_VALUE
-	s = nWayPartition(tbl, col, part_inst);
-	#else
-	s = nWayPartition(col, part_inst);
-	#endif /* GHOST_VALUE */
+			s = align_after_partition(tbl, col->pos);
+			// s = align_test_col(tbl, col->pos);
+			toc = clock();
+			debug("align data comsumed %lf\n", (double)(toc -tic) * 1000.0 / CLOCKS_PER_SEC);
+			#ifdef DEMO
+			evbuffer_add_printf(cmdSoc->buffer, "{\"event\": \"message\",");
+			evbuffer_add_printf(cmdSoc->buffer, "\"msg\": \"aligning data in %lf seconds!\"", (double)(toc -tic) * 1000.0 / CLOCKS_PER_SEC);
+			evbuffer_add_printf(cmdSoc->buffer, "}\n");
+			flush_cmdsocket(cmdSoc);
+			#endif // DEMO
+		}
+		else {
+			log_err("cannot partition on the data!\n");
+		}
+	#else /* SWAPLATER */
+		#ifdef GHOST_VALUE
+			s = nWayPartition(tbl, col, part_inst);
+		#else /* GHOST_VALUE */
+			s = nWayPartition(col, part_inst);
+		#endif /* GHOST_VALUE */
 	#endif /* SWAPLATER */
 
 	return s;
 }
 
-status do_parition_decision(Table *tbl, Column *col, int algo, const char *workload) {
+#ifdef DEMO
+status do_parition_decision(struct cmdsocket *cmdSoc, Table *tbl, Column *col, int algo, const char *workload)
+#else
+status do_parition_decision(Table *tbl, Column *col, int algo, const char *workload)
+#endif
+{
 	status ret;
 	uint lineCount = 0;
 	uint fieldCount = 0;
@@ -114,7 +140,6 @@ status create_index(Table *tbl, Column *col, IndexType type, Workload w) {
 					// call someone else
 					#else
 					tic = clock();
-					debug("%d %d\n", col->data->length, w.count);
 					
 					// frequency_model *sorted_data_frequency_model
 					// args: const int* data_in, size_t data_size, const int* type, const int* first, const int* second, size_t work_size

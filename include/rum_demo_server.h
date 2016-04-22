@@ -1,31 +1,15 @@
 #include "cs165_api.h"
+#include <sys/types.h>
+#include "cmdsocket.h"
+
+#ifndef DEMO_SERVER_H_
+#define DEMO_SERVER_H_
+
 
 #define DEMO_SERVER_PORT 8088
 #define COMMAND_NUM 12
 
-struct cmdsocket {
-	// The file descriptor for this client's socket
-	int fd;
 
-	// Whether this socket has been shut down
-	int shutdown;
-
-	// The client's socket address
-	struct sockaddr_in6 addr;
-
-	// The server's event loop
-	struct event_base *evloop;
-
-	// The client's buffered I/O event
-	struct bufferevent *buf_event;
-
-	// The client's output buffer (commands should write to this buffer,
-	// which is flushed at the end of each command processing loop)
-	struct evbuffer *buffer;
-
-	// Doubly-linked list (so removal is fast) for cleaning up at shutdown
-	struct cmdsocket *prev, *next;
-};
 
 struct command {
 	char *name;
@@ -59,7 +43,6 @@ static void add_cmdsocket(struct cmdsocket *cmdsocket);
 static struct cmdsocket *create_cmdsocket(int sockfd, struct sockaddr_in6 *remote_addr, struct event_base *evloop);
 static void free_cmdsocket(struct cmdsocket *cmdsocket);
 static void shutdown_cmdsocket(struct cmdsocket *cmdsocket);
-static void flush_cmdsocket(struct cmdsocket *cmdsocket);
 static void process_command(size_t len, char *cmdline, struct cmdsocket *cmdsocket);
 static void cmd_read(struct bufferevent *buf_event, void *arg);
 static void cmd_error(struct bufferevent *buf_event, short error, void *arg);
@@ -71,3 +54,5 @@ static void sighandler(int signal);
 char* execute_db_operator(db_operator* dbO);
 void exec_dsl(struct cmdsocket *cmdsocket, char *dsl);
 void setup_database(unsigned int dataset_num);
+
+#endif // DEMO_SERVER_H_
