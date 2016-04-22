@@ -193,7 +193,7 @@ void exec_dsl(struct cmdsocket *cmdsocket, char *dsl)
 			evbuffer_add_printf(cmdsocket->buffer, "{\"event\": \"visualize\",");
 			evbuffer_add_printf(cmdsocket->buffer, "\"sizes\": [");
 			unsigned int i = 0;
-			for (; i < part_inst->p_count- 1; i++) {
+			for (; i < part_inst->p_count - 1; i++) {
 				evbuffer_add_printf(cmdsocket->buffer, "%d,", part_inst->part_sizes[i]);
 			}
 			evbuffer_add_printf(cmdsocket->buffer, "%d", part_inst->part_sizes[i]);

@@ -349,7 +349,13 @@ status parse_dsl(char* str, dsl* d, db_operator* op)
 		Column *tmp_col = NULL;
 		args = prepare_col(args, &tmp_tbl, &tmp_col);
 
-		ret = do_physical_partition(tmp_tbl, tmp_tbl);
+		if (NULL == tmp_tbl || NULL == tmp_col) {
+			log_err("wrong column/table name in partition test\n");
+			ret.code = ERROR;
+			return ret;
+		}
+
+		ret = do_physical_partition(tmp_tbl, tmp_col);
 		return ret;
 	}
 	else if (d->g == PART_DECI) {
@@ -367,7 +373,7 @@ status parse_dsl(char* str, dsl* d, db_operator* op)
 		Column *tmp_col = NULL;
 		args = prepare_col(args, &tmp_tbl, &tmp_col);
 
-		if (NULL == tmp_tbl || NULL == tmp_tbl) {
+		if (NULL == tmp_tbl || NULL == tmp_col) {
 			log_err("wrong column/table name in partition test\n");
 			ret.code = ERROR;
 			return ret;
