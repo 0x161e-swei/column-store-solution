@@ -70,6 +70,7 @@ extern const char* create_col_command_unsorted;
 extern const char* quit_command;
 extern const char* shutdown_command;
 extern const char* load_command;
+extern const char* show_command;
 extern const char* select_from_col_command;
 extern const char* select_from_pre_command;
 extern const char* fetch_command;

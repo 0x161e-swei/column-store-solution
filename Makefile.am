@@ -11,7 +11,7 @@ noinst_LIBRARIES = lib/libutil.a lib/librum.a lib/libdarray.a lib/libfrequencymo
 
 O ?= 0 
 
-AM_CFLAGS = -std=c99 -g -ggdb3 -Wall -Wextra -pedantic -pthread -O$(O)
+AM_CFLAGS = -std=gnu99 -g -ggdb3 -Wall -Wextra -pedantic -pthread -O$(O)
 AM_CPPFLAGS = -I$(INCDIR)
 DEMO_AM_CPPFLAGS = $(AM_CPPFLAGS) -DDEMO
 

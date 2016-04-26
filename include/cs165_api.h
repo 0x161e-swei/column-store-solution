@@ -116,6 +116,8 @@ typedef struct _column {
 	int *part_size;
 	pos_t *p_pos;
 	size_t partitionCount;
+
+	void *pivot_tree;
 	
 	#ifdef SWAPLATER
 	pos_t *pos;

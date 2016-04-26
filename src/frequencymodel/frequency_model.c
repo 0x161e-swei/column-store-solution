@@ -292,7 +292,7 @@ void build_frequency_model_api(data* data,const int size, const int* type, const
 	//TODO: apply workload to data, record result in frequency model.
 	//extract the high value of each block
 	for(int i = fm->block_size, j=0; i < (int)data->size; i+=fm->block_size, j++){
-		fm->max_val[j] = data->array[i];
+		fm->max_val[j] = data->array[i - 1];
 	}
 	fm->max_val[fm->histogram_size-1] = data->array[data->size-1];
 
@@ -416,7 +416,7 @@ partition_struct* compute_partitioning_bottom_up(const forward_backward *fb, par
 	}
 	partition_cost[fm->histogram_size-1].score = -DBL_MAX;
 	//the size of the last partition is not necessarily a full block size.
-	partition_cost[fm->histogram_size-1].part_size = data_size - fm->histogram_size-1*fm->block_size;
+	partition_cost[fm->histogram_size-1].part_size = data_size - (fm->histogram_size - 1) * fm->block_size;
 	//sort
 	quicksort_custom(partition_cost,fm->histogram_size,sizeof(partition_struct),ps_comparator,NULL);
 	for(int i = 0; i < fm->histogram_size; i++) {
@@ -442,7 +442,7 @@ partition_struct* compute_partitioning_bottom_up(const forward_backward *fb, par
 		partition_struct* next = first->next_neighbor;
 		//c. merge p and q to p
 		first->max_block = next->max_block;
-		first->next_neighbor = next->next_neighbor;
+		// first->next_neighbor = next->next_neighbor;
 		first->partition_static_cost = next->partition_static_cost;
 		first->max_val = next->max_val;
 		first->part_size += next->part_size;
@@ -747,6 +747,7 @@ void partition_data(frequency_model* fm,const int algo, Partition_inst *out, siz
 		pointer = pointer->next_queue;
 	}
 
+	// TODO: the following sorting algorithm only swap the pivots, did not take care of the part_size, need fix
 	qsort(out->pivots,out->p_count,sizeof(int),cmpfunc);
 	free(fb.backward);
 	free(fb.forward);

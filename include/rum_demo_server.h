@@ -7,7 +7,7 @@
 
 
 #define DEMO_SERVER_PORT 8088
-#define COMMAND_NUM 12
+#define COMMAND_NUM 16 
 
 
 

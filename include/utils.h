@@ -11,12 +11,14 @@
 #include <stdio.h>
 #include <stdarg.h>
 #include <string.h>
+#include <time.h>
 #include "config.h"
 #define ANSI_COLOR_RED		"\x1b[31m"
 #define ANSI_COLOR_GREEN	"\x1b[32m"
 #define ANSI_COLOR_BLUE		"\x1b[34m"
 #define ANSI_COLOR_RESET	"\x1b[0m"
 
+struct timespec clock_timediff(struct timespec start, struct timespec end);
 
 // cs165_log(out, format, ...)
 // Writes the string from @format to the @out pointer, extendable for

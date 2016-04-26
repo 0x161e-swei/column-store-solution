@@ -293,13 +293,18 @@ int setup_server() {
 // After handling the client, it will exit.
 // You will need to extend this to handle multiple concurrent clients
 // and remain running until it receives a shut-down command.
-int main(void)
+int main(int argc, char const *argv[])
 {
+
+	if (argc != 2 || strlen(argv[1]) != 1) {
+		log_err("Usage: input a one-digit number to choose dataset!\n");
+		exit(1);
+	}
+
 	int server_socket = setup_server();
 	if (server_socket < 0) {
 		exit(1);
 	}
-
 	// Populate the global dsl commands
 	dsl_commands = dsl_commands_init();
 
@@ -307,6 +312,7 @@ int main(void)
 	OpenFlags flags = LOAD;
 	data_path = malloc(sizeof(char) * 15);
 	strcpy(data_path, "data/dataset1/");
+	data_path[12] = *argv[1];
 	char *dbinfo = malloc(sizeof(char) * 21);
 	strncpy(dbinfo, data_path, strlen(data_path) + 1);
 	strncat(dbinfo, "dbinfo", 6);
