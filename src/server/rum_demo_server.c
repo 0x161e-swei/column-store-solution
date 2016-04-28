@@ -7,12 +7,9 @@
 #include <signal.h>
 #include <fcntl.h>
 #include <sys/types.h>
-#include <sys/socket.h>
-#include <arpa/inet.h>
 #include <event.h>
 
 #include "rum_demo_server.h"
-#include "common.h"
 #include "cs165_api.h"
 #include "message.h"
 #include "parser.h"
@@ -149,7 +146,11 @@ void exec_dsl(struct cmdsocket *cmdsocket, char *dsl)
 	debug("in side execs %s\n", dsl);
 	db_operator *dbo = malloc(sizeof(db_operator));	
 	status parse_status;
+	#ifdef DEMO
+	parse_status = parse_command_string(cmdsocket, dsl, dsl_commands, dbo);
+	#else
 	parse_status = parse_command_string(dsl, dsl_commands, dbo);
+	#endif
 	char *res = NULL;
 	switch (parse_status.code) {
 		case UNKNOWN_CMD: {
@@ -192,7 +193,7 @@ void exec_dsl(struct cmdsocket *cmdsocket, char *dsl)
 			log_info("partition algorithm called!\n");
 			evbuffer_add_printf(cmdsocket->buffer, "{\"event\": \"visualize\",");
 			evbuffer_add_printf(cmdsocket->buffer, "\"sizes\": [");
-			unsigned int i = 0;
+			int i = 0;
 			for (; i < part_inst->p_count - 1; i++) {
 				evbuffer_add_printf(cmdsocket->buffer, "%d,", part_inst->part_sizes[i]);
 			}
@@ -205,6 +206,10 @@ void exec_dsl(struct cmdsocket *cmdsocket, char *dsl)
 			}
 			evbuffer_add_printf(cmdsocket->buffer, "%d", part_inst->pivots[i]);
 			evbuffer_add_printf(cmdsocket->buffer, "]}\n");
+			flush_cmdsocket(cmdsocket);
+			evbuffer_add_printf(cmdsocket->buffer, "{\"event\": \"message\",");
+			evbuffer_add_printf(cmdsocket->buffer, "\"msg\": \"partition_algo done, %d partitions in total!\"", part_inst->p_count);
+			evbuffer_add_printf(cmdsocket->buffer, "}\n");
 			break;
 		}
 		default: {
@@ -216,7 +221,6 @@ void exec_dsl(struct cmdsocket *cmdsocket, char *dsl)
 		evbuffer_add_printf(cmdsocket->buffer, "{\"event\": \"dsl_result\",");
 		evbuffer_add_printf(cmdsocket->buffer, "\"res\": \"%s\"", res);
 		evbuffer_add_printf(cmdsocket->buffer, "}\n");
-		flush_cmdsocket(cmdsocket);
 		free(res);
 	}
 	flush_cmdsocket(cmdsocket);
@@ -656,13 +660,6 @@ static void shutdown_cmdsocket(struct cmdsocket *cmdsocket)
 		log_err("Error shutting down client connection on fd %d", cmdsocket->fd);
 	}
 	cmdsocket->shutdown = 1;
-}
-
-static void flush_cmdsocket(struct cmdsocket *cmdsocket)
-{
-	if(bufferevent_write_buffer(cmdsocket->buf_event, cmdsocket->buffer)) {
-		log_err("Error sending data to client on fd %d\n", cmdsocket->fd);
-	}
 }
 
 static void process_command(size_t len, char *cmdline, struct cmdsocket *cmdsocket)

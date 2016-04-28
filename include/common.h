@@ -2,6 +2,8 @@
 #ifndef COMMON_H__
 #define COMMON_H__
 
+
 #define SOCK_PATH "cs165_unix_socket"
+
 
 #endif  // COMMON_H__

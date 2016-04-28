@@ -824,18 +824,17 @@ status col_scan(comparator *f, Column *col, Result **r) {
  * do binary search in the sorted array of pivots
  * pivots:	sorted array of pivots
  * len:		length of the array, i.e. the number of the partitions
- * val:		the search value
- * return: part_id, if of a partition that contain the val
+ * key:		the search value
+ * return: part_id, if of a partition that contain the key
  */
-size_t binary_search_pivots(int *pivots, size_t len, int val){
+size_t binary_search_pivots(int *pivots, size_t len, int key){
 	size_t beg = 0, end = len - 1, mid;
-	status s;
 	while (beg < end) {
 		mid = (beg + end) / 2;
-		if (val > pivots[mid]) {
+		if (key > pivots[mid]) {
 			beg = mid + 1;
 		}
-		else if (val < pivots[mid]){
+		else if (key < pivots[mid]){
 			end = mid;
 		}
 		else {
