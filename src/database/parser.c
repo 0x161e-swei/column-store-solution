@@ -454,12 +454,12 @@ status parse_dsl(char* str, dsl* d, db_operator* op)
 		
 
 		// The following lines commented out are used for workload pre-processing for front-end server
-		// printf("parse done \n");
-		// doSomething(op_type, num1, num2, lineCount + 1);
+		printf("parse done \n");
+		doSomething(op_type, num1, num2, lineCount + 1);
 
-		// printf("job done\n");
-		// ret.code = OK;
-		// return ret;
+		printf("job done\n");
+		ret.code = OK;
+		return ret;
 
 		Workload w;
 		w.ops = op_type;

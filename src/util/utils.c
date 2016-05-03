@@ -96,18 +96,27 @@ void collect_file_info(const char* filename, unsigned int *lineCount, unsigned i
 
 void doSomething(int *op_type, int *num1, int *num2, unsigned int lineCount) {
 	int *pq = malloc(sizeof(int) * 100000000);
+	int *rq_beg = malloc(sizeof(int) * 100000000);
+	int *rq_end = malloc(sizeof(int) * 100000000);
 	int *rq = malloc(sizeof(int) * 100000000);
 	int *in = malloc(sizeof(int) * 100000000);
+	int *up_beg = malloc(sizeof(int) * 100000000);
+	int *up_end = malloc(sizeof(int) * 100000000);
 	int *up = malloc(sizeof(int) * 100000000);
 	int *de = malloc(sizeof(int) * 100000000);
 	memset(pq, 0, 100000000);
+	memset(rq_beg, 0, 100000000);
+	memset(rq_end, 0, 100000000);
 	memset(rq, 0, 100000000);
 	memset(in, 0, 100000000);
+	memset(up_beg, 0, 100000000);
+	memset(up_end, 0, 100000000);
 	memset(up, 0, 100000000);
 	memset(de, 0, 100000000);
 	printf("inside function memset done\n");
 	for (uint i = 0; i < lineCount; i++) {
 		switch (op_type[i]) {
+			// point query operation
 			case 0: {
 				int k = num1[i] / 100;
 				if (k >= 100000000) {
@@ -115,10 +124,11 @@ void doSomething(int *op_type, int *num1, int *num2, unsigned int lineCount) {
 					pq[k]++;
 				}
 				else {
-					pq[k]++;	
+					pq[k]++;
 				}
 				break;
 			}
+			// range query operation
 			case 1: {
 				int k = num1[i] / 100;
 				int j = num2[i] / 100;
@@ -127,41 +137,42 @@ void doSomething(int *op_type, int *num1, int *num2, unsigned int lineCount) {
 					rq[k]++;
 				}
 				else {
+					rq_beg[k]++;
+					rq_end[j]++;
 					for (int x = k; x <= j; x++)
-						rq[x]++;	
+						rq[x]++;
 				}
 				break;
 			}
-			case 2: {
+			// insert operation
+			case 2: { 
 				int k = num1[i] / 100;
 				if (k >= 100000000) {
 					k = 100000000 - 1;
 					in[k]++;
 				}
 				else {
-					in[k]++;	
+					in[k]++;
 				}
 				break;
 			}
+			// update operation
 			case 3: {
 				int k = num1[i] / 100;
-				if (k >= 100000000) {
+				int j = num2[i] / 100;
+				if (k >= 100000000 || j >= 100000000) {
 					k = 100000000 - 1;
 					up[k]++;
 				}
 				else {
-					up[k]++;	
-				}
-				k = num2[i] / 100;
-				if (k >= 100000000) {
-					k = 100000000 - 1;
-					up[k]++;
-				}
-				else {
-					up[k]++;	
+					up_beg[k]++;
+					up_end[j]++;
+					for (int x = k; x <= j; x++)
+						up[x]++;
 				}
 				break;
 			}
+			// delete operation
 			case 4: {
 				int k = num1[i] / 100;
 				if (k >= 100000000) {
@@ -169,7 +180,7 @@ void doSomething(int *op_type, int *num1, int *num2, unsigned int lineCount) {
 					de[k]++;
 				}
 				else {
-					de[k]++;	
+					de[k]++;
 				}
 				break;
 			}
@@ -179,13 +190,27 @@ void doSomething(int *op_type, int *num1, int *num2, unsigned int lineCount) {
 		}	
 	}
 	printf("sort done\n");
-	int len = lineCount;
+	int len = 100000000;
 	FILE *f = fopen("data/pq", "w+");
 	if (NULL != f){
 		fwrite(&len, sizeof(len), 1, f);
 		fwrite(pq, sizeof(int), len, f);
 	}
 	free(pq);
+	fclose(f);
+	f = fopen("data/rq_beg", "w+");
+	if (NULL != f){
+		fwrite(&len, sizeof(len), 1, f);
+		fwrite(rq_beg, sizeof(int), len, f);
+	}
+	free(rq_beg);
+	fclose(f);
+	f = fopen("data/rq_end", "w+");
+	if (NULL != f){
+		fwrite(&len, sizeof(len), 1, f);
+		fwrite(rq_end, sizeof(int), len, f);
+	}
+	free(rq_end);
 	fclose(f);
 	f = fopen("data/rq", "w+");
 	if (NULL != f){
@@ -201,6 +226,20 @@ void doSomething(int *op_type, int *num1, int *num2, unsigned int lineCount) {
 	}
 	fclose(f);
 	free(in);
+	f = fopen("data/up_beg", "w+");
+	if (NULL != f){
+		fwrite(&len, sizeof(len), 1, f);
+		fwrite(up_beg, sizeof(int), len, f);
+	}
+	free(up_beg);
+	fclose(f);
+	f = fopen("data/up_end", "w+");
+	if (NULL != f){
+		fwrite(&len, sizeof(len), 1, f);
+		fwrite(up_end, sizeof(int), len, f);
+	}
+	free(up_end);
+	fclose(f);
 	f = fopen("data/up", "w+");
 	if (NULL != f){
 		fwrite(&len, sizeof(len), 1, f);

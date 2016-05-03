@@ -397,7 +397,7 @@ status nWayPartition(Column *col, Partition_inst *inst)
 	debug("after inserting ghost values, length of array %zu\n", arr->length);
 	#endif
 
-	// idc used for indices to data during partitioning
+	// idc used for indices to data pivot during partitioning
 	pos_t *idc = malloc(sizeof(pos_t) * p_count);
 	// pos used to record the position-map, data now at index i used to be at pos[i]
 	pos_t *pos = malloc(sizeof(pos_t) * arr->length);
@@ -409,7 +409,7 @@ status nWayPartition(Column *col, Partition_inst *inst)
 	
 	while (idc[p_count / 2 - 1] <= idc[p_count / 2]) {
 		while (arr->content[idc[p_count / 2 - 1]] <= pivots[p_count / 2 - 1] && idc[p_count / 2 - 1] <= idc[p_count / 2]) {
-			pos_t tmp_idc = idc[p_count / 2 - 1]	;
+			pos_t tmp_idc = idc[p_count / 2 - 1];
 			int tmp_val = arr->content[tmp_idc];
 			// Init the position when the head pointers first hit the data
 			pos[idc[p_count / 2 - 1]] = idc[p_count / 2 - 1];
