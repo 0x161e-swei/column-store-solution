@@ -93,95 +93,126 @@ void collect_file_info(const char* filename, unsigned int *lineCount, unsigned i
 	return;
 }
 
-
+#define NUMBEROFSLOTS 100000
+#define SAMPLE_INTERVAL 10000
 void doSomething(int *op_type, int *num1, int *num2, unsigned int lineCount) {
-	int *pq = malloc(sizeof(int) * 100000000);
-	int *rq_beg = malloc(sizeof(int) * 100000000);
-	int *rq_end = malloc(sizeof(int) * 100000000);
-	int *rq = malloc(sizeof(int) * 100000000);
-	int *in = malloc(sizeof(int) * 100000000);
-	int *up_beg = malloc(sizeof(int) * 100000000);
-	int *up_end = malloc(sizeof(int) * 100000000);
-	int *up = malloc(sizeof(int) * 100000000);
-	int *de = malloc(sizeof(int) * 100000000);
-	memset(pq, 0, 100000000);
-	memset(rq_beg, 0, 100000000);
-	memset(rq_end, 0, 100000000);
-	memset(rq, 0, 100000000);
-	memset(in, 0, 100000000);
-	memset(up_beg, 0, 100000000);
-	memset(up_end, 0, 100000000);
-	memset(up, 0, 100000000);
-	memset(de, 0, 100000000);
+	int *pq_cost = malloc(sizeof(int) * lineCount);
+	int *pq = malloc(sizeof(int) * NUMBEROFSLOTS);
+	
+	int *rq_beg = malloc(sizeof(int) * lineCount);
+	int *rq_end = malloc(sizeof(int) * lineCount);
+	int *rq = malloc(sizeof(int) * NUMBEROFSLOTS);
+
+	int *in_cost = malloc(sizeof(int) * lineCount);
+	int *in = malloc(sizeof(int) * NUMBEROFSLOTS);
+
+	int *up_beg = malloc(sizeof(int) * lineCount);
+	int *up_end = malloc(sizeof(int) * lineCount);
+	int *up = malloc(sizeof(int) * NUMBEROFSLOTS);
+	
+	int *de_cost = malloc(sizeof(int) * lineCount);
+	int *de = malloc(sizeof(int) * NUMBEROFSLOTS);
+
+	int pq_count = 0;	
+	int rq_count = 0;
+	int up_count = 0;
+	int in_count = 0;
+	int de_count = 0;
+	
+	memset(pq_cost, 0, lineCount);
+	memset(pq, 0, NUMBEROFSLOTS);
+
+	memset(rq_beg, 0, lineCount);
+	memset(rq_end, 0, lineCount);
+	memset(rq, 0, NUMBEROFSLOTS);
+
+	memset(in_cost, 0, lineCount);	
+	memset(in, 0, NUMBEROFSLOTS);
+
+	memset(up_beg, 0, lineCount);
+	memset(up_end, 0, lineCount);
+	memset(up, 0, NUMBEROFSLOTS);
+
+	memset(de_cost, 0, lineCount);
+	memset(de, 0, NUMBEROFSLOTS);
+
 	printf("inside function memset done\n");
 	for (uint i = 0; i < lineCount; i++) {
 		switch (op_type[i]) {
 			// point query operation
 			case 0: {
-				int k = num1[i] / 100;
-				if (k >= 100000000) {
-					k = 100000000 - 1;
+				pq_cost[pq_count] = num1[i];
+				int k = num1[i] / SAMPLE_INTERVAL;
+				if (k >= NUMBEROFSLOTS) {
+					k = NUMBEROFSLOTS - 1;
 					pq[k]++;
 				}
 				else {
 					pq[k]++;
 				}
+				pq_count++;
 				break;
 			}
 			// range query operation
 			case 1: {
-				int k = num1[i] / 100;
-				int j = num2[i] / 100;
-				if (k >= 100000000 || j >= 100000000) {
-					k = 100000000 - 1;
+				int k = num1[i] / SAMPLE_INTERVAL;
+				int j = num2[i] / SAMPLE_INTERVAL;
+				if (k >= NUMBEROFSLOTS || j >= NUMBEROFSLOTS) {
+					k = NUMBEROFSLOTS - 1;
 					rq[k]++;
 				}
 				else {
-					rq_beg[k]++;
-					rq_end[j]++;
+					rq_beg[rq_count] = num1[i];
+					rq_end[rq_count] = num2[i];
 					for (int x = k; x <= j; x++)
 						rq[x]++;
 				}
+				rq_count++;
 				break;
 			}
 			// insert operation
-			case 2: { 
-				int k = num1[i] / 100;
-				if (k >= 100000000) {
-					k = 100000000 - 1;
+			case 2: {
+				in_cost[in_count] = num1[i];
+				int k = num1[i] / SAMPLE_INTERVAL;
+				if (k >= NUMBEROFSLOTS) {
+					k = NUMBEROFSLOTS - 1;
 					in[k]++;
 				}
 				else {
 					in[k]++;
 				}
+				in_count++;
 				break;
 			}
 			// update operation
 			case 3: {
-				int k = num1[i] / 100;
-				int j = num2[i] / 100;
-				if (k >= 100000000 || j >= 100000000) {
-					k = 100000000 - 1;
+				int k = num1[i] / SAMPLE_INTERVAL;
+				int j = num2[i] / SAMPLE_INTERVAL;
+				if (k >= NUMBEROFSLOTS || j >= NUMBEROFSLOTS) {
+					k = NUMBEROFSLOTS - 1;
 					up[k]++;
 				}
 				else {
-					up_beg[k]++;
-					up_end[j]++;
+					up_beg[up_count] = num1[i];
+					up_end[up_count] = num2[i];
 					for (int x = k; x <= j; x++)
 						up[x]++;
 				}
+				up_count++;
 				break;
 			}
 			// delete operation
 			case 4: {
-				int k = num1[i] / 100;
-				if (k >= 100000000) {
-					k = 100000000 - 1;
+				de_cost[de_count] = num1[i];
+				int k = num1[i] / SAMPLE_INTERVAL;
+				if (k >= NUMBEROFSLOTS) {
+					k = NUMBEROFSLOTS - 1;
 					de[k]++;
 				}
 				else {
 					de[k]++;
 				}
+				de_count++;
 				break;
 			}
 			default: {
@@ -190,7 +221,7 @@ void doSomething(int *op_type, int *num1, int *num2, unsigned int lineCount) {
 		}	
 	}
 	printf("sort done\n");
-	int len = 100000000;
+	int len = NUMBEROFSLOTS;
 	FILE *f = fopen("data/pq", "w+");
 	if (NULL != f){
 		fwrite(&len, sizeof(len), 1, f);
@@ -198,17 +229,25 @@ void doSomething(int *op_type, int *num1, int *num2, unsigned int lineCount) {
 	}
 	free(pq);
 	fclose(f);
-	f = fopen("data/rq_beg", "w+");
+	f = fopen("data/pq_cost", "w+");
 	if (NULL != f){
-		fwrite(&len, sizeof(len), 1, f);
-		fwrite(rq_beg, sizeof(int), len, f);
+		fwrite(&pq_count, sizeof(pq_count), 1, f);
+		fwrite(pq_cost, sizeof(int), pq_count, f);
+	}
+	free(pq_cost);
+	fclose(f);
+
+	f = fopen("data/rq_cost_beg", "w+");
+	if (NULL != f){
+		fwrite(&rq_count, sizeof(rq_count), 1, f);
+		fwrite(rq_beg, sizeof(int), rq_count, f);
 	}
 	free(rq_beg);
 	fclose(f);
-	f = fopen("data/rq_end", "w+");
+	f = fopen("data/rq_cost_end", "w+");
 	if (NULL != f){
-		fwrite(&len, sizeof(len), 1, f);
-		fwrite(rq_end, sizeof(int), len, f);
+		fwrite(&rq_count, sizeof(rq_count), 1, f);
+		fwrite(rq_end, sizeof(int), rq_count, f);
 	}
 	free(rq_end);
 	fclose(f);
@@ -219,6 +258,14 @@ void doSomething(int *op_type, int *num1, int *num2, unsigned int lineCount) {
 	}
 	fclose(f);
 	free(rq);
+
+	f = fopen("data/in_cost", "w+");
+        if (NULL != f){
+                fwrite(&in_count, sizeof(in_count), 1, f);
+                fwrite(in_cost, sizeof(int), in_count, f);
+        }
+        free(in_cost);
+        fclose(f);
 	f = fopen("data/in", "w+");
 	if (NULL != f){
 		fwrite(&len, sizeof(len), 1, f);
@@ -226,17 +273,17 @@ void doSomething(int *op_type, int *num1, int *num2, unsigned int lineCount) {
 	}
 	fclose(f);
 	free(in);
-	f = fopen("data/up_beg", "w+");
+	f = fopen("data/up_cost_beg", "w+");
 	if (NULL != f){
-		fwrite(&len, sizeof(len), 1, f);
-		fwrite(up_beg, sizeof(int), len, f);
+		fwrite(&up_count, sizeof(up_count), 1, f);
+		fwrite(up_beg, sizeof(int), up_count, f);
 	}
 	free(up_beg);
 	fclose(f);
-	f = fopen("data/up_end", "w+");
+	f = fopen("data/up_cost_end", "w+");
 	if (NULL != f){
-		fwrite(&len, sizeof(len), 1, f);
-		fwrite(up_end, sizeof(int), len, f);
+		fwrite(&up_count, sizeof(up_count), 1, f);
+		fwrite(up_end, sizeof(int), up_count, f);
 	}
 	free(up_end);
 	fclose(f);
@@ -247,6 +294,14 @@ void doSomething(int *op_type, int *num1, int *num2, unsigned int lineCount) {
 	}
 	fclose(f);
 	free(up);
+
+	f = fopen("data/de_cost", "w+");
+        if (NULL != f){
+                fwrite(&de_count, sizeof(de_count), 1, f);
+                fwrite(de_cost, sizeof(int), de_count, f);
+        }
+        free(de_cost);
+        fclose(f);
 	f = fopen("data/de", "w+");
 	if (NULL != f){
 		fwrite(&len, sizeof(len), 1, f);

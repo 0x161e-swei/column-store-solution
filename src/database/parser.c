@@ -19,7 +19,7 @@ status parse_command_string(struct cmdsocket *cmdSoc, char* str, dsl** commands,
 status parse_command_string(char* str, dsl** commands, db_operator* op)
 #endif
 {
-	// log_info("Parsing: %s", str);
+	log_info("Parsing: %s", str);
 	status s;
 	// Create a regular expression to parse the string
 	log_info("INSIDE PARSE COMMAND STRING\n");
