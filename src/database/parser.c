@@ -12,11 +12,11 @@
 #include "index.h"
 
 #ifdef DEMO
-status parse_command_string(struct cmdsocket *cmdSoc, char* str, dsl** commands, db_operator* op)
+status parse_command_string(struct cmdsocket *cmdSoc, const char* str, dsl** commands, db_operator* op)
 #else
 // Finds a possible matching DSL command by using regular expressions.
 // If it finds a match, it calls parse_command to actually process the dsl.
-status parse_command_string(char* str, dsl** commands, db_operator* op)
+status parse_command_string(const char* str, dsl** commands, db_operator* op)
 #endif
 {
 	log_info("Parsing: %s", str);
@@ -59,9 +59,9 @@ status parse_command_string(char* str, dsl** commands, db_operator* op)
 }
 
 #ifdef DEMO
-status parse_dsl(struct cmdsocket *cmdSoc, char* str, dsl* d, db_operator* op)
+status parse_dsl(struct cmdsocket *cmdSoc, const char* str, dsl* d, db_operator* op)
 #else
-status parse_dsl(char* str, dsl* d, db_operator* op)
+status parse_dsl(const char* str, dsl* d, db_operator* op)
 #endif
 {
 	// Use the commas to parse out the string
