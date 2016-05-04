@@ -22,7 +22,7 @@ status parse_command_string(char* str, dsl** commands, db_operator* op)
 	// log_info("Parsing: %s", str);
 	status s;
 	// Create a regular expression to parse the string
-	
+	log_info("INSIDE PARSE COMMAND STRING\n");
 	int ret;
 
 	// Track the number of matches; a string must match all
@@ -401,7 +401,8 @@ status parse_dsl(char* str, dsl* d, db_operator* op)
 		int num = 0;
 		if (algo != NULL) {
 			num = atoi(algo);
-		}	
+		}
+		log_info("BEFORE DO PARTITION DECISION");
 		#ifdef DEMO
 		ret = do_parition_decision(cmdSoc, tmp_tbl, tmp_col, num, filename);
 		#else

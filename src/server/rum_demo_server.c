@@ -329,8 +329,14 @@ static void part_algo_func(struct cmdsocket *cmdsocket, struct command *command,
 	log_info("%s %s\n", command->name, params);
 	int partition_algo = *params - '0';
 	char dsl[150];
-	// TODO: the database should maintain the instruction of current decision for future execution
-	if (current_dataset >= 0 && current_workload >=0) {
+	if (params_algo	== 4) {
+		// no partition
+	}
+	else if (params_algo == 5) {
+		// sort the data
+	}
+	else if (current_dataset >= 0 && current_workload >=0) {
+		// TODO: the database should maintain the instruction of current decision for future execution
 		sprintf(dsl, "partition_decision(foo.tb1.a,\"%s\",%d)", workloadMap[current_workload], partition_algo);
 		exec_dsl(cmdsocket, dsl);
 	}
