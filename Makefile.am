@@ -9,7 +9,7 @@ INCDIR = include
 
 noinst_LIBRARIES = lib/libutil.a lib/librum.a lib/libdarray.a lib/libfrequencymodel.a lib/libdemobase.a lib/libcmdsocket.a
 
-O ?= 0 
+O ?= 3 
 
 AM_CFLAGS = -std=gnu99 -g -ggdb3 -Wall -Wextra -pedantic -pthread -O$(O)
 AM_CPPFLAGS = -I$(INCDIR)
@@ -117,7 +117,7 @@ opt_part_server_SOURCES = src/server/server.c
 
 
 demo_opt_part_server_CFLAGS = $(AM_CFLAGS)
-demo_opt_part_server_CPPFLAGS = $(AM_CPPFLAGS)
+demo_opt_part_server_CPPFLAGS = $(DEMO_AM_CPPFLAGS)
 demo_opt_part_server_LDADD =  	lib/libdemobase.a \
 	lib/libfrequencymodel.a \
 	lib/libdarray.a \

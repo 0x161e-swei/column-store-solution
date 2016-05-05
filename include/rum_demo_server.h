@@ -52,7 +52,7 @@ static void cmd_connect(int listenfd, short evtype, void *arg);
 static void sighandler(int signal);
 
 char* execute_db_operator(db_operator* dbO);
-void exec_dsl(struct cmdsocket *cmdsocket, char *dsl);
+void exec_dsl(struct cmdsocket *cmdsocket, const char *dsl);
 void setup_database(unsigned int dataset_num);
 
 #endif // DEMO_SERVER_H_
