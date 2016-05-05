@@ -119,22 +119,22 @@ void doSomething(int *op_type, int *num1, int *num2, unsigned int lineCount) {
 	int in_count = 0;
 	int de_count = 0;
 	
-	memset(pq_cost, 0, lineCount);
-	memset(pq, 0, NUMBEROFSLOTS);
+	memset(pq_cost, 0, lineCount * sizeof(int));
+	memset(pq, 0, NUMBEROFSLOTS * sizeof(int));
 
-	memset(rq_beg, 0, lineCount);
-	memset(rq_end, 0, lineCount);
-	memset(rq, 0, NUMBEROFSLOTS);
+	memset(rq_beg, 0, lineCount * sizeof(int));
+	memset(rq_end, 0, lineCount * sizeof(int));
+	memset(rq, 0, NUMBEROFSLOTS * sizeof(int));
 
-	memset(in_cost, 0, lineCount);	
-	memset(in, 0, NUMBEROFSLOTS);
+	memset(in_cost, 0, lineCount * sizeof(int));
+	memset(in, 0, NUMBEROFSLOTS * sizeof(int));
 
-	memset(up_beg, 0, lineCount);
-	memset(up_end, 0, lineCount);
-	memset(up, 0, NUMBEROFSLOTS);
+	memset(up_beg, 0, lineCount * sizeof(int));
+	memset(up_end, 0, lineCount * sizeof(int));
+	memset(up, 0, NUMBEROFSLOTS * sizeof(int));
 
-	memset(de_cost, 0, lineCount);
-	memset(de, 0, NUMBEROFSLOTS);
+	memset(de_cost, 0, lineCount * sizeof(int));
+	memset(de, 0, NUMBEROFSLOTS * sizeof(int));
 
 	printf("inside function memset done\n");
 	for (uint i = 0; i < lineCount; i++) {

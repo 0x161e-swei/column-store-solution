@@ -47,7 +47,9 @@ r*hs
 perf*
 # makefile generated
 **/.deps/*
- 
+
+# Frontend files
+/RUM_Visual_Front/* 
 # runtime products
 
 # test

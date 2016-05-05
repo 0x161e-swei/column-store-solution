@@ -141,15 +141,15 @@ char* execute_db_operator(db_operator* dbO) {
 	return ret;
 }
 
-void exec_dsl(struct cmdsocket *cmdsocket, const char *dsl)
+void exec_dsl(struct cmdsocket *cmdsocket, const char *demo_dsl)
 {
-	// debug("in side execs %s\n", dsl);
-	db_operator *dbo = malloc(sizeof(db_operator));	
+	debug("in side execs %s\n", demo_dsl);
 	status parse_status;
+	db_operator *dbo = malloc(sizeof(db_operator));
 	#ifdef DEMO
-	parse_status = parse_command_string(cmdsocket, dsl, dsl_commands, dbo);
+	parse_status = parse_command_string(cmdsocket, demo_dsl, dsl_commands, dbo);
 	#else
-	parse_status = parse_command_string(dsl, dsl_commands, dbo);
+	parse_status = parse_command_string(demo_dsl, dsl_commands, dbo);
 	#endif
 	char *res = NULL;
 	switch (parse_status.code) {
@@ -328,7 +328,8 @@ static void part_algo_func(struct cmdsocket *cmdsocket, struct command *command,
 {
 	log_info("%s %s\n", command->name, params);
 	int partition_algo = *params - '0';
-	char dsl[150];
+	char *demo_dsl = malloc(sizeof(char) * 150);
+	memset(demo_dsl, 0, sizeof(char) * 150);
 	if (partition_algo == 4) {
 		// no partition
 	}
@@ -337,8 +338,8 @@ static void part_algo_func(struct cmdsocket *cmdsocket, struct command *command,
 	}
 	else if (current_dataset >= 0 && current_workload >=0) {
 		// TODO: the database should maintain the instruction of current decision for future execution
-		sprintf(dsl, "partition_decision(foo.tb1.a,\"%s\",%d)", workloadMap[current_workload], partition_algo);
-		exec_dsl(cmdsocket, dsl);
+		sprintf(demo_dsl, "partition_decision(foo.tb1.a,\"%s\",%d)", workloadMap[current_workload], partition_algo);
+		exec_dsl(cmdsocket, demo_dsl);
 	}
 	else {
 		evbuffer_add_printf(cmdsocket->buffer, "{\"event\": \"message\",");
@@ -346,7 +347,7 @@ static void part_algo_func(struct cmdsocket *cmdsocket, struct command *command,
 		evbuffer_add_printf(cmdsocket->buffer, "}\n");
 		flush_cmdsocket(cmdsocket);
 	}
-
+	free(demo_dsl);
 }
 
 /**
@@ -357,9 +358,10 @@ static void phys_part_func(struct cmdsocket *cmdsocket , struct command *command
 {
 	log_info("%s %s\n", command->name, params);
 	if (NULL != part_inst) {
-		char dsl[150];
-		sprintf(dsl, "partition(foo.tb1.a)");
-		exec_dsl(cmdsocket, dsl);
+		char *demo_dsl = malloc(sizeof(char) * 150);
+	        memset(demo_dsl, 0, sizeof(char) * 150); 
+		sprintf(demo_dsl, "partition(foo.tb1.a)");
+		exec_dsl(cmdsocket, demo_dsl);
 		if (part_inst->pivots) {
 			free(part_inst->pivots);
 		}
@@ -369,6 +371,7 @@ static void phys_part_func(struct cmdsocket *cmdsocket , struct command *command
 		}
 		#endif
 		free(part_inst);
+		free(demo_dsl);
 	}
 	else {
 		evbuffer_add_printf(cmdsocket->buffer, "{\"event\": \"message\",");
@@ -410,10 +413,11 @@ static void exec_work_func(struct cmdsocket *cmdsocket, struct command *command,
 	log_info("%s %s\n", command->name, params);
 	// we could probably do it in another way, which is the server(innterface) 
 	// itself loads the workload text file and than fire the workload through exec_dsl
-	char dsl[150];
+	char *demo_dsl = malloc(sizeof(char) * 150);
+        memset(demo_dsl, 0, sizeof(char) * 150);
 	if (current_dataset >= 0 && current_workload >=0) {
-		sprintf(dsl, "exec_work(%s)", workloadMap[current_workload]);
-		exec_dsl(cmdsocket, dsl);
+		sprintf(demo_dsl, "exec_work(%s)", workloadMap[current_workload]);
+		exec_dsl(cmdsocket, demo_dsl);
 	}
 	else {
 		evbuffer_add_printf(cmdsocket->buffer, "{\"event\": \"message\",");
@@ -421,6 +425,7 @@ static void exec_work_func(struct cmdsocket *cmdsocket, struct command *command,
 		evbuffer_add_printf(cmdsocket->buffer, "}\n");
 		flush_cmdsocket(cmdsocket);
 	}
+	free(demo_dsl);
 }
 
 static void userConstrain_func(struct cmdsocket *cmdsocket, struct command *command, const char *params)
