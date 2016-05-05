@@ -144,8 +144,8 @@ char* execute_db_operator(db_operator* dbO) {
 void exec_dsl(struct cmdsocket *cmdsocket, const char *dsl)
 {
 	// debug("in side execs %s\n", dsl);
-	db_operator *dbo = malloc(sizeof(db_operator));	
 	status parse_status;
+	db_operator *dbo = malloc(sizeof(db_operator));
 	#ifdef DEMO
 	parse_status = parse_command_string(cmdsocket, dsl, dsl_commands, dbo);
 	#else
