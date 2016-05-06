@@ -17,87 +17,8 @@ int cmpfunc (const void * a, const void * b)
 	return ( *(int*)a - *(int*)b );
 }
 
-int cmpfunc_aof (const void * a, const void * b)
-{
-	return ((partition_inst_aof *)a)->pivot - ((partition_inst_aof *)b)->pivot;
-}
 
-
-
-void aof_swap(char* a,char* b) {
-	partition_inst_aof __temp;
-	memcpy(&__temp, ((partition_inst_aof *) a), sizeof(partition_inst_aof));
-	memcpy(((partition_inst_aof *) a), ((partition_inst_aof *) b), sizeof(partition_inst_aof));
-	memcpy(((partition_inst_aof *) b), & __temp, sizeof(partition_inst_aof));
-}
-
-/* Byte-wise swap two items of size SIZE. */
-void partition_struct_swap(char* a,char* b) {
-	//pointer_swap(a,b);
-	partition_struct __temp;
-	partition_struct *__a = ((partition_struct *) a);
-	partition_struct *__b = ((partition_struct *) b);
-	if(__a->next_neighbor == __b || __b->next_neighbor == __a || __b->prev_neighbor == __a || __a->prev_neighbor == __b) {
-		if(__a->next_neighbor == __b) {
-			//a before b
-			partition_struct *__a_prev = __a->prev_neighbor;
-			partition_struct *__b_next = __b->next_neighbor;
-			__temp = * ((partition_struct *) a);
-			*((partition_struct *) a) = *((partition_struct *) b);
-			*((partition_struct *) b) = __temp;
-			//now __b points to a and vise versa
-			__a = ((partition_struct *) b);
-			__b = ((partition_struct *) a);
-			__b->prev_neighbor = __a;
-			__a->next_neighbor = __b;
-			if(__a_prev){
-				__a_prev->next_neighbor = __a;
-			}
-			if(__b_next){
-				__b_next->prev_neighbor = __b;
-			}
-		} else {
-			//b before a
-			partition_struct *__b_prev = __b->prev_neighbor;
-			partition_struct *__a_next = __a->next_neighbor;
-			__temp = * ((partition_struct *) a);
-			*((partition_struct *) a) = *((partition_struct *) b);
-			*((partition_struct *) b) = __temp;
-			//now __b points to a and vise versa
-			__a = ((partition_struct *) b);
-			__b = ((partition_struct *) a);
-			__b->next_neighbor = __a;
-			__a->prev_neighbor = __b;
-			if(__b_prev) {
-				__b_prev->next_neighbor = __b;
-			}
-			if(__a_next) {
-				__a_next->prev_neighbor = __a;
-			}
-		}
-	}
-	else {
-
-		if(__a->next_neighbor){
-			__a->next_neighbor->prev_neighbor = ((partition_struct *) b);
-		}
-		if(__a->prev_neighbor){
-			__a->prev_neighbor->next_neighbor = ((partition_struct *) b);
-		}
-		if(__b->next_neighbor){
-			__b->next_neighbor->prev_neighbor = ((partition_struct *) a);
-		}
-		if(__b->prev_neighbor) {
-			__b->prev_neighbor->next_neighbor = ((partition_struct *) a);
-		}
-
-		__temp = * ((partition_struct *) a);
-		*((partition_struct *) a) = *((partition_struct *) b);
-		*((partition_struct *) b) = __temp;
-	}
-}
-
-int ps_comparator(const void *a, const void *b) {
+int ps_comparator(const void *a, const void *b, void* c) {
 
 	const partition_struct* first = (partition_struct*)a;
 	const partition_struct* second = (partition_struct*)b;
@@ -120,7 +41,7 @@ void simple_operation_api(const int* high_val, const int workload,
 	if(next >= high_val[histogram_size-1]){
 		histogram[histogram_size-1]++;
 	} else {
-		//iterate the high values of the dataset, to fi,size_t sizend the bin that should be incremented
+		//iterate the high values of the dataset, to find the bin that should be incremented
 		int j = 0;
 		while (high_val[j] < next) {
 			j++;
@@ -354,11 +275,11 @@ static inline void setup_partition_structure(const int block_counter,const int m
 }
 
 
-void setup_partitions(frequency_model *fm, partition_struct *ps) {
+void setup_partitions(frequency_model *fm, partition_struct *ps, int data_size) {
 	for(int j=0; j < fm->histogram_size; j++){
 		setup_partition_structure(j,fm->max_val[j],fm->histogram_size,ps);
 #ifdef GHOST_VALUE
-		//record the amount of inserts per partition as these will be used to compute the dynamic cost of each partition
+	//record the amount of inserts per partition as these will be used to compute the dynamic cost of each partition
 		ps[j].inserts = fm->in[j];
 #endif
 	}
@@ -497,7 +418,7 @@ partition_struct* compute_partitioning_bottom_up(const forward_backward *fb, par
 	//the size of the last partition is not necessarily a full block size.
 	partition_cost[fm->histogram_size-1].part_size = data_size - (fm->histogram_size - 1) * fm->block_size;
 	//sort
-	quicksort_custom(partition_cost,fm->histogram_size,sizeof(partition_struct),ps_comparator,partition_struct_swap);
+	quicksort_custom(partition_cost,fm->histogram_size,sizeof(partition_struct),ps_comparator,NULL);
 	for(int i = 0; i < fm->histogram_size; i++) {
 		if(i != 0) {
 			partition_cost[i].prev_queue = &partition_cost[i-1];
@@ -521,7 +442,7 @@ partition_struct* compute_partitioning_bottom_up(const forward_backward *fb, par
 		partition_struct* next = first->next_neighbor;
 		//c. merge p and q to p
 		first->max_block = next->max_block;
-		first->next_neighbor = next->next_neighbor;
+		// first->next_neighbor = next->next_neighbor;
 		first->partition_static_cost = next->partition_static_cost;
 		first->max_val = next->max_val;
 		first->part_size += next->part_size;
@@ -795,7 +716,7 @@ void partition_data(frequency_model* fm,const int algo, Partition_inst *out, siz
 	fb.backward = (int*) calloc(fm->histogram_size,sizeof(int));
 	fb.forward = (int*) calloc(fm->histogram_size,sizeof(int));
 	partition_struct *partition_cost = (partition_struct *) malloc(fm->histogram_size*sizeof(partition_struct));
-	setup_partitions(fm,partition_cost);
+	setup_partitions(fm,partition_cost,data_size);
 	compute_costs(&fb, partition_cost, fm, &prefix_sum, rand_read, rand_write, seq_read);
 	//TODO: Build Algorithm in three versions, top down, bottom up and brute force
 	partition_struct* bottom_up_cost;
@@ -814,38 +735,29 @@ void partition_data(frequency_model* fm,const int algo, Partition_inst *out, siz
 		//printf("%f,%i,%i,%i\t",pointer->score,pointer->min_block,pointer->max_block,pointer->max_val);
 		pointer = pointer->next_queue;
 	}
-
+	out->pivots = (int *) malloc(part_size*sizeof(int));
+	out->p_count = part_size;
+	out->part_sizes = (int *) malloc(part_size*sizeof(int));
 	pointer = bottom_up_cost;
-	partition_inst_aof* sort_structure = (partition_inst_aof *) malloc(part_size*sizeof(partition_inst_aof));
 	part_size = 0;
 	while(pointer) {
-		sort_structure[part_size].pivot = pointer->max_val;
-		sort_structure[part_size].part_size = pointer->part_size;
+		out->pivots[part_size] = pointer->max_val;
+		out->part_sizes[part_size] = pointer->part_size;
 		part_size++;
 		pointer = pointer->next_queue;
 	}
-	//free stuff to minimize peak memory usage
+
+	// TODO: the following sorting algorithm only swap the pivots, did not take care of the part_size, need fix
+	qsort(out->pivots,out->p_count,sizeof(int),cmpfunc);
 	free(fb.backward);
 	free(fb.forward);
 	free(partition_cost);
 	free(prefix_sum.de);
 	free(prefix_sum.in);
-
-	quicksort_custom(sort_structure,part_size,sizeof(partition_inst_aof),cmpfunc_aof,aof_swap);
-	out->pivots = (int *) malloc(part_size*sizeof(int));
-	out->p_count = part_size;
-	out->part_sizes = (int *) malloc(part_size*sizeof(int));
-	for(int i = 0; i < part_size; i++) {
-		out->pivots[i] = sort_structure[i].pivot;
-		out->part_sizes[i] = sort_structure[i].part_size;
-	}
-	free(sort_structure);
-
 	//free_frequency_model(&fm);
 }
 
 #ifdef GHOST_VALUE
-
 void partition_data_gv(frequency_model *fm, const int data_size, const int algo, const int ghost_values, Partition_inst *out) {
 
 	double rand_read = 20;
@@ -867,15 +779,7 @@ void partition_data_gv(frequency_model *fm, const int data_size, const int algo,
 	fb.forward = (int*) calloc(fm->histogram_size,sizeof(int));
 	compute_costs(&fb, partition_cost, fm, &prefix_sum, rand_read, rand_write, seq_read);
 	//TODO: Build Algorithm in three versions, top down, bottom up and brute force
-	partition_struct* bottom_up_cost;
-	if(algo ==0) {
-		bottom_up_cost = compute_partitioning_bottom_up_gv(&fb, partition_cost, fm,seq_read,rand_read,rand_write,ghost_values,data_size);
-	} else {
-		printf("Warning: Unknown algo, running bottom up\n");
-		bottom_up_cost = compute_partitioning_bottom_up_gv(&fb, partition_cost, fm,seq_read,rand_read,rand_write,ghost_values,data_size);
-	}
-
-
+	partition_struct* bottom_up_cost = compute_partitioning_bottom_up_gv(&fb, partition_cost, fm,seq_read,rand_read,rand_write,ghost_values,data_size);
 	int part_size = 0;
 	partition_struct *pointer = bottom_up_cost;
 	while(pointer) {
@@ -883,40 +787,10 @@ void partition_data_gv(frequency_model *fm, const int data_size, const int algo,
 		//printf("%f,%i,%i,%i\t",pointer->score,pointer->min_block,pointer->max_block,pointer->max_val);
 		pointer = pointer->next_queue;
 	}
-
-	pointer = bottom_up_cost;
-	partition_inst_aof* sort_structure = (partition_inst_aof *) malloc(part_size*sizeof(partition_inst_aof));
-	part_size = 0;
-	while(pointer) {
-		sort_structure[part_size].pivot = pointer->max_val;
-		sort_structure[part_size].part_size = pointer->part_size;
-		sort_structure[part_size].ghost_count = pointer->ghost_values;
-		part_size++;
-		pointer = pointer->next_queue;
-	}
-	//free stuff to minimize peak memory usage
-	free(fb.backward);
-	free(fb.forward);
-	free(partition_cost);
-	free(prefix_sum.de);
-	free(prefix_sum.in);
-
-	quicksort_custom(sort_structure,part_size,sizeof(partition_inst_aof),cmpfunc_aof,aof_swap);
 	out->pivots = (int *) malloc(part_size*sizeof(int));
 	out->p_count = part_size;
 	out->part_sizes = (int *) malloc(part_size*sizeof(int));
 	out->ghost_count = (int *) malloc(part_size*sizeof(int));
-	for(int i = 0; i < part_size; i++) {
-		out->pivots[i] = sort_structure[i].pivot;
-		out->part_sizes[i] = sort_structure[i].part_size;
-		out->ghost_count[i] = sort_structure[i].ghost_count;
-	}
-	free(sort_structure);
-
-	out->pivots = (int *) malloc(part_size*sizeof(int));
-	out->p_count = part_size;
-	out->part_sizes = (int *) malloc(part_size*sizeof(int));
-
 	pointer = bottom_up_cost;
 	part_size = 0;
 	while(pointer) {
@@ -926,8 +800,12 @@ void partition_data_gv(frequency_model *fm, const int data_size, const int algo,
 		part_size++;
 		pointer = pointer->next_queue;
 	}
+
+	qsort(out->pivots,out->p_count,sizeof(int),cmpfunc);
+	free(fb.backward);
+	free(fb.forward);
+	free(partition_cost);
+	free(prefix_sum.de);
+	free(prefix_sum.in);
 }
-
 #endif
-
-

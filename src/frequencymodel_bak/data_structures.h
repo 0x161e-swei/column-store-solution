@@ -49,22 +49,14 @@ typedef struct workload_api {
 	int* second;
 } workload_api;
 
-typedef struct partition_inst_aos {
-	int part_size;
-	int pivot;
-#ifdef GHOST_VALUE
-	int ghost_count;
-#endif
-} partition_inst_aof;
-
 typedef struct _partition_inst{
 	// pivot count
 	int p_count;
 	int *part_sizes;
 	int *pivots;
-#ifdef GHOST_VALUE
+	#ifdef GHOST_VALUE
 	int *ghost_count;
-#endif
+	#endif
 } Partition_inst;
 
 typedef struct frequency_model {

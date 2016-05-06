@@ -101,8 +101,27 @@ status do_parition_decision(Table *tbl, Column *col, int algo, const char *workl
 	freq_model = sorted_data_frequency_model(col->data->content, col->data->length, op_type, num1, num2, lineCount);
 
 	part_inst = malloc(sizeof(Partition_inst));
-	partition_data(freq_model, 0, part_inst, col->data->length);
-	debug("partition decision done\n");
+	//TODO: make algo the real algo:
+	algo = 0;
+	partition_data(freq_model, algo, part_inst, col->data->length);
+	#ifdef DEMO
+		evbuffer_add_printf(cmdSoc->buffer, "{\"event\": \"visualize\",");
+		evbuffer_add_printf(cmdSoc->buffer, "\"sizes\": [");
+		int i = 0;
+		for (; i < part_inst->p_count - 1; i++) {
+			evbuffer_add_printf(cmdSoc->buffer, "%d,", part_inst->part_sizes[i]);
+		}
+		evbuffer_add_printf(cmdSoc->buffer, "%d", part_inst->part_sizes[i]);
+
+		evbuffer_add_printf(cmdSoc->buffer, "],\"pivots\": [");
+		i = 0;
+		for (; i < part_inst->p_count - 1; i++) {
+			evbuffer_add_printf(cmdSoc->buffer, "%d,", part_inst->pivots[i]);
+		}
+		evbuffer_add_printf(cmdSoc->buffer, "%d", part_inst->pivots[i]);
+		evbuffer_add_printf(cmdSoc->buffer, "]}\n");
+		flush_cmdsocket(cmdSoc);
+	#endif
 	if (op_type) free(op_type);
 	if (num1) free(num1);
 	if (num2) free(num2);

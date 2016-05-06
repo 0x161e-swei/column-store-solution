@@ -11,9 +11,7 @@
 #include "customsort/custom_sort.h"
 //#define GHOST_VALUE
 frequency_model *sorted_data_frequency_model(const int* data_in, size_t data_size, const int* type, const int* first, const int* second, size_t work_size);
-#ifdef GHOST_VALUE
 void partition_data_gv(frequency_model *fm, const int data_size, const int algo, const int ghost_values, Partition_inst *out);
-#endif
 void partition_data(frequency_model* fm,const int algo, Partition_inst *out, size_t data_size);
 void free_frequency_model(frequency_model *fm);
 

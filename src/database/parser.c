@@ -462,7 +462,7 @@ status parse_dsl(const char* str, dsl* d, db_operator* op)
 		int *num1 = NULL; // malloc(sizeof(int) * lineCount);
 		int *num2 = NULL; // malloc(sizeof(int) * lineCount);
 		// workload_parse(workload, op_type, num1, num2);
-		past_workload(workload[0], &op_type, &num1, &num2, &lineCount);
+		past_workload(filename[0], &op_type, &num1, &num2, &lineCount);
 
 		Workload w;
 		w.ops = op_type;
@@ -572,6 +572,7 @@ void past_workload(char workload, int **ops, int **num1, int **num2, uint *lineC
 		for (int j = 0; j < len[i]; j++) {
 			(*ops)[pos + j] = op;
 		}
+		// TODO: fread should be handled with multiple attampts if the files are large
 		fread((*num1 + pos), sizeof(int), len[i], files[i]);
 		if (i == 1 || i == 4) {
 			i++;
