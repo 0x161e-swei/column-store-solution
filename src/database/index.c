@@ -84,7 +84,7 @@ status do_parition_decision(Table *tbl, Column *col, int algo, const char *workl
 	int *num2 = NULL; // malloc(sizeof(int) * lineCount);
 	// workload_parse(workload, op_type, num1, num2);
 	past_workload(workload[0], &op_type, &num1, &num2, &lineCount);
-	debug("workload line count %u", lineCount);
+	debug("workload line count %u\n", lineCount);
 	if (tbl->length != 0) {
 		// do the loading later
 		// for (unsigned int j = 0; j < tmp_tbl->col_count; j++) {
@@ -122,6 +122,7 @@ status do_parition_decision(Table *tbl, Column *col, int algo, const char *workl
 		evbuffer_add_printf(cmdSoc->buffer, "]}\n");
 		flush_cmdsocket(cmdSoc);
 	#endif
+	log_info("Partition decision done total %d partitions\n", part_inst->p_count);
 	if (op_type) free(op_type);
 	if (num1) free(num1);
 	if (num2) free(num2);

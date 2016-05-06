@@ -404,7 +404,6 @@ status parse_dsl(const char* str, dsl* d, db_operator* op)
 		if (algo != NULL) {
 			num = atoi(algo);
 		}
-		log_info("BEFORE DO PARTITION DECISION");
 		#ifdef DEMO
 		ret = do_parition_decision(cmdSoc, tmp_tbl, tmp_col, num, filename);
 		#else
@@ -551,7 +550,6 @@ void past_workload(char workload, int **ops, int **num1, int **num2, uint *lineC
 		fread(&len[i], sizeof(int), 1, files[i]);
 		if (i != 2 && i != 5) line += len[i];
 	}
-	log_info("file lines %u", line);
 	*ops = malloc(sizeof(int) * line);
 	*num1 = malloc(sizeof(int) * line);
 	*num2 = malloc(sizeof(int) * line);
