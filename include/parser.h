@@ -28,6 +28,6 @@ status parse_dsl(const char* str, dsl* d, db_operator* op);
 status parse_command_string(const char* str, dsl** commands, db_operator* op);
 #endif // DEMO
 
-void workload_parse(const char *filename, int *ops, int *num1, int *num2);
+void past_workload(char workload, int **ops, int **num1, int **num2, uint *lineCount);
 
 #endif // PARSER_H__

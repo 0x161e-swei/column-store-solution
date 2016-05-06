@@ -79,21 +79,12 @@ status do_parition_decision(Table *tbl, Column *col, int algo, const char *workl
 {
 	status ret;
 	uint lineCount = 0;
-	uint fieldCount = 0;
-	collect_file_info(workload, &lineCount, &fieldCount);
-
-	if (1 >= lineCount) {
-		log_err("cannot workload file %s\n", workload);
-		ret.code = ERROR;
-		return ret;
-	}
-	
-	lineCount++;
-	int *op_type = malloc(sizeof(int) * lineCount);
-	int *num1 = malloc(sizeof(int) * lineCount);
-	int *num2 = malloc(sizeof(int) * lineCount);
-	workload_parse(workload, op_type, num1, num2);
-
+	int *op_type = NULL; // malloc(sizeof(int) * lineCount);
+	int *num1 = NULL; // malloc(sizeof(int) * lineCount);
+	int *num2 = NULL; // malloc(sizeof(int) * lineCount);
+	// workload_parse(workload, op_type, num1, num2);
+	past_workload(workload[0], &op_type, &num1, &num2, &lineCount);
+	debug("workload line count %u", lineCount);
 	if (tbl->length != 0) {
 		// do the loading later
 		// for (unsigned int j = 0; j < tmp_tbl->col_count; j++) {
@@ -112,11 +103,12 @@ status do_parition_decision(Table *tbl, Column *col, int algo, const char *workl
 	part_inst = malloc(sizeof(Partition_inst));
 	partition_data(freq_model, 0, part_inst, col->data->length);
 	debug("partition decision done\n");
+	if (op_type) free(op_type);
+	if (num1) free(num1);
+	if (num2) free(num2);
 	ret.code = PARTALGO_DONE;
 	return ret;
 }
-
-
 
 /**
  * create an index over a Column

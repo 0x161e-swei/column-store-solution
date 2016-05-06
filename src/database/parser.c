@@ -3,6 +3,7 @@
 #include <regex.h>
 #include <string.h>
 #include <ctype.h>
+#include <stdlib.h>
 #include "db.h"
 #include "table.h"
 #include "column.h"
@@ -10,6 +11,7 @@
 #include "query.h"
 #include "utils.h"
 #include "index.h"
+
 
 #ifdef DEMO
 status parse_command_string(struct cmdsocket *cmdSoc, const char* str, dsl** commands, db_operator* op)
@@ -326,7 +328,7 @@ status parse_dsl(const char* str, dsl* d, db_operator* op)
 		Column *tmp_col = NULL;
 		args = prepare_col(args, &tmp_tbl, &tmp_col);
 
-		if (NULL == tmp_tbl || NULL == tmp_tbl) {
+		if (NULL == tmp_tbl || NULL == tmp_col) {
 			log_err("wrong column/table name in show table\n");
 			ret.code = ERROR;
 			return ret;
@@ -428,7 +430,7 @@ status parse_dsl(const char* str, dsl* d, db_operator* op)
 		Column *tmp_col = NULL;
 		args = prepare_col(args, &tmp_tbl, &tmp_col);
 
-		if (NULL == tmp_tbl || NULL == tmp_tbl) {
+		if (NULL == tmp_tbl || NULL == tmp_col) {
 			log_err("wrong column/table name in partition test\n");
 			ret.code = ERROR;
 			return ret;
@@ -439,28 +441,28 @@ status parse_dsl(const char* str, dsl* d, db_operator* op)
 		const char* filename = strtok(args, quotes);
 		log_info("workload file: \"%s\"\n", filename);
 		uint lineCount = 0;
-		uint fieldCount = 0;
-		collect_file_info(filename, &lineCount, &fieldCount);
+		// uint fieldCount = 0;
+		// collect_file_info(filename, &lineCount, &fieldCount);
 
-		if (1 >= lineCount) {
-			log_err("cannot workload file\n");
-			ret.code = ERROR;
-			return ret;
-		}
-		lineCount++;	
-		int *op_type = malloc(sizeof(int) * lineCount);
-		int *num1 = malloc(sizeof(int) * lineCount);
-		int *num2 = malloc(sizeof(int) * lineCount);
-		workload_parse(filename, op_type, num1, num2);
+		// if (1 >= lineCount) {
+		// 	log_err("cannot workload file\n");
+		// 	ret.code = ERROR;
+		// 	return ret;
+		// }
+		// lineCount++;
 		
+		// // The following lines commented out are used for workload pre-processing for front-end server
+		// printf("parse done \n");
+		// doSomething(op_type, num1, num2, lineCount);
 
-		// The following lines commented out are used for workload pre-processing for front-end server
-		printf("parse done \n");
-		doSomething(op_type, num1, num2, lineCount + 1);
-
-		printf("job done\n");
-		ret.code = OK;
-		return ret;
+		// printf("job done\n");
+		// ret.code = OK;
+		// return ret;
+		int *op_type = NULL; // malloc(sizeof(int) * lineCount);
+		int *num1 = NULL; // malloc(sizeof(int) * lineCount);
+		int *num2 = NULL; // malloc(sizeof(int) * lineCount);
+		// workload_parse(workload, op_type, num1, num2);
+		past_workload(workload[0], &op_type, &num1, &num2, &lineCount);
 
 		Workload w;
 		w.ops = op_type;
@@ -484,6 +486,9 @@ status parse_dsl(const char* str, dsl* d, db_operator* op)
 		// TODO: make create_index a db operator?
 		ret = create_index(tmp_tbl, tmp_col, PARTI, w);
 		
+		if (op_type) free(op_type);
+		if (num1) free(num1);
+		if (num2) free(num2);
 		// Free the str_cpy
 		free(str_cpy);
 		str_cpy = NULL;
@@ -503,89 +508,80 @@ status parse_dsl(const char* str, dsl* d, db_operator* op)
 	return fail;
 }
 
-void workload_parse(const char *filename, int *ops, int *num1, int *num2) {
-	FILE* fp = fopen(filename, "r");
-	char *line = NULL;
-	ssize_t read;
-	size_t len = 0;
-	size_t count = 0;
-	db_operator *op = malloc(sizeof(db_operator));	
-	if (NULL != fp) {
-		while (-1 != (read = getline(&line, &len, fp))) {
-			#ifdef DEMO
-			parse_command_string(NULL, line, dsl_commands, op);
-			#else
-			parse_command_string(line, dsl_commands, op);
-			#endif
-			switch(op->type) {
-				case SELECT_COL: {
-					// TODO: 
-					if (((op->c[0]).p_val + 1) == (op->c[1]).p_val) {
-						ops[count] = 0;
-						num1[count] = (op->c[0]).p_val;
-						num2[count] = -1;
-					}
-					else {
-						ops[count] = 1;
-						num1[count] = (op->c[0]).p_val;
-						num2[count] = (op->c[1]).p_val;
-					}
-					// cleanups
-					free(op->res_name);
-					free(op->tables);
-					free((op->domain).cols);
-					free(op->c);
-					break;
-				}
-				case INSERT: {
-					ops[count] = 2;
-					size_t i = 0;
-					for (; i < op->tables[0]->col_count; i++) {
-						if (op->tables[0]->cols[i] == op->tables[0]->primary_indexed_col) break;
-					}
-					num1[count] = op->value1[i];
-					num2[count] = -1;
-					free(op->tables);
-					free(op->value1);
-					break;
-				}
-				case UPDATE: {
-					ops[count] = 3;
-					num1[count] = op->value1[0];
-					num2[count] = op->value2[0];
-					free(op->tables);
-					free((op->domain).cols);
-					free(op->value1);
-					free(op->value2);
-					break;
-				}
-				case DELETE: {
-					ops[count] = 4;
-					num1[count] = op->value1[0];
-					num2[count] = -1;
-					free(op->tables);
-					free((op->domain).cols);
-					free(op->value1);
-					break;
-				}
-				default: break;
-				// case SELECT_PRE: {
-				// 	break;
-				// }
-				// case DELETE_POS: {
-				// 	break;
-				// }
-			}
-			count++;
-			if (line) free(line);
-			line = NULL;
+/**
+ * The past_workload function reads the pre-prorcessed past workload stops ored on disk
+ * int workload indicates which workload to use
+ * int **ops stores the opertions
+ * int **num1 stores the first number of the operation
+ * int **num2 stores the second number of the operation, if any
+ * int *lineCount store the count of operations in the past workload
+ */
+void past_workload(char workload, int **ops, int **num1, int **num2, uint *lineCount) {
+
+	char pq_cost[] 		= "data/workload0/pq_cost";
+	char rq_cost_beg[] 	= "data/workload0/rq_cost_beg";
+	char rq_cost_end[] 	= "data/workload0/rq_cost_end";
+	char in_cost[] 		= "data/workload0/in_cost";
+	char up_cost_beg[] 	= "data/workload0/up_cost_beg";
+	char up_cost_end[] 	= "data/workload0/up_cost_end";
+	char de_cost[] 		= "data/workload0/de_cost";
+	pq_cost[13]			= workload;
+	rq_cost_beg[13]		= workload;
+	rq_cost_end[13]		= workload;
+	in_cost[13] 		= workload;
+	up_cost_beg[13]		= workload;
+	up_cost_end[13]		= workload;
+	de_cost[13] 		= workload;
+	FILE *files[7];
+	files[0] = fopen(pq_cost, "r");
+	files[1] = fopen(rq_cost_beg, "r");
+	files[2] = fopen(rq_cost_end, "r");
+	files[3] = fopen(in_cost, "r");
+	files[4] = fopen(up_cost_beg, "r");
+	files[5] = fopen(up_cost_end, "r");
+	files[6] = fopen(de_cost, "r");
+
+	uint line = 0;
+	int len[7];
+	for (int i = 0; i < 7; i++) {
+		if (files[i] == NULL) {
+			log_err("cannot open files %d\n", i);
+			return;
 		}
-		if (line) free(line);
-		fclose(fp);
-		free(op);
-		// debug("after workload parsed:\n");
-		// for (size_t ii = 0; ii < count; ii++) {
-		// 	printf("%d %d %d\n", ops[ii], num1[ii], num2[ii]);
-		// }
+		fread(&len[i], sizeof(int), 1, files[i]);
+		if (i != 2 && i != 5) line += len[i];
 	}
+	log_info("file lines %u", line);
+	*ops = malloc(sizeof(int) * line);
+	*num1 = malloc(sizeof(int) * line);
+	*num2 = malloc(sizeof(int) * line);
+
+	int pos = 0;
+	int i = 0;
+	while (i < 7) {
+		int op = i;
+		if (i == 3) {
+			op = 2;
+		}
+		else if (i == 4) {
+			op = 3;
+		}
+		else if (i == 6) {
+			op = 4;
+		}
+		for (int j = 0; j < len[i]; j++) {
+			(*ops)[pos + j] = op;
+		}
+		fread((*num1 + pos), sizeof(int), len[i], files[i]);
+		if (i == 1 || i == 4) {
+			i++;
+			fread((*num2 + pos), sizeof(int), len[i], files[i]);
+		}
+		else {
+			memset((*num2 + pos), 0, sizeof(int) * len[i]);
+		}
+		pos += len[i];
+		i++;
+	}
+	*lineCount = line;
 }

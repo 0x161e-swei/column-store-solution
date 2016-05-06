@@ -50,8 +50,8 @@ const char* insert_command = "^i\\([a-zA-Z0-9_\\.]+(\\,-?[0-9]+)+\\)";
 const char* update_command = "^u\\([a-zA-Z0-9_\\.]+\\,-?[0-9]+\\,-?[0-9]+\\)";
 
 // temporary dsls for test
-// Matches: partition(<col_var>, "filename")
-const char* partition_test = "^partition\\([a-zA-Z0-9_\\.]+\\,\\\"[a-zA-Z0-9_/\\.]+\\\"\\)";
+// Matches: partition(<col_var>, "workload_num")
+const char* partition_test = "^partition\\([a-zA-Z0-9_\\.]+\\,\\\"[0-9]\\\"\\)";
 
 // Matches: show_tbl(<col_var>)
 const char* show_table_test = "^show_tbl\\([a-zA-Z0-9_\\.]+\\)";
@@ -59,8 +59,8 @@ const char* show_table_test = "^show_tbl\\([a-zA-Z0-9_\\.]+\\)";
 // Matches: partition(<col_var>)
 const char* partition_command = "^partition\\([a-zA-Z0-9_\\.]+\\)";
 
-// Matches: partition_decision(<col_var>, "workload")
-const char* part_deci_command = "^partition_decision\\([a-zA-Z0-9_\\.]+\\,\\\"[a-zA-Z0-9_/\\.]+\\\"\\,[0-9]\\)";
+// Matches: partition_decision(<col_var>, "workload_num")
+const char* part_deci_command = "^partition_decision\\([a-zA-Z0-9_\\.]+\\,\\\"[0-9]+\\\"\\,[0-9]\\)";
 
 // Matches: exec_work("workload")
 const char* execwork_command = "^exec_work\\(\\\"[a-zA-Z0-9_/\\.]+\\\"\\)";
