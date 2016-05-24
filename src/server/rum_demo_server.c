@@ -191,22 +191,6 @@ void exec_dsl(struct cmdsocket *cmdsocket, const char *demo_dsl)
 		}
 		case PARTALGO_DONE: {
 			log_info("partition algorithm called!\n");
-			evbuffer_add_printf(cmdsocket->buffer, "{\"event\": \"visualize\",");
-			evbuffer_add_printf(cmdsocket->buffer, "\"sizes\": [");
-			int i = 0;
-			for (; i < part_inst->p_count - 1; i++) {
-				evbuffer_add_printf(cmdsocket->buffer, "%d,", part_inst->part_sizes[i]);
-			}
-			evbuffer_add_printf(cmdsocket->buffer, "%d", part_inst->part_sizes[i]);
-
-			evbuffer_add_printf(cmdsocket->buffer, "],\"pivots\": [");
-			i = 0;
-			for (; i < part_inst->p_count - 1; i++) {
-				evbuffer_add_printf(cmdsocket->buffer, "%d,", part_inst->pivots[i]);
-			}
-			evbuffer_add_printf(cmdsocket->buffer, "%d", part_inst->pivots[i]);
-			evbuffer_add_printf(cmdsocket->buffer, "]}\n");
-			flush_cmdsocket(cmdsocket);
 			evbuffer_add_printf(cmdsocket->buffer, "{\"event\": \"message\",");
 			evbuffer_add_printf(cmdsocket->buffer, "\"msg\": \"partition_algo done, %d partitions in total!\"", part_inst->p_count);
 			evbuffer_add_printf(cmdsocket->buffer, "}\n");
@@ -338,7 +322,7 @@ static void part_algo_func(struct cmdsocket *cmdsocket, struct command *command,
 	}
 	else if (current_dataset >= 0 && current_workload >=0) {
 		// TODO: the database should maintain the instruction of current decision for future execution
-		sprintf(demo_dsl, "partition_decision(foo.tb1.a,\"%s\",%d)", workloadMap[current_workload], partition_algo);
+		sprintf(demo_dsl, "partition_decision(foo.tb1.a,\"%d\",%d)", current_workload, partition_algo);
 		exec_dsl(cmdsocket, demo_dsl);
 	}
 	else {

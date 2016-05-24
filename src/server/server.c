@@ -87,7 +87,11 @@ db_operator* parse_command(message* recv_message, message* send_message) {
 		case OK:
 			log_info("query to be executed!\n");
 			send_message->status = OK_WAIT_FOR_RESPONSE;
+			break;
 		default: {
+			free(dbo);
+			dbo = NULL;
+			send_message->status = OK_DONE;
 			break;
 		}
 	}

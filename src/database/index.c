@@ -79,21 +79,12 @@ status do_parition_decision(Table *tbl, Column *col, int algo, const char *workl
 {
 	status ret;
 	uint lineCount = 0;
-	uint fieldCount = 0;
-	collect_file_info(workload, &lineCount, &fieldCount);
-
-	if (1 >= lineCount) {
-		log_err("cannot workload file %s\n", workload);
-		ret.code = ERROR;
-		return ret;
-	}
-	
-	lineCount++;
-	int *op_type = malloc(sizeof(int) * lineCount);
-	int *num1 = malloc(sizeof(int) * lineCount);
-	int *num2 = malloc(sizeof(int) * lineCount);
-	workload_parse(workload, op_type, num1, num2);
-
+	int *op_type = NULL; // malloc(sizeof(int) * lineCount);
+	int *num1 = NULL; // malloc(sizeof(int) * lineCount);
+	int *num2 = NULL; // malloc(sizeof(int) * lineCount);
+	// workload_parse(workload, op_type, num1, num2);
+	past_workload(workload[0], &op_type, &num1, &num2, &lineCount);
+	debug("workload line count %u\n", lineCount);
 	if (tbl->length != 0) {
 		// do the loading later
 		// for (unsigned int j = 0; j < tmp_tbl->col_count; j++) {
@@ -110,13 +101,34 @@ status do_parition_decision(Table *tbl, Column *col, int algo, const char *workl
 	freq_model = sorted_data_frequency_model(col->data->content, col->data->length, op_type, num1, num2, lineCount);
 
 	part_inst = malloc(sizeof(Partition_inst));
-	partition_data(freq_model, 0, part_inst, col->data->length);
-	debug("partition decision done\n");
+	//TODO: make algo the real algo:
+	algo = 0;
+	partition_data(freq_model, algo, part_inst, col->data->length);
+	#ifdef DEMO
+		evbuffer_add_printf(cmdSoc->buffer, "{\"event\": \"visualize\",");
+		evbuffer_add_printf(cmdSoc->buffer, "\"sizes\": [");
+		int i = 0;
+		for (; i < part_inst->p_count - 1; i++) {
+			evbuffer_add_printf(cmdSoc->buffer, "%d,", part_inst->part_sizes[i]);
+		}
+		evbuffer_add_printf(cmdSoc->buffer, "%d", part_inst->part_sizes[i]);
+
+		evbuffer_add_printf(cmdSoc->buffer, "],\"pivots\": [");
+		i = 0;
+		for (; i < part_inst->p_count - 1; i++) {
+			evbuffer_add_printf(cmdSoc->buffer, "%d,", part_inst->pivots[i]);
+		}
+		evbuffer_add_printf(cmdSoc->buffer, "%d", part_inst->pivots[i]);
+		evbuffer_add_printf(cmdSoc->buffer, "]}\n");
+		flush_cmdsocket(cmdSoc);
+	#endif
+	log_info("Partition decision done total %d partitions\n", part_inst->p_count);
+	if (op_type) free(op_type);
+	if (num1) free(num1);
+	if (num2) free(num2);
 	ret.code = PARTALGO_DONE;
 	return ret;
 }
-
-
 
 /**
  * create an index over a Column
