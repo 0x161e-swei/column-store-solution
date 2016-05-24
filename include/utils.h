@@ -11,12 +11,14 @@
 #include <stdio.h>
 #include <stdarg.h>
 #include <string.h>
+#include <time.h>
 #include "config.h"
 #define ANSI_COLOR_RED		"\x1b[31m"
 #define ANSI_COLOR_GREEN	"\x1b[32m"
 #define ANSI_COLOR_BLUE		"\x1b[34m"
 #define ANSI_COLOR_RESET	"\x1b[0m"
 
+struct timespec clock_timediff(struct timespec start, struct timespec end);
 
 // cs165_log(out, format, ...)
 // Writes the string from @format to the @out pointer, extendable for
@@ -32,12 +34,12 @@ void cs165_log(FILE* out, const char *format, ...);
 // Usage: log_err("%s: error at line: %d", __func__, __LINE__);
 // void log_err(const char *format, ...);
 #ifdef LOG_ERR
-#define log_err(...) do {										\
-	fprintf(stderr, ANSI_COLOR_RED);							\
-	fprintf(stderr, "[ERROR] (%s:%d): ", __FILE__, __LINE__);	\
-	fprintf(stderr, ##__VA_ARGS__);								\
-	fprintf(stderr, ANSI_COLOR_RESET);							\
-	fflush(stderr);												\
+#define log_err(...) do {															\
+	fprintf(stderr, ANSI_COLOR_RED);												\
+	fprintf(stderr, "[ERROR] (%s:%d): %s(): ", __FILE__, __LINE__, __FUNCTION__);	\
+	fprintf(stderr, ##__VA_ARGS__);													\
+	fprintf(stderr, ANSI_COLOR_RESET);												\
+	fflush(stderr);																	\
 } while (0)
 #else
 #define log_err(...) do{} while(0)
@@ -45,12 +47,12 @@ void cs165_log(FILE* out, const char *format, ...);
 
 
 #ifdef DEBUG
-#define debug(...) do{											\
-	fprintf(stdout, ANSI_COLOR_BLUE);							\
-	fprintf(stdout, "[DEBUG] (%s:%d): ", __FILE__, __LINE__);	\
-	fprintf(stdout, ##__VA_ARGS__);								\
-	fprintf(stdout, ANSI_COLOR_RESET);							\
-	fflush(stdout);												\
+#define debug(...) do{																\
+	fprintf(stdout, ANSI_COLOR_BLUE);												\
+	fprintf(stdout, "[DEBUG] (%s:%d): %s(): ", __FILE__, __LINE__,  __FUNCTION__);	\
+	fprintf(stdout, ##__VA_ARGS__);													\
+	fprintf(stdout, ANSI_COLOR_RESET);												\
+	fflush(stdout);																	\
 }while(0)
 #else
 #define debug(...)
@@ -65,21 +67,18 @@ void cs165_log(FILE* out, const char *format, ...);
 // void log_info(const char *format, ...);
 
 #ifdef LOG_INFO
-#define log_info(...) do {										\
-	fprintf(stdout, ANSI_COLOR_GREEN);							\
-	fprintf(stdout, "[INFO] (%s:%d): ", __FILE__, __LINE__);	\
-	fprintf(stdout, ##__VA_ARGS__);								\
-	fprintf(stdout, ANSI_COLOR_RESET);							\
-	fflush(stdout);												\
+#define log_info(...) do {															\
+	fprintf(stdout, ANSI_COLOR_GREEN);												\
+	fprintf(stdout, "[INFO] (%s:%d): %s(): ", __FILE__, __LINE__, __FUNCTION__);	\
+	fprintf(stdout, ##__VA_ARGS__);													\
+	fprintf(stdout, ANSI_COLOR_RESET);												\
+	fflush(stdout);																	\
 } while (0)
 #else
 #define log_info(...) do{} while(0)
 #endif
 
-
-
-// count_file_lines(filename)
-// Count the number lines in a file fast
 void collect_file_info(const char* filename, unsigned int *lineCount, unsigned int *fieldCount);
 
+void doSomething(int *op_type, int *num1, int *num2, unsigned int lineCount);
 #endif /* __UTILS_H__ */

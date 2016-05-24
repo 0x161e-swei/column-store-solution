@@ -1,4 +1,5 @@
 #include "query.h"
+
 #define BUFFERSIZE 3096
 
 // Global results hash list to keep track of query results
@@ -458,9 +459,9 @@ status query_prepare(const char* query, dsl* d, db_operator* op) {
 			}
 		}
 		debug("numbers to insert in Table %s:\n",tmp_tbl->name);
-		for (size_t i = 0; i < tmp_tbl->col_count; i++) {
-			printf("%d ", op->value1[i]);
-		}
+		// for (size_t i = 0; i < tmp_tbl->col_count; i++) {
+		// 	printf("%d ", op->value1[i]);
+		// }
 
 		op->type = INSERT;
 		op->tables = malloc(sizeof(Tbl_ptr));
@@ -708,11 +709,10 @@ status query_execute(db_operator* op, Result** results) {
  */
 status load_column4disk(Column *col, size_t len) {
 	status s;
-	static char dataprefix[] = "data/";
 	char *colfile = NULL;
 	int namelen = strlen(col->name);
-	colfile = malloc(sizeof(char) * (6 + namelen));
-	strncpy(colfile, dataprefix, 6);
+	colfile = malloc(sizeof(char) * (strlen(data_path) + 1 + namelen));
+	strncpy(colfile, data_path, strlen(data_path) + 1);
 	strncat(colfile, col->name, namelen);
 	// debug("loading column %s from disks!\n", colfile);
 
@@ -723,7 +723,7 @@ status load_column4disk(Column *col, size_t len) {
 	size_t read = len;
 	char *buffer = malloc(sizeof(int) * BUFFERSIZE);
 	if (NULL == fp) {
-		log_info("cannot open file!\n");
+		log_err("cannot open file!\n");
 		s.code = ERROR;
 		return s;
 	}
@@ -824,18 +824,17 @@ status col_scan(comparator *f, Column *col, Result **r) {
  * do binary search in the sorted array of pivots
  * pivots:	sorted array of pivots
  * len:		length of the array, i.e. the number of the partitions
- * val:		the search value
- * return: part_id, if of a partition that contain the val
+ * key:		the search value
+ * return: part_id, if of a partition that contain the key
  */
-size_t binary_search_pivots(int *pivots, size_t len, int val){
+size_t binary_search_pivots(int *pivots, size_t len, int key){
 	size_t beg = 0, end = len - 1, mid;
-	status s;
 	while (beg < end) {
 		mid = (beg + end) / 2;
-		if (val > pivots[mid]) {
+		if (key > pivots[mid]) {
 			beg = mid + 1;
 		}
-		else if (val < pivots[mid]){
+		else if (key < pivots[mid]){
 			end = mid;
 		}
 		else {

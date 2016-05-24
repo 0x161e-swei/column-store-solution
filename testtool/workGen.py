@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#! /usr/bin/python
 # -*- coding: utf-8 -*-
 import math
 import numpy
@@ -64,10 +64,10 @@ def workGen(d):
 			sel = numberGen(rq_sel_dis, rq_sel_para_0, rq_sel_para_1, 1)
 			while ((end + dataDomain * sel) > dataDomain and (end - dataDomain * sel) < 0):
 				sel = numberGen(rq_sel_dis, rq_sel_para_0, rq_sel_para_1, 1)
-			if (end + dataDomain * sel) > dataDomain:
+			if (end + dataDomain * sel) <  dataDomain:
 				fwork.write('p=s('+ col_name + ',' + str(end) + ',' + str(int(end + dataDomain * sel)) + ')\n')
 			else:
-				fwork.write('p=s('+ col_name + ',' + str(int(end + dataDomain * sel)) + ',' + str(end) + ')\n')
+				fwork.write('p=s('+ col_name + ',' + str(int(end - dataDomain * sel)) + ',' + str(end) + ')\n')
 		elif t < (Ppq + Prq + Pin): # insert
 			i_num = int(numberGen(in_dis, in_para_0, in_para_1, dataDomain))
 			fwork.write('i('+ tbl_name + ',' + str(i_num))

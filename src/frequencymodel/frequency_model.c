@@ -10,15 +10,94 @@
 #include <stdio.h>
 #include <string.h>
 #include <float.h>
-
+#include <math.h>
 
 int cmpfunc (const void * a, const void * b)
 {
 	return ( *(int*)a - *(int*)b );
 }
 
+int cmpfunc_aof (const void * a, const void * b)
+{
+	return ((partition_inst_aof *)a)->pivot - ((partition_inst_aof *)b)->pivot;
+}
 
-int ps_comparator(const void *a, const void *b, void* c) {
+
+
+void aof_swap(char* a,char* b) {
+	partition_inst_aof __temp;
+	memcpy(&__temp, ((partition_inst_aof *) a), sizeof(partition_inst_aof));
+	memcpy(((partition_inst_aof *) a), ((partition_inst_aof *) b), sizeof(partition_inst_aof));
+	memcpy(((partition_inst_aof *) b), & __temp, sizeof(partition_inst_aof));
+}
+
+/* Byte-wise swap two items of size SIZE. */
+void partition_struct_swap(char* a,char* b) {
+	//pointer_swap(a,b);
+	partition_struct __temp;
+	partition_struct *__a = ((partition_struct *) a);
+	partition_struct *__b = ((partition_struct *) b);
+	if(__a->next_neighbor == __b || __b->next_neighbor == __a || __b->prev_neighbor == __a || __a->prev_neighbor == __b) {
+		if(__a->next_neighbor == __b) {
+			//a before b
+			partition_struct *__a_prev = __a->prev_neighbor;
+			partition_struct *__b_next = __b->next_neighbor;
+			__temp = * ((partition_struct *) a);
+			*((partition_struct *) a) = *((partition_struct *) b);
+			*((partition_struct *) b) = __temp;
+			//now __b points to a and vise versa
+			__a = ((partition_struct *) b);
+			__b = ((partition_struct *) a);
+			__b->prev_neighbor = __a;
+			__a->next_neighbor = __b;
+			if(__a_prev){
+				__a_prev->next_neighbor = __a;
+			}
+			if(__b_next){
+				__b_next->prev_neighbor = __b;
+			}
+		} else {
+			//b before a
+			partition_struct *__b_prev = __b->prev_neighbor;
+			partition_struct *__a_next = __a->next_neighbor;
+			__temp = * ((partition_struct *) a);
+			*((partition_struct *) a) = *((partition_struct *) b);
+			*((partition_struct *) b) = __temp;
+			//now __b points to a and vise versa
+			__a = ((partition_struct *) b);
+			__b = ((partition_struct *) a);
+			__b->next_neighbor = __a;
+			__a->prev_neighbor = __b;
+			if(__b_prev) {
+				__b_prev->next_neighbor = __b;
+			}
+			if(__a_next) {
+				__a_next->prev_neighbor = __a;
+			}
+		}
+	}
+	else {
+
+		if(__a->next_neighbor){
+			__a->next_neighbor->prev_neighbor = ((partition_struct *) b);
+		}
+		if(__a->prev_neighbor){
+			__a->prev_neighbor->next_neighbor = ((partition_struct *) b);
+		}
+		if(__b->next_neighbor){
+			__b->next_neighbor->prev_neighbor = ((partition_struct *) a);
+		}
+		if(__b->prev_neighbor) {
+			__b->prev_neighbor->next_neighbor = ((partition_struct *) a);
+		}
+
+		__temp = * ((partition_struct *) a);
+		*((partition_struct *) a) = *((partition_struct *) b);
+		*((partition_struct *) b) = __temp;
+	}
+}
+
+int ps_comparator(const void *a, const void *b) {
 
 	const partition_struct* first = (partition_struct*)a;
 	const partition_struct* second = (partition_struct*)b;
@@ -41,7 +120,7 @@ void simple_operation_api(const int* high_val, const int workload,
 	if(next >= high_val[histogram_size-1]){
 		histogram[histogram_size-1]++;
 	} else {
-		//iterate the high values of the dataset, to find the bin that should be incremented
+		//iterate the high values of the dataset, to fi,size_t sizend the bin that should be incremented
 		int j = 0;
 		while (high_val[j] < next) {
 			j++;
@@ -164,6 +243,7 @@ void initialize_frequency_model(frequency_model *fm, const int data_size, const 
 	fm->ub = (int *) calloc(fm->histogram_size , sizeof(int));
 	fm->ud = (int *) calloc(fm->histogram_size , sizeof(int));
 	fm->uf = (int *) calloc(fm->histogram_size , sizeof(int));
+	fm->max_val = (int *) calloc(fm->histogram_size , sizeof(int));
 }
 
 void free_frequency_model(frequency_model *fm){
@@ -210,9 +290,9 @@ double compute_costs(forward_backward* fb, partition_struct* partition_cost, con
 		static_cost += fm->in[i]*(rr+rw);
 #ifndef GHOST_VALUE
 		if(i != 0) {
-					//inserts - data movement across partitions. We never touch the block we insert into, so the cost is "shifted by one"
-					partition_cost[i].partition_static_cost += prefix_sum->in[i-1]*(rr+rw);
-				}
+			//inserts - data movement across partitions. We never touch the block we insert into, so the cost is "shifted by one"
+			partition_cost[i].partition_static_cost += prefix_sum->in[i-1]*(rr+rw);
+		}
 #endif
 #ifndef GHOST_VALUE
 		//deletes - data movement local to the block and always needed
@@ -245,18 +325,15 @@ double compute_costs(forward_backward* fb, partition_struct* partition_cost, con
 	return static_cost;
 }
 
-static inline void setup_partition_structure(const int block_counter, const int data_counter,const int histogram_size, int* high_val, data* data, partition_struct *ps){
+static inline void setup_partition_structure(const int block_counter,const int max_val,const int histogram_size, partition_struct *ps){
 
-	high_val[block_counter] = data->array[data_counter];
-	//initialize the partition representation
-
-	ps[block_counter].max_val = data->array[data_counter];
+	ps[block_counter].max_val = max_val;
 	ps[block_counter].max_block = block_counter;
 	ps[block_counter].min_block = block_counter;
 	ps[block_counter].score = 0.0;
 	ps[block_counter].partition_static_cost = 0.0;
 #ifdef GHOST_VALUE
-	ps[block_counter].partition_dynamic_cost = 0.0;
+	ps[block_counter].next_partitions = 0.0;
 	ps[block_counter].ghost_values = 0;
 	ps[block_counter].inserts = 0;
 
@@ -277,48 +354,50 @@ static inline void setup_partition_structure(const int block_counter, const int 
 }
 
 
-void build_frequency_model_api(data* data,const int size, const int* type, const int* first, const int* second,frequency_model *fm, partition_struct *ps) {
+void setup_partitions(frequency_model *fm, partition_struct *ps) {
+	for(int j=0; j < fm->histogram_size; j++){
+		setup_partition_structure(j,fm->max_val[j],fm->histogram_size,ps);
+#ifdef GHOST_VALUE
+		//record the amount of inserts per partition as these will be used to compute the dynamic cost of each partition
+		ps[j].inserts = fm->in[j];
+#endif
+	}
+
+}
+
+void build_frequency_model_api(data* data,const int size, const int* type, const int* first, const int* second,frequency_model *fm) {
 	//TODO: Consider how this may be done in parallel - stdatomic.h seems like a place to start
 	//TODO: Consider non-distinct value case
 	//TODO: apply workload to data, record result in frequency model.
 	//extract the high value of each block
-	int *high_val = (int *) calloc(fm->histogram_size,sizeof(int));
 	for(int i = fm->block_size, j=0; i < (int)data->size; i+=fm->block_size, j++){
-		setup_partition_structure(j,i,fm->histogram_size,high_val,data,ps);
+		fm->max_val[j] = data->array[i - 1];
 	}
-	setup_partition_structure(fm->histogram_size-1,data->size-1,fm->histogram_size,high_val,data,ps);
+	fm->max_val[fm->histogram_size-1] = data->array[data->size-1];
 
 	for(int i = 0; i < size; i++) {
 		if(type[i] == 0) {
 			//point queries
-			simple_operation_api(high_val,first[i],fm->histogram_size,fm->pq);
+			simple_operation_api(fm->max_val,first[i],fm->histogram_size,fm->pq);
 		} else if(type[i] == 1){
 			//range queries
-			range_query_api(high_val,first[i],second[i],fm);
+			range_query_api(fm->max_val,first[i],second[i],fm);
 		} else if(type[i] == 2){
 			//insert
-			simple_operation_api(high_val,first[i],fm->histogram_size,fm->in);
+			simple_operation_api(fm->max_val,first[i],fm->histogram_size,fm->in);
 		} else if(type[i] == 3){
 			//updates
-			update_api(high_val,first[i],second[i],fm);
+			update_api(fm->max_val,first[i],second[i],fm);
 		} else if(type[i] == 4){
 			//deletes
-			simple_operation_api(high_val,first[i],fm->histogram_size,fm->de);
+			simple_operation_api(fm->max_val,first[i],fm->histogram_size,fm->de);
 		} else {
 			printf("unknown");
 		}
 	}
-#ifdef GHOST_VALUE
-	//record the amount of inserts per partition as these will be used to compute the dynamic cost of each partition
-	for(int i = 0; i < fm->histogram_size; i++){
-		ps[i].inserts = fm->in[i];
-	}
-#endif
 	//for(int i = 0; i < fm->histogram_size; i++){
 	//printf("%i\t%i\t%i\t%i\t%i\t%i\t%i\t%i\t%i\n",fm->de[i],fm->in[i],fm->pq[i],fm->re[i],fm->rs[i],fm->sc[i],fm->ub[i],fm->ud[i],fm->uf[i]);
 	//}
-	free(high_val);
-
 }
 
 
@@ -381,14 +460,14 @@ static inline void delete_queue(partition_struct* next){
 			//next is first in the queue
 			next->next_queue->prev_queue = NULL;
 		}
-	} else if(next->prev_neighbor) {
+	} else if(next->prev_queue) {
 		//next is last in the queue
 		next->prev_queue->next_queue = NULL;
 	}
 }
 
 partition_struct* compute_partitioning_bottom_up(const forward_backward *fb, partition_struct* partition_cost,
-		const frequency_model *fm, const double sr) {
+		const frequency_model *fm, const double sr, size_t data_size) {
 	//this is not as optimal as it should be. We should keep a sorted queue of all partitions that have a positive potential impact.
 
 	//partition_struct* tail = &partition_cost[fm->histogram_size-1];
@@ -411,11 +490,14 @@ partition_struct* compute_partitioning_bottom_up(const forward_backward *fb, par
 	//1. compute priority queue score for each partition as the IOs "saved" by merging with the neighbor to the right.
 	for(int i = 0; i < fm->histogram_size-1; i++) {
 		compute_score(&partition_cost[i], fb, sr);
+		partition_cost[i].part_size = fm->block_size;
 
 	}
 	partition_cost[fm->histogram_size-1].score = -DBL_MAX;
+	//the size of the last partition is not necessarily a full block size.
+	partition_cost[fm->histogram_size-1].part_size = data_size - (fm->histogram_size - 1) * fm->block_size;
 	//sort
-	quicksort_custom(partition_cost,fm->histogram_size,sizeof(partition_struct),ps_comparator,NULL);
+	quicksort_custom(partition_cost,fm->histogram_size,sizeof(partition_struct),ps_comparator,partition_struct_swap);
 	for(int i = 0; i < fm->histogram_size; i++) {
 		if(i != 0) {
 			partition_cost[i].prev_queue = &partition_cost[i-1];
@@ -427,6 +509,7 @@ partition_struct* compute_partitioning_bottom_up(const forward_backward *fb, par
 		} else {
 			partition_cost[i].next_queue = NULL;
 		}
+
 	}
 	partition_struct* head = &partition_cost[0];
 	//4. while the next score in the priority queue is positive
@@ -441,6 +524,7 @@ partition_struct* compute_partitioning_bottom_up(const forward_backward *fb, par
 		first->next_neighbor = next->next_neighbor;
 		first->partition_static_cost = next->partition_static_cost;
 		first->max_val = next->max_val;
+		first->part_size += next->part_size;
 		//are first and next the two first in the queue list?
 		if(first->next_queue != next) {
 			//delete head from queue
@@ -504,91 +588,98 @@ partition_struct* compute_partitioning_bottom_up(const forward_backward *fb, par
 
 		}
 		printf("\nsize: %i\n",test);
-		*/
+		 */
 
 	}
 	//done so return the partitioning
 	return head;
 }
 
-
+#ifdef GHOST_VALUE
 partition_struct* compute_partitioning_bottom_up_gv(const forward_backward *fb, partition_struct* partition_cost,
-		const frequency_model *fm, const double sr, const int gv) {
+		const frequency_model *fm, const double sr, const double rr, const double rw, const int gv, const int data_size) {
 	//this is not as optimal as it should be. We should keep a sorted queue of all partitions that have a positive potential impact.
 
 	//partition_struct* tail = &partition_cost[fm->histogram_size-1];
 	//generate a priority queue
 	/*
 	 * Algorithm outline:
-	 *
-	 *
-	 *
-	 * 1. scan backwards and compute dynamic cost of the partition, as well as the scores
-	 * 		a. track the one with the best score.
-	 * 		b. create accumulated cost of inserts in a "backwards" prefix sum array
-	 * 2. Merge the high hitter with its neighbor
-	 * 3. Scan back to recompute individual scores for previous inserts (remember to update prefix sum).
-	 * 4. Scan forwards to recompute scores for all partitions taking the new total score into account.
-	 * 	a. again track the high hitter
-	 * 5. repeat from 2 until the high-hitter have a negative score.
+	 * 1. Compute cost of the inserts per partition and accumulated, assuming no ghost values.
+	 * 2. Distribute ghost values relative to the cost of inserts for each partition, and compute score for each, keeping track of the high hitter
+	 * 3. Merge high highest score with neighbor
+	 * 4. recompute cost(as before assuming no ghost values) for all previous partitions.
+	 * 5. redistribute ghost values and compute new scores, keeping track of the highest scoring partition.
+	 * While highest score is positive - GOTO: 3
+	 * output partitioning and ghost value distribution.
 	 *
 	 */
 
-	int* prefix_in_back = (int *) calloc(fm->histogram_size,sizeof(int));
-	//1. compute priority queue score for each partition as the IOs "saved" by merging with the neighbor to the right.
-
+	//double* prefix_in_back = (double *) calloc(fm->histogram_size,sizeof(double));
+	//1. Compute cost of the inserts per partition and accumulated, assuming no ghost values.
+	for(int i = fm->histogram_size-1; i >= 0; i--){
+		if(i == fm->histogram_size-1) {
+			partition_cost[fm->histogram_size-1].part_size = data_size - fm->histogram_size-1*fm->block_size;
+		} else {
+			partition_cost[i].part_size = fm->block_size;
+		}
+		partition_struct *next = &partition_cost[i];
+		//amount partitions before this one
+		int prev_partitions = fm->histogram_size-1-i;
+		//each previous partition adds an rr and a rw to the total cost of each insert (the static part is handled elsewhere)
+		double insert_cost = prev_partitions*fm->in[i]*(rr+rw);
+		next->next_partitions = prev_partitions;
+		if(i == fm->histogram_size-1) {
+			next->prefix_in_back = insert_cost;
+		} else {
+			next->prefix_in_back = insert_cost+next->next_neighbor->prefix_in_back;
+		}
+		next->inserts = fm->in[i];
+	}
+	double total_insert_cost = partition_cost[0].prefix_in_back;
+	//2. Distribute ghost values relative to the cost of inserts for each partition, and compute score for each, keeping track of the high hitter
+	partition_struct *high_hitter = &partition_cost[0];
 	for(int i = 0; i < fm->histogram_size-1; i++) {
-		//compute_score_gv(&partition_cost[i], fb, sr, prefix_in_back, i);
+		partition_struct *ps = &partition_cost[i];
+		double fraction = (ps->next_partitions*ps->inserts*(rr+rw))/total_insert_cost;
+		double ghost_assignment = (double) gv * fraction;
+		ps->ghost_values = floor(ghost_assignment);
+		int inserts_remaining = ps->inserts - ps->ghost_values;
+		double dynamic_partition_cost = 0;
+		if(inserts_remaining > 0) {
+			dynamic_partition_cost = inserts_remaining*ps->next_partitions*(rr+rw);
+		}
+
+		if(ps->next_neighbor){
+			partition_struct *next = ps->next_neighbor;
+			int additional_blocks = (next->max_block-ps->min_block);
+			double score = 0.0;
+			for(int i = 0, index = ps->min_block; i <= additional_blocks; i++, index++) {
+				//compute the cost of removing the partition boundary in terms of additional read penalty
+				score += fb->backward[index]*i*sr;
+				score += fb->forward[index]*(additional_blocks-i)*sr;
+			}
+			//the score is the difference between the data movement cost of having the partition boundary,
+			//and the read penalty of not having the partition boundary
+			ps->score = (ps->partition_static_cost+dynamic_partition_cost)-score;
+		} else {
+			ps->score = -DBL_MAX;
+		}
+		if(ps->score > high_hitter->score) {
+			high_hitter = ps;
+		}
 	}
 
-
-	partition_cost[fm->histogram_size-1].score = -DBL_MAX;
-	//sort
-	quicksort_custom(partition_cost,fm->histogram_size,sizeof(partition_struct),ps_comparator,NULL);
-	for(int i = 0; i < fm->histogram_size; i++) {
-		if(i != 0) {
-			partition_cost[i].prev_queue = &partition_cost[i-1];
-		} else {
-			partition_cost[i].prev_queue = NULL;
-		}
-		if(i+1 < fm->histogram_size){
-			partition_cost[i].next_queue = &partition_cost[i+1];
-		} else {
-			partition_cost[i].next_queue = NULL;
-		}
-	}
 	partition_struct* head = &partition_cost[0];
-	//4. while the next score in the priority queue is positive
-	while(head->score > 0 && head->next_queue) {
-
-		//a. pop the first element - this is head
-		partition_struct *first = head;
-		//b. pop p's neighbor q out of order.
-		partition_struct* next = first->next_neighbor;
-		//c. merge p and q to p
+	while(high_hitter->score > 0) {
+		//3. Merge highest score with neighbor
+		partition_struct *first = high_hitter;
+		partition_struct *next = high_hitter->next_neighbor;
 		first->max_block = next->max_block;
 		first->next_neighbor = next->next_neighbor;
 		first->partition_static_cost = next->partition_static_cost;
 		first->max_val = next->max_val;
-		//are first and next the two first in the queue list?
-		if(first->next_queue != next) {
-			//delete head from queue
-			head = first->next_queue;
-			//delete next from queue
-			if(next->next_queue) {
-				next->next_queue->prev_queue = next->prev_queue;
-			}
-			if(next->prev_queue) {
-				next->prev_queue->next_queue = next->next_queue;
-			}
-
-
-		} else {
-			//first and next are the two first in the queue, so we make nexts next the queue head
-			head = next->next_queue;
-		}
-		head->prev_queue = NULL;
-
+		first->inserts += next->inserts;
+		first->part_size += next->part_size;
 		//delete next from the neighbor list (we keep first as the new merged partition)
 		if(next->next_neighbor) {
 			if(next->prev_neighbor) {
@@ -602,89 +693,118 @@ partition_struct* compute_partitioning_bottom_up_gv(const forward_backward *fb, 
 			//next is last in the neighbor list
 			next->prev_neighbor->next_neighbor = NULL;
 		}
-		//recompute scores for affected partitions and reinsert them in the queue.
-		if(first->next_neighbor){
-			//if next wasn't the last partition
-			compute_score(first,fb,sr);
-			//reinsert in queue.
-		} else {
-			first->score = -DBL_MAX;
-		}
 
-		head = insert_queue(head,first);
 
-		if(first->prev_neighbor){
-			//if first had a previous neighbor his cost just changed as well, so we delete, recompute and reinsert
-			partition_struct *prev = first->prev_neighbor;
-			if(head == prev) {
-				head = prev->next_queue;
-			}
-			delete_queue(prev);
-			compute_score(prev,fb,sr);
-			head = insert_queue(head,prev);
-		}
-		/*
-		int test = 0;
-		partition_struct *pointer = head;
+		//Recompute first->prefix_in_back where needed
+		partition_struct *pointer = first;
 		while(pointer) {
-			test++;
-			printf("%f,%i,%i,%i\t",pointer->score,pointer->min_block,pointer->max_block,pointer->max_val);
-			pointer = pointer->next_queue;
+			//the merge means one less next partition for each previous partition as well as the newly merged one.
+			pointer->next_partitions -= 1;
+			//each previous partition adds an rr and a rw to the total cost of each insert (the static part is handled elsewhere)
+			double insert_cost = pointer->next_partitions*pointer->inserts*(rr+rw);
+
+			if(pointer->next_neighbor) {
+				next->prefix_in_back = insert_cost+next->next_neighbor->prefix_in_back;
+			} else {
+				next->prefix_in_back = insert_cost;
+			}
+			if(!pointer->prev_neighbor){
+				//last so we record the total score
+				total_insert_cost = pointer->prefix_in_back;
+			}
+			pointer = pointer->prev_neighbor;
 
 		}
-		printf("\nsize: %i\n",test);
-		*/
+		//Recompute all scores
+		pointer = head;
+		high_hitter = head;
+		while(pointer) {
+			partition_struct *ps = pointer;
+			double fraction = (ps->next_partitions*ps->inserts*(rr+rw))/total_insert_cost;
+			double ghost_assignment = (double) gv * fraction;
+			ps->ghost_values = floor(ghost_assignment);
+			int inserts_remaining = ps->inserts - ps->ghost_values;
+			double dynamic_partition_cost = 0;
+			if(inserts_remaining > 0) {
+				dynamic_partition_cost = inserts_remaining*ps->next_partitions*(rr+rw);
+			}
 
+			if(ps->next_neighbor){
+				partition_struct *next = ps->next_neighbor;
+				int additional_blocks = (next->max_block-ps->min_block);
+				double score = 0.0;
+				for(int i = 0, index = ps->min_block; i <= additional_blocks; i++, index++) {
+					//compute the cost of removing the partition boundary in terms of additional read penalty
+					score += fb->backward[index]*i*sr;
+					score += fb->forward[index]*(additional_blocks-i)*sr;
+				}
+				//the score is the difference between the data movement cost of having the partition boundary,
+				//and the read penalty of not having the partition boundary
+				ps->score = (ps->partition_static_cost+dynamic_partition_cost)-score;
+			} else {
+				ps->score = -DBL_MAX;
+			}
+			if(ps->score > high_hitter->score) {
+				high_hitter = ps;
+			}
+			pointer = pointer->next_neighbor;
+		}
 	}
-	//done so return the partitioning
+
+
 	return head;
 }
+#endif
 
-
-
-void partition_data(const int* data_in, size_t size,const int* type, const int* first, const int* second, size_t work_size, const int algo, Partition_inst *out) {
-
-	//-d /home/kenneth/test/data -l /home/kenneth/test/workload -a td -t 8 -b 2 -r 1 -R 2 -w 2 -W 4 -o /home/kenneth/test/result
-
-	//-d /home/kenneth/test/data -l /home/kenneth/test/workload -a td -t 8 -b 2 -r 1 -R 2 -w 2 -W 4 -o /home/kenneth/test/result
-
+frequency_model *sorted_data_frequency_model(const int* data_in, size_t data_size, const int* type, const int* first, const int* second, size_t work_size) {
 	int block_size = 8;
+	//double seq_write = 2;
+	data data;
+	data.array = (int *) malloc(data_size*sizeof(int));
+	data.size = data_size;
+	memcpy(data.array,data_in,data_size*sizeof(int));
+	qsort(data.array,data.size,sizeof(int),cmpfunc);
+	frequency_model *fm = malloc(sizeof(frequency_model));
+
+	initialize_frequency_model(fm, data.size,block_size);
+
+	//Workload simulator
+	build_frequency_model_api(&data,work_size,type,first,second, fm);
+	free(data.array);
+	return fm;
+
+}
+
+void partition_data(frequency_model* fm,const int algo, Partition_inst *out, size_t data_size) {
+
+	//-d /home/kenneth/test/data -l /home/kenneth/test/workload -a td -t 8 -b 2 -r 1 -R 2 -w 2 -W 4 -o /home/kenneth/test/result
+
+	//-d /home/kenneth/test/data -l /home/kenneth/test/workload -a td -t 8 -b 2 -r 1 -R 2 -w 2 -W 4 -o /home/kenneth/test/result
 	double rand_read = 20;
 	double rand_write = 4;
 	double seq_read = 10;
-	//double seq_write = 2;
-	data data;
-	data.array = (int *) malloc(size*sizeof(int));
-	data.size = size;
-	memcpy(data.array,data_in,size*sizeof(int));
-	qsort(data.array,data.size,sizeof(int),cmpfunc);
-	frequency_model fm;
-
-	initialize_frequency_model(&fm, data.size,block_size);
-	partition_struct *partition_cost = (partition_struct *) malloc(fm.histogram_size*sizeof(partition_struct));
-	//Workload simulator
-	build_frequency_model_api(&data,work_size,type,first,second, &fm, partition_cost);
-
 	prefix prefix_sum;
-	prefix_sum.de = (int *) calloc(fm.histogram_size , sizeof(int));
-	prefix_sum.in = (int *) calloc(fm.histogram_size , sizeof(int));
-	prefix_sum.histogram_size = fm.histogram_size;
+	prefix_sum.de = (int *) calloc(fm->histogram_size , sizeof(int));
+	prefix_sum.in = (int *) calloc(fm->histogram_size , sizeof(int));
+	prefix_sum.histogram_size = fm->histogram_size;
 	//initialize_frequency_model(&prefix_sum, data.size,block_size);
 	//Build prefix sum
-	compute_prefix_sum(&fm,&prefix_sum);
+	compute_prefix_sum(fm,&prefix_sum);
 	//TODO: Compute the cost of data movement per partition boundary - use the prefix sum.
 	forward_backward fb;
-	fb.backward = (int*) calloc(fm.histogram_size,sizeof(int));
-	fb.forward = (int*) calloc(fm.histogram_size,sizeof(int));
-	compute_costs(&fb, partition_cost, &fm, &prefix_sum, rand_read, rand_write, seq_read);
+	fb.backward = (int*) calloc(fm->histogram_size,sizeof(int));
+	fb.forward = (int*) calloc(fm->histogram_size,sizeof(int));
+	partition_struct *partition_cost = (partition_struct *) malloc(fm->histogram_size*sizeof(partition_struct));
+	setup_partitions(fm,partition_cost);
+	compute_costs(&fb, partition_cost, fm, &prefix_sum, rand_read, rand_write, seq_read);
 	//TODO: Build Algorithm in three versions, top down, bottom up and brute force
 	partition_struct* bottom_up_cost;
 	if(algo == 0) {
-		bottom_up_cost = compute_partitioning_bottom_up(&fb, partition_cost, &fm, seq_read);
+		bottom_up_cost = compute_partitioning_bottom_up(&fb, partition_cost, fm, seq_read, data_size);
 	} else {
 		printf("unknown algorithm number: %i\n",algo);
 		printf("Defaulting to buttom up!\n");
-		bottom_up_cost = compute_partitioning_bottom_up(&fb, partition_cost, &fm, seq_read);
+		bottom_up_cost = compute_partitioning_bottom_up(&fb, partition_cost, fm, seq_read, data_size);
 	}
 
 	int part_size = 0;
@@ -694,63 +814,66 @@ void partition_data(const int* data_in, size_t size,const int* type, const int* 
 		//printf("%f,%i,%i,%i\t",pointer->score,pointer->min_block,pointer->max_block,pointer->max_val);
 		pointer = pointer->next_queue;
 	}
-	out->pivots = (int *) malloc(part_size*sizeof(int));
-	out->p_count = part_size;
+
 	pointer = bottom_up_cost;
+	partition_inst_aof* sort_structure = (partition_inst_aof *) malloc(part_size*sizeof(partition_inst_aof));
 	part_size = 0;
 	while(pointer) {
-		out->pivots[part_size] = pointer->max_val;
+		sort_structure[part_size].pivot = pointer->max_val;
+		sort_structure[part_size].part_size = pointer->part_size;
 		part_size++;
 		pointer = pointer->next_queue;
 	}
-
-	qsort(out->pivots,out->p_count,sizeof(int),cmpfunc);
-	free(data.array);
+	//free stuff to minimize peak memory usage
 	free(fb.backward);
 	free(fb.forward);
 	free(partition_cost);
 	free(prefix_sum.de);
 	free(prefix_sum.in);
-	free_frequency_model(&fm);
+
+	quicksort_custom(sort_structure,part_size,sizeof(partition_inst_aof),cmpfunc_aof,aof_swap);
+	out->pivots = (int *) malloc(part_size*sizeof(int));
+	out->p_count = part_size;
+	out->part_sizes = (int *) malloc(part_size*sizeof(int));
+	for(int i = 0; i < part_size; i++) {
+		out->pivots[i] = sort_structure[i].pivot;
+		out->part_sizes[i] = sort_structure[i].part_size;
+	}
+	free(sort_structure);
+
+	//free_frequency_model(&fm);
 }
 
-void partition_data_gv(const int* data_in, size_t size,const int* type, const int* first, const int* second, size_t work_size, const int algo, const int ghost_values, Partition_inst *out) {
+#ifdef GHOST_VALUE
 
-	//-d /home/kenneth/test/data -l /home/kenneth/test/workload -a td -t 8 -b 2 -r 1 -R 2 -w 2 -W 4 -o /home/kenneth/test/result
+void partition_data_gv(frequency_model *fm, const int data_size, const int algo, const int ghost_values, Partition_inst *out) {
 
-	//-d /home/kenneth/test/data -l /home/kenneth/test/workload -a td -t 8 -b 2 -r 1 -R 2 -w 2 -W 4 -o /home/kenneth/test/result
-
-	int block_size = 8;
 	double rand_read = 20;
 	double rand_write = 4;
 	double seq_read = 10;
-	//double seq_write = 2;
-	data data;
-	data.array = (int *) malloc(size*sizeof(int));
-	data.size = size;
-	memcpy(data.array,data_in,size*sizeof(int));
-	qsort(data.array,data.size,sizeof(int),cmpfunc);
-	frequency_model fm;
 
-	initialize_frequency_model(&fm, data.size,block_size);
-	partition_struct *partition_cost = (partition_struct *) malloc(fm.histogram_size*sizeof(partition_struct));
-	//Workload simulator
-	build_frequency_model_api(&data,work_size,type,first,second, &fm, partition_cost);
+	partition_struct *partition_cost = (partition_struct *) malloc(fm->histogram_size*sizeof(partition_struct));
 
 	prefix prefix_sum;
-	prefix_sum.de = (int *) calloc(fm.histogram_size , sizeof(int));
-	prefix_sum.in = (int *) calloc(fm.histogram_size , sizeof(int));
-	prefix_sum.histogram_size = fm.histogram_size;
+	prefix_sum.de = (int *) calloc(fm->histogram_size , sizeof(int));
+	prefix_sum.in = (int *) calloc(fm->histogram_size , sizeof(int));
+	prefix_sum.histogram_size = fm->histogram_size;
 	//initialize_frequency_model(&prefix_sum, data.size,block_size);
 	//Build prefix sum
-	compute_prefix_sum(&fm,&prefix_sum);
+	compute_prefix_sum(fm,&prefix_sum);
 	//TODO: Compute the cost of data movement per partition boundary - use the prefix sum.
 	forward_backward fb;
-	fb.backward = (int*) calloc(fm.histogram_size,sizeof(int));
-	fb.forward = (int*) calloc(fm.histogram_size,sizeof(int));
-	compute_costs(&fb, partition_cost, &fm, &prefix_sum, rand_read, rand_write, seq_read);
+	fb.backward = (int*) calloc(fm->histogram_size,sizeof(int));
+	fb.forward = (int*) calloc(fm->histogram_size,sizeof(int));
+	compute_costs(&fb, partition_cost, fm, &prefix_sum, rand_read, rand_write, seq_read);
 	//TODO: Build Algorithm in three versions, top down, bottom up and brute force
-	partition_struct* bottom_up_cost = compute_partitioning_bottom_up(&fb, partition_cost, &fm, seq_read);
+	partition_struct* bottom_up_cost;
+	if(algo ==0) {
+		bottom_up_cost = compute_partitioning_bottom_up_gv(&fb, partition_cost, fm,seq_read,rand_read,rand_write,ghost_values,data_size);
+	} else {
+		printf("Warning: Unknown algo, running bottom up\n");
+		bottom_up_cost = compute_partitioning_bottom_up_gv(&fb, partition_cost, fm,seq_read,rand_read,rand_write,ghost_values,data_size);
+	}
 
 
 	int part_size = 0;
@@ -760,24 +883,51 @@ void partition_data_gv(const int* data_in, size_t size,const int* type, const in
 		//printf("%f,%i,%i,%i\t",pointer->score,pointer->min_block,pointer->max_block,pointer->max_val);
 		pointer = pointer->next_queue;
 	}
-	out->pivots = (int *) malloc(part_size*sizeof(int));
-	out->p_count = part_size;
+
 	pointer = bottom_up_cost;
+	partition_inst_aof* sort_structure = (partition_inst_aof *) malloc(part_size*sizeof(partition_inst_aof));
 	part_size = 0;
 	while(pointer) {
-		out->pivots[part_size] = pointer->max_val;
+		sort_structure[part_size].pivot = pointer->max_val;
+		sort_structure[part_size].part_size = pointer->part_size;
+		sort_structure[part_size].ghost_count = pointer->ghost_values;
 		part_size++;
 		pointer = pointer->next_queue;
 	}
-
-	qsort(out->pivots,out->p_count,sizeof(int),cmpfunc);
-	free(data.array);
+	//free stuff to minimize peak memory usage
 	free(fb.backward);
 	free(fb.forward);
 	free(partition_cost);
 	free(prefix_sum.de);
 	free(prefix_sum.in);
-	free_frequency_model(&fm);
+
+	quicksort_custom(sort_structure,part_size,sizeof(partition_inst_aof),cmpfunc_aof,aof_swap);
+	out->pivots = (int *) malloc(part_size*sizeof(int));
+	out->p_count = part_size;
+	out->part_sizes = (int *) malloc(part_size*sizeof(int));
+	out->ghost_count = (int *) malloc(part_size*sizeof(int));
+	for(int i = 0; i < part_size; i++) {
+		out->pivots[i] = sort_structure[i].pivot;
+		out->part_sizes[i] = sort_structure[i].part_size;
+		out->ghost_count[i] = sort_structure[i].ghost_count;
+	}
+	free(sort_structure);
+
+	out->pivots = (int *) malloc(part_size*sizeof(int));
+	out->p_count = part_size;
+	out->part_sizes = (int *) malloc(part_size*sizeof(int));
+
+	pointer = bottom_up_cost;
+	part_size = 0;
+	while(pointer) {
+		out->pivots[part_size] = pointer->max_val;
+		out->pivots[part_size] = pointer->part_size;
+		out->ghost_count[part_size] = pointer->ghost_values;
+		part_size++;
+		pointer = pointer->next_queue;
+	}
 }
+
+#endif
 
 

@@ -182,7 +182,7 @@ typedef struct
 
 void
 quicksort_custom (void *const pbase, size_t total_elems, size_t size,
-		__compar_d_fn_t cmp, void *arg)
+		__compar_custom cmp, __custom_swap SWAP)
 {
 	char *base_ptr = (char *) pbase;
 
@@ -214,14 +214,14 @@ quicksort_custom (void *const pbase, size_t total_elems, size_t size,
 
 			char *mid = lo + size * ((hi - lo) / size >> 1);
 
-			if ((*cmp) ((void *) mid, (void *) lo, arg) < 0)
-				SWAP (mid, lo, size);
-			if ((*cmp) ((void *) hi, (void *) mid, arg) < 0)
-				SWAP (mid, hi, size);
+			if ((*cmp) ((void *) mid, (void *) lo) < 0)
+				SWAP (mid, lo);
+			if ((*cmp) ((void *) hi, (void *) mid) < 0)
+				SWAP (mid, hi);
 			else
 				goto jump_over;
-			if ((*cmp) ((void *) mid, (void *) lo, arg) < 0)
-				SWAP (mid, lo, size);
+			if ((*cmp) ((void *) mid, (void *) lo) < 0)
+				SWAP (mid, lo);
 			jump_over:;
 
 			left_ptr  = lo + size;
@@ -232,15 +232,15 @@ quicksort_custom (void *const pbase, size_t total_elems, size_t size,
 	     that this algorithm runs much faster than others. */
 			do
 			{
-				while ((*cmp) ((void *) left_ptr, (void *) mid, arg) < 0)
+				while ((*cmp) ((void *) left_ptr, (void *) mid) < 0)
 					left_ptr += size;
 
-				while ((*cmp) ((void *) mid, (void *) right_ptr, arg) < 0)
+				while ((*cmp) ((void *) mid, (void *) right_ptr) < 0)
 					right_ptr -= size;
 
 				if (left_ptr < right_ptr)
 				{
-					SWAP (left_ptr, right_ptr, size);
+					SWAP (left_ptr, right_ptr);
 					if (mid == left_ptr)
 						mid = right_ptr;
 					else if (mid == right_ptr)
@@ -308,11 +308,11 @@ quicksort_custom (void *const pbase, size_t total_elems, size_t size,
        and the operation speeds up insertion sort's inner loop. */
 
 		for (run_ptr = tmp_ptr + size; run_ptr <= thresh; run_ptr += size)
-			if ((*cmp) ((void *) run_ptr, (void *) tmp_ptr, arg) < 0)
+			if ((*cmp) ((void *) run_ptr, (void *) tmp_ptr) < 0)
 				tmp_ptr = run_ptr;
 
 		if (tmp_ptr != base_ptr)
-			SWAP (tmp_ptr, base_ptr, size);
+			SWAP (tmp_ptr, base_ptr);
 
 		/* Insertion sort, running from left-hand-side up to right-hand-side.  */
 
@@ -320,7 +320,7 @@ quicksort_custom (void *const pbase, size_t total_elems, size_t size,
 		while ((run_ptr += size) <= end_ptr)
 		{
 			tmp_ptr = run_ptr - size;
-			while ((*cmp) ((void *) run_ptr, (void *) tmp_ptr, arg) < 0)
+			while ((*cmp) ((void *) run_ptr, (void *) tmp_ptr) < 0)
 				tmp_ptr -= size;
 
 			tmp_ptr += size;

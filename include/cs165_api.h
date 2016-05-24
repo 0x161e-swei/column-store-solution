@@ -113,8 +113,11 @@ typedef struct _column {
 	DArray_INT *data;
 	
 	int *pivots;
+	int *part_size;
 	pos_t *p_pos;
 	size_t partitionCount;
+
+	void *pivot_tree;
 	
 	#ifdef SWAPLATER
 	pos_t *pos;
@@ -185,6 +188,7 @@ typedef enum StatusCode {
 	QUIT,
 	/* A shutdown command was executed */
 	SHUTDOWN,
+	PARTALGO_DONE
 } StatusCode;
 
 // status declares an error code and associated message

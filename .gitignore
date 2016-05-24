@@ -30,11 +30,11 @@ stamp-h1
 # Executables
 *.out
 bin/*
-/server
 /client
-/opt_part_server
 /demo_opt_part_server
-/configure
+/opt_part_server
+configure
+
 #ide stuff
 tags
 Tags
@@ -47,13 +47,14 @@ r*hs
 perf*
 # makefile generated
 **/.deps/*
- 
+
+# Frontend files
+/RUM_Visual_Front/* 
 # runtime products
-dbinfo
-foo.*
 
 # test
 data/*
 testtool/*
 !testtool/dataGen.py
 !testtool/workGen.py
+/RUM_Visual_Front_bak/*

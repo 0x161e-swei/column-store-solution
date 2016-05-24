@@ -24,6 +24,9 @@ status create_column(Table *table, const char* name, Column** col) {
 		(*col)->index = NULL;
 		(*col)->partitionCount = 1;
 		(*col)->pivots = NULL;
+		// TODO: need to free it somehow
+		(*col)->pivot_tree = NULL;
+		(*col)->part_size = NULL;
 		(*col)->p_pos = NULL;
 		#ifdef SWAPLATER
 		(*col)->pos = NULL;

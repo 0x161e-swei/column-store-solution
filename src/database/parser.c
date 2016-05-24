@@ -3,23 +3,28 @@
 #include <regex.h>
 #include <string.h>
 #include <ctype.h>
+#include <stdlib.h>
 #include "db.h"
 #include "table.h"
 #include "column.h"
 #include "fileparser.h"
 #include "query.h"
-// Prototype for Helper function that executes that actual parsing after
-// parse_command_string has found a matching regex.
-status parse_dsl(char* str, dsl* d, db_operator* op);
+#include "utils.h"
+#include "index.h"
 
+
+#ifdef DEMO
+status parse_command_string(struct cmdsocket *cmdSoc, const char* str, dsl** commands, db_operator* op)
+#else
 // Finds a possible matching DSL command by using regular expressions.
 // If it finds a match, it calls parse_command to actually process the dsl.
-status parse_command_string(char* str, dsl** commands, db_operator* op)
+status parse_command_string(const char* str, dsl** commands, db_operator* op)
+#endif
 {
 	log_info("Parsing: %s\n", str);
 	status s;
 	// Create a regular expression to parse the string
-	
+	log_info("INSIDE PARSE COMMAND STRING\n");
 	int ret;
 
 	// Track the number of matches; a string must match all
@@ -30,7 +35,7 @@ status parse_command_string(char* str, dsl** commands, db_operator* op)
 		regex_t regex;
 		dsl* d = commands[i];
 		if (regcomp(&regex, d->c, REG_EXTENDED) != 0) {
-			log_err("Could not compile regex\n");
+			log_err("Could not compile regex %s\n", d->c);
 		}
 
 		// Bind regular expression associated with the string
@@ -42,7 +47,11 @@ status parse_command_string(char* str, dsl** commands, db_operator* op)
 			log_info("Found Command: %d\n", i);
 			// Here, we actually strip the command as appropriately
 			// based on the DSL to get the variable names.
+			#ifdef DEMO
+			return parse_dsl(cmdSoc, str, d, op);
+			#else
 			return parse_dsl(str, d, op);
+			#endif
 		}
 	}
 
@@ -51,7 +60,11 @@ status parse_command_string(char* str, dsl** commands, db_operator* op)
 	return s;
 }
 
-status parse_dsl(char* str, dsl* d, db_operator* op)
+#ifdef DEMO
+status parse_dsl(struct cmdsocket *cmdSoc, const char* str, dsl* d, db_operator* op)
+#else
+status parse_dsl(const char* str, dsl* d, db_operator* op)
+#endif
 {
 	// Use the commas to parse out the string
 	char open_paren[2] = "(";
@@ -220,11 +233,6 @@ status parse_dsl(char* str, dsl* d, db_operator* op)
 		// TODO(USER): Uncomment this section after you're able to grab the tbl1
 		Column* col1 = NULL;
 		s = create_column(tbl1, full_name, &col1);
-		if (OK != s.code) {
-			// Something went wrong
-			log_err("cannot create the column\n");
-			return s;
-		}
 
 		// TODO(USER): You must track your variable in a variable pool now!
 		// This means later on when I refer to <full_name>, I should get this
@@ -320,7 +328,7 @@ status parse_dsl(char* str, dsl* d, db_operator* op)
 		Column *tmp_col = NULL;
 		args = prepare_col(args, &tmp_tbl, &tmp_col);
 
-		if (NULL == tmp_tbl || NULL == tmp_tbl) {
+		if (NULL == tmp_tbl || NULL == tmp_col) {
 			log_err("wrong column/table name in show table\n");
 			ret.code = ERROR;
 			return ret;
@@ -339,6 +347,73 @@ status parse_dsl(char* str, dsl* d, db_operator* op)
 		ret.code = OK;
 		return ret;
 	}
+	else if (d->g == PART_PHYS) {
+		status ret;
+		// Create a working copy, +1 for '\0'
+		char* str_cpy = malloc(strlen(str) + 1);
+		strncpy(str_cpy, str, strlen(str) + 1);
+
+		// This gives us everything inside the ("colname")
+		strtok(str_cpy, open_paren);
+		char* args = strtok(NULL, close_paren);
+
+		// prepare table and column
+		Table *tmp_tbl = NULL;
+		Column *tmp_col = NULL;
+		args = prepare_col(args, &tmp_tbl, &tmp_col);
+
+		if (NULL == tmp_tbl || NULL == tmp_col) {
+			log_err("wrong column/table name in partition test\n");
+			ret.code = ERROR;
+			return ret;
+		}
+		#ifdef DEMO
+		ret = do_physical_partition(cmdSoc, tmp_tbl, tmp_col);
+		#else
+		ret = do_physical_partition(tmp_tbl, tmp_col);
+		#endif
+		return ret;
+	}
+	else if (d->g == PART_DECI) {
+		status ret;
+		// Create a working copy, +1 for '\0'
+		char* str_cpy = malloc(strlen(str) + 1);
+		strncpy(str_cpy, str, strlen(str) + 1);
+
+		// This gives us everything inside the ("colname")
+		strtok(str_cpy, open_paren);
+		char* args = strtok(NULL, close_paren);
+
+		// prepare table and column
+		Table *tmp_tbl = NULL;
+		Column *tmp_col = NULL;
+		args = prepare_col(args, &tmp_tbl, &tmp_col);
+
+		if (NULL == tmp_tbl || NULL == tmp_col) {
+			log_err("wrong column/table name in partition test\n");
+			ret.code = ERROR;
+			return ret;
+		}
+
+		tmp_tbl->primary_indexed_col = tmp_col;
+		// 
+		const char* filename = strtok(args, quotes);
+	
+		char *algo = strtok(NULL, comma);
+		int num = 0;
+		if (algo != NULL) {
+			num = atoi(algo);
+		}
+		#ifdef DEMO
+		ret = do_parition_decision(cmdSoc, tmp_tbl, tmp_col, num, filename);
+		#else
+		ret = do_parition_decision(tmp_tbl, tmp_col, num, filename);
+		#endif
+		free(str_cpy);
+		str_cpy = NULL;
+
+		return ret;
+	}
 	else if (d->g == PARTITION_TEST) {
 		status ret;
 		// Create a working copy, +1 for '\0'
@@ -354,7 +429,7 @@ status parse_dsl(char* str, dsl* d, db_operator* op)
 		Column *tmp_col = NULL;
 		args = prepare_col(args, &tmp_tbl, &tmp_col);
 
-		if (NULL == tmp_tbl || NULL == tmp_tbl) {
+		if (NULL == tmp_tbl || NULL == tmp_col) {
 			log_err("wrong column/table name in partition test\n");
 			ret.code = ERROR;
 			return ret;
@@ -365,25 +440,34 @@ status parse_dsl(char* str, dsl* d, db_operator* op)
 		const char* filename = strtok(args, quotes);
 		log_info("workload file: \"%s\"\n", filename);
 		uint lineCount = 0;
-		uint fieldCount = 0;
-		collect_file_info(filename, &lineCount, &fieldCount);
+		// uint fieldCount = 0;
+		// collect_file_info(filename, &lineCount, &fieldCount);
 
-		if (1 >= lineCount) {
-			log_err("cannot workload file\n");
-			ret.code = ERROR;
-			return ret;
-		}
+		// if (1 >= lineCount) {
+		// 	log_err("cannot workload file\n");
+		// 	ret.code = ERROR;
+		// 	return ret;
+		// }
+		// lineCount++;
 		
-		int *op_type = malloc(sizeof(int) * (lineCount + 1));
-		int *num1 = malloc(sizeof(int) * (lineCount + 1));
-		int *num2 = malloc(sizeof(int) * (lineCount + 1));
-		workload_parse(filename, op_type, num1, num2);
-		
+		// The following lines commented out are used for workload pre-processing for front-end server
+		// printf("parse done \n");
+		// doSomething(op_type, num1, num2, lineCount);
+
+		// printf("job done\n");
+		// ret.code = OK;
+		// return ret;
+		int *op_type = NULL; // malloc(sizeof(int) * lineCount);
+		int *num1 = NULL; // malloc(sizeof(int) * lineCount);
+		int *num2 = NULL; // malloc(sizeof(int) * lineCount);
+		// workload_parse(workload, op_type, num1, num2);
+		past_workload(filename[0], &op_type, &num1, &num2, &lineCount);
+
 		Workload w;
 		w.ops = op_type;
 		w.num1 = num1;
 		w.num2 = num2;
-		w.count = lineCount + 1;
+		w.count = lineCount;
 		// Load data from disk if not in memory
 		if (tmp_tbl->length != 0) {
 			// do the loading later
@@ -401,6 +485,9 @@ status parse_dsl(char* str, dsl* d, db_operator* op)
 		// TODO: make create_index a db operator?
 		ret = create_index(tmp_tbl, tmp_col, PARTI, w);
 		
+		if (op_type) free(op_type);
+		if (num1) free(num1);
+		if (num2) free(num2);
 		// Free the str_cpy
 		free(str_cpy);
 		str_cpy = NULL;
@@ -420,85 +507,80 @@ status parse_dsl(char* str, dsl* d, db_operator* op)
 	return fail;
 }
 
-void workload_parse(const char *filename, int *ops, int *num1, int *num2) {
-	FILE* fp = fopen(filename, "r");
-	char *line = NULL;
-	ssize_t read;
-	size_t len = 0;
-	size_t count = 0;
-	db_operator *op = malloc(sizeof(db_operator));	
-	if (NULL != fp) {
-		while (-1 != (read = getline(&line, &len, fp))) {
-			parse_command_string(line, dsl_commands, op);
-			switch(op->type) {
-				case SELECT_COL: {
-					// TODO: 
-					if (((op->c[0]).p_val + 1) == (op->c[1]).p_val) {
-						ops[count] = 0;
-						num1[count] = (op->c[0]).p_val;
-						num2[count] = -1;
-					}
-					else {
-						ops[count] = 1;
-						num1[count] = (op->c[0]).p_val;
-						num2[count] = (op->c[1]).p_val;
-					}
-					// cleanups
-					free(op->res_name);
-					free(op->tables);
-					free((op->domain).cols);
-					free(op->c);
-					break;
-				}
-				case INSERT: {
-					ops[count] = 2;
-					size_t i = 0;
-					for (; i < op->tables[0]->col_count; i++) {
-						if (op->tables[0]->cols[i] == op->tables[0]->primary_indexed_col) break;
-					}
-					num1[count] = op->value1[i];
-					num2[count] = -1;
-					free(op->tables);
-					free(op->value1);
-					break;
-				}
-				case UPDATE: {
-					ops[count] = 3;
-					num1[count] = op->value1[0];
-					num2[count] = op->value2[0];
-					free(op->tables);
-					free((op->domain).cols);
-					free(op->value1);
-					free(op->value2);
-					break;
-				}
-				case DELETE: {
-					ops[count] = 4;
-					num1[count] = op->value1[0];
-					num2[count] = -1;
-					free(op->tables);
-					free((op->domain).cols);
-					free(op->value1);
-					break;
-				}
-				default: break;
-				// case SELECT_PRE: {
-				// 	break;
-				// }
-				// case DELETE_POS: {
-				// 	break;
-				// }
-			}
-			count++;
-			if (line) free(line);
-			line = NULL;
+/**
+ * The past_workload function reads the pre-prorcessed past workload stops ored on disk
+ * int workload indicates which workload to use
+ * int **ops stores the opertions
+ * int **num1 stores the first number of the operation
+ * int **num2 stores the second number of the operation, if any
+ * int *lineCount store the count of operations in the past workload
+ */
+void past_workload(char workload, int **ops, int **num1, int **num2, uint *lineCount) {
+
+	char pq_cost[] 		= "data/workload0/pq_cost";
+	char rq_cost_beg[] 	= "data/workload0/rq_cost_beg";
+	char rq_cost_end[] 	= "data/workload0/rq_cost_end";
+	char in_cost[] 		= "data/workload0/in_cost";
+	char up_cost_beg[] 	= "data/workload0/up_cost_beg";
+	char up_cost_end[] 	= "data/workload0/up_cost_end";
+	char de_cost[] 		= "data/workload0/de_cost";
+	pq_cost[13]			= workload;
+	rq_cost_beg[13]		= workload;
+	rq_cost_end[13]		= workload;
+	in_cost[13] 		= workload;
+	up_cost_beg[13]		= workload;
+	up_cost_end[13]		= workload;
+	de_cost[13] 		= workload;
+	FILE *files[7];
+	files[0] = fopen(pq_cost, "r");
+	files[1] = fopen(rq_cost_beg, "r");
+	files[2] = fopen(rq_cost_end, "r");
+	files[3] = fopen(in_cost, "r");
+	files[4] = fopen(up_cost_beg, "r");
+	files[5] = fopen(up_cost_end, "r");
+	files[6] = fopen(de_cost, "r");
+
+	uint line = 0;
+	int len[7];
+	for (int i = 0; i < 7; i++) {
+		if (files[i] == NULL) {
+			log_err("cannot open files %d\n", i);
+			return;
 		}
-		if (line) free(line);
-		fclose(fp);
-		free(op);
-		// debug("after workload parsed:\n");
-		// for (size_t ii = 0; ii < count; ii++) {
-		// 	printf("%d %d %d\n", ops[ii], num1[ii], num2[ii]);
-		// }
+		fread(&len[i], sizeof(int), 1, files[i]);
+		if (i != 2 && i != 5) line += len[i];
 	}
+	*ops = malloc(sizeof(int) * line);
+	*num1 = malloc(sizeof(int) * line);
+	*num2 = malloc(sizeof(int) * line);
+
+	int pos = 0;
+	int i = 0;
+	while (i < 7) {
+		int op = i;
+		if (i == 3) {
+			op = 2;
+		}
+		else if (i == 4) {
+			op = 3;
+		}
+		else if (i == 6) {
+			op = 4;
+		}
+		for (int j = 0; j < len[i]; j++) {
+			(*ops)[pos + j] = op;
+		}
+		// TODO: fread should be handled with multiple attampts if the files are large
+		fread((*num1 + pos), sizeof(int), len[i], files[i]);
+		if (i == 1 || i == 4) {
+			i++;
+			fread((*num2 + pos), sizeof(int), len[i], files[i]);
+		}
+		else {
+			memset((*num2 + pos), 0, sizeof(int) * len[i]);
+		}
+		pos += len[i];
+		i++;
+	}
+	*lineCount = line;
 }

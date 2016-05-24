@@ -7,7 +7,8 @@
 // There will be changes that you will need to include here.
 
 // the only global db 
-Db *database;
+Db *database = NULL;
+char *data_path = NULL;
 
 status grab_db(const char* db_name, Db** db) {
 	status s;
@@ -75,7 +76,10 @@ status sync_db(Db* db __attribute__((unused))) {
 	FILE *dbinfo;
 	status s;
 	clear_res_list();
-	if (NULL != database && NULL != (dbinfo = fopen("data/dbinfo", "w+"))) {
+	char *dbinfo_name = malloc(sizeof(char) * strlen(data_path) + 7);
+	strncpy(dbinfo_name, data_path, strlen(data_path) + 1);
+	strncat(dbinfo_name, "dbinfo", 6);
+	if (NULL != database && NULL != (dbinfo = fopen(dbinfo_name, "w+"))) {
 		log_info("saving the database %s...\n", database->name);
 		/* Write length of database name, 
 			database name and table count to dbinfo
@@ -112,8 +116,8 @@ status sync_db(Db* db __attribute__((unused))) {
 					HASH_DEL(col_hash_list, tbl->cols[i]);
 					if (NULL != (tbl->cols[i])->data) {
 						char *dataname;
-						dataname = malloc(sizeof(char) * (len + 6));
-						strncpy(dataname, "data/", 6);
+						dataname = malloc(sizeof(char) * (len + strlen(data_path) + 1));
+						strncpy(dataname, data_path, strlen(data_path) + 1);
 						strncat(dataname, (tbl->cols[i])->name, len);
 						printf("%s\n", dataname);
 						// FILE *fwp = fopen((tbl->cols[i])->name, "w+");

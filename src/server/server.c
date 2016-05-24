@@ -87,7 +87,11 @@ db_operator* parse_command(message* recv_message, message* send_message) {
 		case OK:
 			log_info("query to be executed!\n");
 			send_message->status = OK_WAIT_FOR_RESPONSE;
+			break;
 		default: {
+			free(dbo);
+			dbo = NULL;
+			send_message->status = OK_DONE;
 			break;
 		}
 	}
@@ -231,7 +235,10 @@ bool handle_client(int client_socket) {
 					exit(1);
 				}
 				// TODO: HOW TO FREE THIS STR
-				// free(res);
+			}
+			if (res != NULL) {
+				free(res);
+				res = NULL;
 			}
 		}
 	} while (!done);
@@ -290,19 +297,31 @@ int setup_server() {
 // After handling the client, it will exit.
 // You will need to extend this to handle multiple concurrent clients
 // and remain running until it receives a shut-down command.
-int main(void)
+int main(int argc, char const *argv[])
 {
+
+	if (argc != 2 || strlen(argv[1]) != 1) {
+		log_err("Usage: input a one-digit number to choose dataset!\n");
+		exit(1);
+	}
+
 	int server_socket = setup_server();
 	if (server_socket < 0) {
 		exit(1);
 	}
-
 	// Populate the global dsl commands
 	dsl_commands = dsl_commands_init();
 
 	Db *default_db = NULL;
 	OpenFlags flags = LOAD;
-	status s = open_db("data/dbinfo", &default_db, flags);
+	data_path = malloc(sizeof(char) * 15);
+	strcpy(data_path, "data/dataset1/");
+	data_path[12] = *argv[1];
+	char *dbinfo = malloc(sizeof(char) * 21);
+	strncpy(dbinfo, data_path, strlen(data_path) + 1);
+	strncat(dbinfo, "dbinfo", 6);
+	debug("loading db from %s\n", dbinfo);
+	status s = open_db(dbinfo, &default_db, flags);
 
 	if (ERROR == s.code) {
 		log_info("No database found on server or database info corrupted\n");
@@ -310,7 +329,6 @@ int main(void)
 	else {
 		log_info("Database found on server\n");
 	}
-
 
 	log_info("Waiting for a connection %d ...\n", server_socket);
 
@@ -326,7 +344,7 @@ int main(void)
 		}
 
 		if (NULL == database) {
-			open_db("data/dbinfo", &default_db, flags);
+			open_db(dbinfo, &default_db, flags);
 		}
 
 		shutdown_server = handle_client(client_socket);
@@ -337,6 +355,7 @@ int main(void)
 		if (NULL != default_db)
 			sync_db(default_db);
 	}
-
+	free(data_path);
+	free(dbinfo);
 	return 0;
 }
