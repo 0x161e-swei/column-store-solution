@@ -90,6 +90,7 @@ void collect_file_info(const char* filename, unsigned int *lineCount, unsigned i
 		*lineCount = -1;
 		*fieldCount = -1;
 	}
+	log_info("file lines: %u\n", *lineCount);
 	return;
 }
 

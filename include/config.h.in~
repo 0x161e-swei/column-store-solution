@@ -1,8 +1,5 @@
 /* include/config.h.in.  Generated from configure.ac by autoheader.  */
 
-/* Define for debug */
-#undef DEBUG
-
 /* Define to 1 if you have the <fcntl.h> header file. */
 #undef HAVE_FCNTL_H
 

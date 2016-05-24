@@ -370,7 +370,7 @@ static void phys_part_func(struct cmdsocket *cmdsocket , struct command *command
 			free(part_inst->ghost_count);
 		}
 		#endif
-		free(part_inst);
+		// free(part_inst);
 		free(demo_dsl);
 	}
 	else {

@@ -326,7 +326,7 @@ status parse_dsl(const char* str, dsl* d, db_operator* op)
 		Column *tmp_col = NULL;
 		args = prepare_col(args, &tmp_tbl, &tmp_col);
 
-		if (NULL == tmp_tbl || NULL == tmp_tbl) {
+		if (NULL == tmp_tbl || NULL == tmp_col) {
 			log_err("wrong column/table name in show table\n");
 			ret.code = ERROR;
 			return ret;
@@ -428,7 +428,7 @@ status parse_dsl(const char* str, dsl* d, db_operator* op)
 		Column *tmp_col = NULL;
 		args = prepare_col(args, &tmp_tbl, &tmp_col);
 
-		if (NULL == tmp_tbl || NULL == tmp_tbl) {
+		if (NULL == tmp_tbl || NULL == tmp_col) {
 			log_err("wrong column/table name in partition test\n");
 			ret.code = ERROR;
 			return ret;
@@ -456,7 +456,7 @@ status parse_dsl(const char* str, dsl* d, db_operator* op)
 
 		// The following lines commented out are used for workload pre-processing for front-end server
 		printf("parse done \n");
-		doSomething(op_type, num1, num2, lineCount + 1);
+		doSomething(op_type, num1, num2, lineCount);
 
 		printf("job done\n");
 		ret.code = OK;

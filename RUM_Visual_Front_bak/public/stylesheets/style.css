@@ -1,0 +1,45 @@
+/*
+@import url("https://maxcdn.bootstrapcdn.com/font-awesome/4.5.0/css/font-awesome.min.css");
+@import url("https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css");
+body {
+  padding: 50px;
+  font: 14px "Lucida Grande", Helvetica, Arial, sans-serif;
+}
+a {
+  color: #00B7FF;
+}
+*/
+
+
+svg {
+  font: 10px sans-serif;
+}
+.area {
+  fill: steelblue;
+  clip-path: url(#clip);
+}
+.bar {
+  fill: green;
+}
+.bar text {
+  fill: #fff;
+}
+/*    .bar:hover {
+        fill: brown;
+    }*/
+
+.axis {
+  font: 10px sans-serif;
+}
+.axis path,
+.axis line {
+  fill: none;
+  stroke: #000;
+  shape-rendering: crispEdges;
+}
+
+.brush .extent {
+  stroke: #fff;
+  fill-opacity: .200;
+  shape-rendering: crispEdges;
+}
