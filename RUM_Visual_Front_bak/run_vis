@@ -1,2 +1,0 @@
-#! /bin/bash
-DEBUG=RUM_Visual:* npm start
