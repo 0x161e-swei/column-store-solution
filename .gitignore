@@ -55,6 +55,7 @@ perf*
 # test
 data/*
 testtool/*
+!testtool/gen.cfg
 !testtool/dataGen.py
 !testtool/workGen.py
 /RUM_Visual_Front_bak/*

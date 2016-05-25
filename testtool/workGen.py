@@ -10,15 +10,13 @@ Pin = 0.2
 Pup = 0.2
 Pde = 0.2
 pq_dis = 'uniform'
-rq_sel_dis = 'uniform'
+rq_sel = 0.01
 rq_end_dis = 'uniform'
 in_dis = 'uniform'
 up_dis = 'uniform'
 de_dis = 'uniform'
 pq_para_0 = 0
 pq_para_1 = 0
-rq_sel_para_0 = 0
-rq_sel_para_1 = 0
 rq_end_para_0 = 0
 rq_end_para_1 = 0
 in_para_0 = 0
@@ -42,7 +40,7 @@ def numberGen(dis, para_0, para_1, domain):
 	if dis == 'beta':
 		num = numpy.random.beta(para_0, para_1) * domain
 	elif dis == 'uniform':
-		num = numpy.random.uniform(para_0, para_1) * domain
+		num = numpy.random.uniform(0, 1) * domain
 	elif dis == 'zipf':
 		num = numpy.random.zipf(para_0) * domain
 	elif dis == 'gauss':
@@ -61,13 +59,12 @@ def workGen(d):
 			fwork.write('p=s('+ col_name + ',' + str(num) + ',' + str(num_1) + ')\n')
 		elif t < (Ppq + Prq):	# range query
 			end = int(numberGen(rq_end_dis, rq_end_para_0, rq_end_para_1, dataDomain))
-			sel = numberGen(rq_sel_dis, rq_sel_para_0, rq_sel_para_1, 1)
-			while ((end + dataDomain * sel) > dataDomain and (end - dataDomain * sel) < 0):
-				sel = numberGen(rq_sel_dis, rq_sel_para_0, rq_sel_para_1, 1)
-			if (end + dataDomain * sel) <  dataDomain:
-				fwork.write('p=s('+ col_name + ',' + str(end) + ',' + str(int(end + dataDomain * sel)) + ')\n')
+			while ((end + dataDomain * rq_sel) > dataDomain and (end - dataDomain * rq_sel) < 0):
+				end = int(numberGen(rq_end_dis, rq_end_para_0, rq_end_para_1, dataDomain))
+			if (end + dataDomain * rq_sel) <  dataDomain:
+				fwork.write('p=s('+ col_name + ',' + str(end) + ',' + str(int(end + dataDomain * rq_sel)) + ')\n')
 			else:
-				fwork.write('p=s('+ col_name + ',' + str(int(end - dataDomain * sel)) + ',' + str(end) + ')\n')
+				fwork.write('p=s('+ col_name + ',' + str(int(end - dataDomain * rq_sel)) + ',' + str(end) + ')\n')
 		elif t < (Ppq + Prq + Pin): # insert
 			i_num = int(numberGen(in_dis, in_para_0, in_para_1, dataDomain))
 			fwork.write('i('+ tbl_name + ',' + str(i_num))
@@ -117,8 +114,7 @@ def readFloat(option, default):
 def readPara(dis, option_prefix, ):
 	global pq_para_0
 	global pq_para_1
-	global rq_sel_para_0
-	global rq_sel_para_1
+	global rq_sel
 	global rq_end_para_0
 	global rq_end_para_1
 	global in_para_0
@@ -145,10 +141,8 @@ def readPara(dis, option_prefix, ):
 	if option_prefix == 'pq_':
 		pq_para_0 = para_0
 		pq_para_1 = para_1
-	elif option_prefix == 'rq_sel_':
-		rq_sel_para_0 = para_0
-		rq_sel_para_1 = para_1
 	elif option_prefix == 'rq_end_':
+		rq_sel = readFloat('rq_sel', rq_sel)
 		rq_end_para_0 = para_0
 		rq_end_para_1 = para_1
 	elif option_prefix == 'in_':
@@ -178,7 +172,6 @@ def readConfig():
 	global Pup
 	global Pde
 	global pq_dis
-	global rq_sel_dis
 	global rq_end_dis
 	global in_dis
 	global up_dis
@@ -190,13 +183,11 @@ def readConfig():
 	Pup = readFloat('up_percentage', Pup)
 	Pde = readFloat('de_percentage', Pde)
 	pq_dis = readDis('pq_dis')
-	rq_sel_dis = readDis('rq_sel_dis')
 	rq_end_dis = readDis('rq_end_dis')
 	in_dis = readDis('in_dis')	
 	up_dis = readDis('up_dis')
 	de_dis = readDis('de_dis')
 	readPara(pq_dis, 'pq_')
-	readPara(rq_sel_dis, 'rq_sel_')
 	readPara(rq_end_dis, 'rq_end_')
 	readPara(in_dis, 'in_')
 	readPara(up_dis, 'up_')
