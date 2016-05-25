@@ -131,7 +131,7 @@ def readPara(dis, option_prefix, ):
 		para_1 = readFloat(option_prefix + 'beta_b', para_1)
 	elif dis == 'uniform':
 		para_0 = readInt(option_prefix + 'uniform_low', para_0)
-		para_1 = raedInt(option_prefix + 'uniform_low', para_1)
+		para_1 = readInt(option_prefix + 'uniform_high', para_1)
 	elif dis == 'zipf':
 		para_0 = readFloat(option_prefix + 'zipf_s', para_0)
 	elif dis == 'gauss':
