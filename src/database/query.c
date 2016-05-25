@@ -135,15 +135,24 @@ status query_prepare(const char* query, dsl* d, db_operator* op) {
 		op->value2 = NULL;
 
 		// Compose the comparator
-		op->c = malloc(sizeof(comparator) * 2);
-		(op->c[0]).p_val = low;
-		(op->c[0]).type = GREATER_THAN | EQUAL;
-		(op->c[0]).mode = AND;
-		(op->c[1]).p_val = high;
-		(op->c[1]).type = LESS_THAN;
-		(op->c[1]).mode = NONE;
-		(op->c[0]).next_comparator = &(op->c[1]);
-		(op->c[1]).next_comparator = NULL;
+		if (low + 1 == high) {
+			op->c = malloc(sizeof(comparator) * 1);
+			(op->c[0]).p_val = low;
+			(op->c[0]).type = EQUAL;
+			(op->c[0]).mode = NONE;
+			(op->c[0]).next_comparator = NULL;
+		}
+		else {
+			op->c = malloc(sizeof(comparator) * 2);
+			(op->c[0]).p_val = low;
+			(op->c[0]).type = GREATER_THAN | EQUAL;
+			(op->c[0]).mode = AND;
+			(op->c[1]).p_val = high;
+			(op->c[1]).type = LESS_THAN;
+			(op->c[1]).mode = NONE;
+			(op->c[0]).next_comparator = &(op->c[1]);
+			(op->c[1]).next_comparator = NULL;
+		}
 
 		// Keep track of the name for further refering
 		op->res_name = pos_var;
@@ -552,12 +561,44 @@ status query_prepare(const char* query, dsl* d, db_operator* op) {
  */
 status query_execute(db_operator* op, Result** results) {
 	status s;
+	struct timespec tic, toc;
 	switch (op->type) {
 		case SELECT_COL: {
-			if (NULL == (op->domain).cols[0]->data && 0 != op->tables[0]->length) {
-				load_column4disk((op->domain).cols[0], op->tables[0]->length);
+			// point query
+			if (op->c[0].type == EQUAL) {
+				// ######################################
+				// Timing the program
+				clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &tic);
+				// ######################################
+
+				if (NULL == (op->domain).cols[0]->data && 0 != op->tables[0]->length) {
+					load_column4disk((op->domain).cols[0], op->tables[0]->length);
+				}
+				s = col_point_query((op->domain).cols[0], op->c[0].p_val, results);
+				// ######################################
+				// Timing the program
+				clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &toc);
+				pq_total = clock_timeadd(pq_total, clock_timediff(tic, toc));
+				// ######################################
 			}
-			s = col_scan(op->c, (op->domain).cols[0], results);
+			// for testing purpose, we assume others are all range queries
+			else {
+				// ######################################
+				// Timing the program
+				clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &tic);
+				// ######################################
+
+				if (NULL == (op->domain).cols[0]->data && 0 != op->tables[0]->length) {
+					load_column4disk((op->domain).cols[0], op->tables[0]->length);
+				}
+				s = col_range_query((op->domain).cols[0], op->c[0].p_val, op->c[1].p_val, results);
+				// ######################################
+				// Timing the program
+				clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &toc);
+				rq_total = clock_timeadd(rq_total, clock_timediff(tic, toc));
+				// ######################################
+			}
+			// s = col_scan(op->c, (op->domain).cols[0], results);
 			if (OK != s.code) {
 				// Something Wrong
 				return s;
@@ -593,6 +634,10 @@ status query_execute(db_operator* op, Result** results) {
 			break;
 		}
 		case DELETE: {
+			// ######################################
+			// Timing the program
+			clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &tic);
+			// ######################################
 			if (0 != op->tables[0]->length) {
 				for (size_t i = 0; i < op->tables[0]->col_count; i++) {
 					if (NULL == (op->tables[0])->cols[i]->data) {
@@ -602,6 +647,11 @@ status query_execute(db_operator* op, Result** results) {
 			}
 			log_info("going to exec delete\n");
 			delete_with_pointQuery(op->tables[0], (op->domain).cols[0], op->value1[0]);
+			// ######################################
+			// Timing the program
+			clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &toc);
+			de_total = clock_timeadd(de_total, clock_timediff(tic, toc));
+			// ######################################
 			break;
 		}
 		case DELETE_POS: {
@@ -623,6 +673,11 @@ status query_execute(db_operator* op, Result** results) {
 			break;
 		}
 		case INSERT: {
+			// ######################################
+			// Timing the program
+			clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &tic);
+			// ######################################
+
 			log_info("going to exec insert\n");
 			if (0 != op->tables[0]->length) {
 				for (size_t i = 0; i < op->tables[0]->col_count; i++) {
@@ -636,18 +691,40 @@ status query_execute(db_operator* op, Result** results) {
 				log_err("cannot insert in table %s\n", (op->tables[0])->name);
 				return s;
 			}
+			// ######################################
+			// Timing the program
+			clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &toc);
+			in_total = clock_timeadd(in_total, clock_timediff(tic, toc));
+			// ######################################
+
 			break;
 		}
 		case UPDATE: {
+			// ######################################
+			// Timing the program
+			clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &tic);
+			// ######################################
+
 			log_info("going to exec update\n");
 			if (NULL == (op->domain).cols[0]->data && 0 != op->tables[0]->length) {
 				load_column4disk((op->domain).cols[0], op->tables[0]->length);
 			}
-			s = update_with_pointQuery((op->domain).cols[0], op->value1[0], op->value2[0]);
+			// if ((op->domain).cols[0]->partitionCount > 1) {
+				s = update_with_pointQuery(op->tables[0], (op->domain).cols[0], op->value1[0], op->value2[0]);
+			// }
+			// else {
+			// 	s = update_in_place((op->domain).cols[0], op->value1[0], op->value2[0]);
+			// }
 			if (OK != s.code) {
 				// something wrong...
 				return s;
 			}
+			// ######################################
+			// Timing the program
+			clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &toc);
+			up_total = clock_timeadd(up_total, clock_timediff(tic, toc));
+			// ######################################
+
 			break;
 		}
 		default:
@@ -846,7 +923,6 @@ size_t binary_search_pivots(int *pivots, size_t len, int key){
 	return beg;
 }
 
-// TODO: is it necessary to have an extra point query for delete?
 status col_point_query(Column *col, int val, Result **r) {
 	status s;
 	if (NULL != col) {
@@ -874,17 +950,19 @@ status col_point_query(Column *col, int val, Result **r) {
 		}
 		for (pos_t i = beg; i < end; i++) {
 			if (val == (col->data)->content[i]) {
-				// TODO: Results storing needs improving later
+				// At most one value qualifies as we are assuming distinct value
 				(*r)->num_tuples++;
 				(*r)->token = realloc((*r)->token, (*r)->num_tuples * sizeof(Payload));
 				(*r)->token[(*r)->num_tuples - 1].pos = i;
+				// as we are assuming distinct values, so we break here
+				break;
 			}
 		}
 		s.code = OK;
 		log_info("point query %u tuple qualified\n", (*r)->num_tuples);
-		for (uint ii = 0; ii < (*r)->num_tuples; ii++) {
-			log_info("pos selected %u\n", (*r)->token[ii].pos);
-		}
+		// for (uint ii = 0; ii < (*r)->num_tuples; ii++) {
+		// 	log_info("pos selected %u\n", (*r)->token[ii].pos);
+		// }
 		return s;
 	}
 	else {
@@ -903,6 +981,7 @@ status col_range_query(Column *col, int low, int high, Result **r) {
 		if (col->partitionCount > 1) {
 			pos_t beg_l = 0, end_l = 0;
 			pos_t beg_r = 0, end_r = 0;
+			uint size_of_head_and_tail_partition = 0;
 			size_t partition_to_query_l = binary_search_pivots(col->pivots, col->partitionCount, low);
 			beg_l = (partition_to_query_l == 0)? 0: (col->p_pos[partition_to_query_l - 1] + 1);
 			end_l = col->p_pos[partition_to_query_l] + 1;
@@ -914,40 +993,48 @@ status col_range_query(Column *col, int low, int high, Result **r) {
 				(*r)->partitionNum = malloc(sizeof(size_t) * 2);
 				(*r)->partitionNum[0] = partition_to_query_l;
 				(*r)->partitionNum[1] = partition_to_query_r;
+				size_of_head_and_tail_partition = col->part_size[partition_to_query_l] + col->part_size[partition_to_query_r];
 			}
 			else {
 				(*r)->partitionNum = malloc(sizeof(size_t));
 				(*r)->partitionNum[0] = partition_to_query_l;
+				size_of_head_and_tail_partition = col->part_size[partition_to_query_l];
 			}
-
+			(*r)->token = malloc(size_of_head_and_tail_partition * sizeof(Payload));
 			for (pos_t i = beg_l; i < end_l; i++) {
 				if (low <= (col->data)->content[i]) {
-					// do something
+					(*r)->num_tuples++;
+					(*r)->token[(*r)->num_tuples - 1].pos = i;
 				}
 			}
 			for (pos_t i = beg_r; i < end_r; i++) {
 				if (high > (col->data)->content[i]) {
-					// do something
+					(*r)->num_tuples++;
+					(*r)->token[(*r)->num_tuples - 1].pos = i;
 				}
 			}
 		}
 		else {	// unpartitioned case
 			pos_t beg = 0, end = 0;
 			end = (col->data)->length;
+			uint allocated_tuple = (uint)((float)end * 0.01);
+			(*r)->token = malloc(allocated_tuple * sizeof(Payload));
 			for (pos_t i = beg; i < end; i++) {
 				if (low <= (col->data)->content[i] && high > (col->data)->content[i]) {
-					// TODO: Results storing needs improving later
 					(*r)->num_tuples++;
-					(*r)->token = realloc((*r)->token, (*r)->num_tuples * sizeof(Payload));
+					if ((*r)->num_tuples > allocated_tuple) {
+						allocated_tuple *= 2;
+						(*r)->token = realloc((*r)->token, allocated_tuple * sizeof(Payload));	
+					}
 					(*r)->token[(*r)->num_tuples - 1].pos = i;
 				}
 			}
 		}
 		s.code = OK;
-		log_info("point query %u tuple qualified\n", (*r)->num_tuples);
-		for (uint ii = 0; ii < (*r)->num_tuples; ii++) {
-			log_info("pos selected %u\n", (*r)->token[ii].pos);
-		}
+		log_info("range query %u tuple qualified\n", (*r)->num_tuples);
+		// for (uint ii = 0; ii < (*r)->num_tuples; ii++) {
+		// 	log_info("pos selected %u\n", (*r)->token[ii].pos);
+		// }
 		return s;
 	}
 	else {
@@ -1043,22 +1130,21 @@ char* tuple(db_operator *query) {
 	return  NULL;
 }
 
-
 /** update operation, client interface
  * update old_v in col to new_v
  * col:		the Column pointer
  * old_v:	point query value
  * new_v:	the new updated value
  */
-status update_with_pointQuery(Column *col, int old_v, int new_v) {
+status update_with_pointQuery(Table *tbl, Column *col, int old_v, int new_v) {
 	status s;
 	// perform the point query first...
 	Result *pos = NULL;
 	col_point_query(col, old_v, &pos);
 	// then delete with a position vector
 	if (pos->num_tuples > 0){
-		// s = update_with_pos(col, new_v, pos);
 		log_info("updating %d to %d\n", old_v, new_v);
+		s = update_with_pos(tbl, col, new_v, pos);	
 	}
 	else {
 		log_info("no tuple satisfies the point query, nothing to update!\n");
@@ -1105,23 +1191,227 @@ status delete_with_pointQuery(Table *tbl, Column *col, int val) {
  * TODO: the fuction is implemented based on the assumption that all positions reside within a single partition,
  * TODO: which might not be true when the position vector is selected in a unpartitioned Column, i.e. bug will occur
  * update some tuple in col to val as pos specifies
- * col:	Column ppointer
+ * col:	Column pointer
  * val:	updated value
  * pos:	position vector
  */
-// status update_with_pos(Column *col, int val, Result *pos) {
-// 	status s;
-// 	size_t partition_to_update = 0;
-// 	size_t total_update = pos->num_tuples;
-// 	DArray_INT *arr = col->data;
-// 	if (pos->token[pos->num_tuples - 1].pos >= arr->length) {
-// 		log_err("delete array boundary verflow!\n");
-// 		s.code = ERROR;
-// 		return s;
-// 	}
-// 	s.code = OK;
-// 	return s;
-// }
+status update_with_pos(Table *tbl, Column *col, int new_v, Result *pos) {
+	status s;
+	size_t partition_to_update = 0;
+	size_t total_update = pos->num_tuples;
+	DArray_INT *arr = col->data;
+	pos_t update_vec_tail = total_update - 1;
+	pos_t update_vec_head = 0;
+	uint update_item_count = 0;
+
+	if (pos->token[pos->num_tuples - 1].pos >= arr->length) {
+		log_err("update array boundary verflow!\n");
+		s.code = ERROR;
+		return s;
+	}
+
+	if (col->partitionCount > 1) {
+		Column *partitionedCol = col;
+		size_t partition_id_for_new_value = binary_search_pivots(col->pivots, col->partitionCount, new_v);
+		pos_t *swap_position_record_from = malloc(sizeof(pos_t) * total_update);
+		pos_t *swap_position_record_to = malloc(sizeof(pos_t) * total_update);
+		while (partition_to_update < partitionedCol->partitionCount 
+			&& partitionedCol->p_pos[partition_to_update] < pos->token[0].pos) {
+			partition_to_update++;
+		}
+		log_info("deletion in partition %zu\n", partition_to_update);
+
+		#ifdef GHOST_VALUE
+		pos_t end_of_partition = partitionedCol->p_pos[partition_to_update] - partitionedCol->ghost_count[partition_to_update];
+		#else
+		pos_t end_of_partition = partitionedCol->p_pos[partition_to_update];
+		#endif
+
+		// move the data specified by pos to the end of the partition
+		while (update_item_count < total_update) {
+			while (update_item_count < total_update && end_of_partition == pos->token[update_vec_tail].pos) {
+				#ifdef GHOST_VALUE
+				arr->content[end_of_partition] = NON_QUALIFYING_INT;
+				#endif
+				// no need to swap, yet mark it for other columns
+				swap_position_record_from[update_item_count] = end_of_partition;
+				swap_position_record_to[update_item_count] = end_of_partition;
+				end_of_partition--;
+				update_vec_tail--;
+				update_item_count++;
+			}
+			if (update_item_count < total_update) {
+				arr->content[pos->token[update_vec_head].pos] = arr->content[end_of_partition];
+				#ifdef GHOST_VALUE
+				arr->content[end_of_partition] = NON_QUALIFYING_INT;
+				#endif
+				swap_position_record_from[update_item_count] = end_of_partition;
+				swap_position_record_to[update_item_count] = pos->token[update_vec_head].pos;
+				end_of_partition--;
+				update_vec_head++;
+				update_item_count++;
+			}
+		}
+
+		#ifdef GHOST_VALUE
+		// TODO: add insertion-like ghost value behavior
+		#else
+		// Move data from other partitions
+		size_t i = partition_to_update;
+		if (partition_id_for_new_value > partition_to_update) {
+			int *dst = &(arr->content[partitionedCol->p_pos[partition_to_update] - total_update + 1]);
+			int *src = NULL;
+			for (; i < partition_id_for_new_value - 1; i++) {
+				int num_cpy = total_update;
+				int dest_inc = partitionedCol->p_pos[i + 1] - partitionedCol->p_pos[i];
+				if (dest_inc < num_cpy){
+					num_cpy = dest_inc;
+				}
+				// TODO: may trigger bug when a partition is empty, i.e. num_cpy = 0.. depends on how memcpy behaves when n = 0
+				src = &(arr->content[partitionedCol->p_pos[i + 1] - num_cpy + 1]);
+				memmove(dst, src, sizeof(int) * num_cpy);
+				// move the holes to next partition
+				dst += dest_inc;
+				// decrease the boundary of the current partition
+				partitionedCol->p_pos[i] -= total_update;
+			}
+			partitionedCol->p_pos[i] -= total_update;
+			// update the partition where the new value should reside
+			for (uint j = partitionedCol->p_pos[i] + 1; j <= partitionedCol->p_pos[i] + total_update; j++) {
+				arr->content[j] = new_v;
+			}
+		}
+		else {
+			// head of the holes at the end of the partition
+			int *dst = &(arr->content[partitionedCol->p_pos[i] - total_update + 1]);
+			// head of this partition
+			int *src = &(arr->content[partitionedCol->p_pos[i - 1] + 1]);
+			int num_cpy = total_update;
+			uint offset = partitionedCol->p_pos[i] - partitionedCol->p_pos[i - 1] - total_update;
+			if (offset < total_update) {
+				dst += (total_update - offset);
+				num_cpy = offset;
+			}
+			memmove(dst, src, sizeof(int) * num_cpy);
+			dst = src;
+			i--;
+			for (; i > partition_id_for_new_value; i--) {
+				// int dest_dec = partitionedCol->p_pos[i] - partitionedCol->p_pos[i - 1];
+				num_cpy = total_update;
+				uint current_part_size = partitionedCol->p_pos[i] - partitionedCol->p_pos[i - 1];
+				if (current_part_size < total_update){
+					dst += (total_update - current_part_size);
+					num_cpy = current_part_size;
+				}
+				// TODO: may trigger bug when a partition is empty, i.e. num_cpy = 0.. depends on how memcpy behaves when n = 0
+				src = &(arr->content[partitionedCol->p_pos[i - 1] + 1]);
+				memmove(dst, src, sizeof(int) * num_cpy);
+				// move the holes to next partition
+				dst = src;
+				// decrease the boundary of the current partition
+				partitionedCol->p_pos[i] += total_update;
+			}
+			// update the partition where the new value should reside
+			for (uint j = partitionedCol->p_pos[i] + 1; j <= partitionedCol->p_pos[i] + total_update; j++) {
+				arr->content[j] = new_v;
+			}
+			partitionedCol->p_pos[i] += total_update;
+		}
+
+		update_other_cols(tbl, swap_position_record_from, swap_position_record_to, total_update, partition_to_update, partition_id_for_new_value);
+		#endif /* GHOST_VALUE */
+		debug("partition %zu after updates:\n", partition_to_update);
+		size_t k = partition_to_update == 0? 0: partitionedCol->p_pos[partition_to_update - 1] + 1;
+		for (; k <= partitionedCol->p_pos[partition_to_update]; k++) {
+			printf("rid %zu: ", k);
+			for (size_t j = 0; j < tbl->col_count; j++) 
+				printf("%d ", tbl->cols[j]->data->content[k]);
+			printf("\n");
+		}
+	}
+	else {
+		// updating in place, no data movement needed
+		for (uint i = 0; i < total_update; i++) {
+			arr->content[pos->token[i].pos] = new_v;
+		}
+	}
+	s.code = OK;
+	return s;
+}
+
+#ifdef GHOST_VALUE
+status update_other_cols(Table *tbl, pos_t *from, pos_t *to, uint total_update, size_t partition_to_update, size_t partition_to_insert, size_t partition_to_steal)
+#else
+status update_other_cols(Table *tbl, pos_t *from, pos_t *to, uint total_update, size_t partition_to_update, size_t partition_to_insert)
+#endif
+{
+	status s;
+	Column *partitionedCol = tbl->primary_indexed_col;
+	for (uint k = 0; k < tbl->col_count; k++) {
+		Column *tmp_col = tbl->cols[k];
+		if (tmp_col == partitionedCol) continue;
+		DArray_INT *arr = tmp_col->data;
+		// do swap within the partition
+		int *original_value = malloc(sizeof(int) * total_update);
+		for (uint i = 0; i < total_update; i++) {
+			original_value[i] = arr->content[to[i]];
+			arr->content[to[i]] = arr->content[from[i]];
+			#ifdef GHOST_VALUE
+			arr->content[from[i]] = NON_QUALIFYING_INT;
+			#endif /* GHOST_VALUE */
+		}
+		#ifndef GHOST_VALUE
+		// the destition of memcpy is the 
+		size_t i = partition_to_update;
+		if (partition_to_insert > partition_to_update) {
+			int *dst = &(arr->content[partitionedCol->p_pos[i] + 1]);
+			int *src = NULL;
+			for (; i < partition_to_insert - 1; i++) {
+				uint num_cpy = total_update;
+				uint dest_inc = partitionedCol->p_pos[i + 1] - partitionedCol->p_pos[i];
+				if (dest_inc < num_cpy){
+					num_cpy = dest_inc;
+				}
+				// source address from the next partition
+				src = &(arr->content[partitionedCol->p_pos[i + 1] + total_update - num_cpy + 1]);
+				memcpy(dst, src, sizeof(int) * num_cpy);
+				// Move the holes to next partition
+				dst += dest_inc;
+			}
+			uint count = 0;
+			for (uint j = partitionedCol->p_pos[i] + 1; j <= partitionedCol->p_pos[i] + total_update; j++) {
+				arr->content[j] = original_value[count++];
+			}	
+		}
+		else if (partition_to_insert < partition_to_update) {
+			int *dst = &(arr->content[partitionedCol->p_pos[i] - total_update + 1]);
+			int *src = &(arr->content[partitionedCol->p_pos[i - 1] - total_update + 1]);
+			for (; i > partition_to_insert; i--) {
+				uint num_cpy = total_update;
+				uint current_part_size = partitionedCol->p_pos[i] - partitionedCol->p_pos[i - 1];
+				if (current_part_size < total_update) {
+					dst += total_update - current_part_size;
+					num_cpy = current_part_size;
+				}
+				src = &(arr->content[partitionedCol->p_pos[i - 1] - total_update + 1]);
+				memcpy(dst, src, sizeof(int) * num_cpy);
+				dst = src;
+			}
+			uint count = 0;
+			for (uint j = partitionedCol->p_pos[i] - total_update + 1; j <= partitionedCol->p_pos[i]; j++) {
+				arr->content[j] = original_value[count++];
+			}
+		}
+
+		#else
+		// TODO: add insertion-like ghost value behavior, i.e. insert the orignal values
+		#endif /* GHOST_VALUE */
+		arr->length -= total_update;
+	}
+	s.code = OK;
+	return s;
+}
+
 
 /** 
  * TODO: the function is implemented based on the assumption that all positions reside within a single partition,
@@ -1141,7 +1431,6 @@ status delete_with_pos(Table *tbl, Result *pos) {
 	pos_t delete_vec_tail = total_delete - 1;
 	pos_t delete_vec_head = 0;
 	uint delete_item_count = 0;
-		
 
 	pos_t *swap_position_record_from = malloc(sizeof(pos_t) * total_delete);
 	pos_t *swap_position_record_to = malloc(sizeof(pos_t) * total_delete);
@@ -1300,7 +1589,7 @@ status delete_other_cols(Table *tbl, pos_t *from, pos_t *to, uint total_delete, 
 				num_cpy = dest_inc;
 			}
 			// source address from the next partition
-			src = &(arr->content[partitionedCol->p_pos[i + 1]+ total_delete - num_cpy + 1]);
+			src = &(arr->content[partitionedCol->p_pos[i + 1] + total_delete - num_cpy + 1]);
 			memcpy(dst, src, sizeof(int) * num_cpy);
 			// Move the holes to next partition
 			dst += dest_inc;

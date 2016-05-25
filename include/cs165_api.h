@@ -495,7 +495,7 @@ status fetch_val(Column *col, Result *pos, Result **r);
 char* tuple(db_operator *query);
 
 status delete_with_pointQuery(Table *tbl, Column *col, int val);
-status update_with_pointQuery(Column *col, int old_v, int new_v);
+status update_with_pointQuery(Table *tbl, Column *col, int old_v, int new_v);
 status insert_tuple(Table *tbl, int *src);
 
 

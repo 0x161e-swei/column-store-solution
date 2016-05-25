@@ -190,43 +190,46 @@ status create_index(Table *tbl, Column *col, IndexType type, Workload w) {
 					// #endif /* GHOST_VALUE */
 
 					#ifdef SWAPLATER
-					#ifdef GHOST_VALUE
-					tic = clock();
+						#ifdef GHOST_VALUE
+							tic = clock();
 
-					s = nWayPartition(tbl, col, part_inst);
+							s = nWayPartition(tbl, col, part_inst);
 
-					toc = clock();
-					debug("partition with ghostvalue comsumed %lf\n", (double)(toc -tic) * 1000.0 / CLOCKS_PER_SEC);
+							toc = clock();
+							debug("partition with ghostvalue comsumed %lf\n", (double)(toc -tic) * 1000.0 / CLOCKS_PER_SEC);
 
-					free(part_inst->ghost_count);
-					#else
-					tic = clock();
-					col->pivot_tree = part_inst->pivots;
-					s = physicalPartition_fast(col, part_inst);
-					// s = nWayPartition(col, part_inst);
+							free(part_inst->ghost_count);
+						#else
+							tic = clock();
+							col->pivot_tree = malloc(sizeof(int) * part_inst->p_count);
+							memcpy(col->pivot_tree, part_inst->pivots, sizeof(int) * part_inst->p_count);
+							col->pivots = col->pivot_tree;
+							s = physicalPartition_fast(col, part_inst);
+							// s = nWayPartition(col, part_inst);
 
-					toc = clock();
-					debug("partition without ghostvalue comsumed %lf\n", (double)(toc -tic) * 1000.0 / CLOCKS_PER_SEC);
+							toc = clock();
+							debug("partition without ghostvalue comsumed %lf\n", (double)(toc -tic) * 1000.0 / CLOCKS_PER_SEC);
 					
-					#endif /* GHOST_VALUE */
-					free(part_inst->pivots);
-					if (CMD_DONE == s.code) {
-						tic = clock();
+						#endif /* GHOST_VALUE */
+						free(part_inst->pivots);
+						if (CMD_DONE == s.code) {
+							tic = clock();
 
-						// s = align_after_partition(tbl, col->pos);
-						// s = align_test_col(tbl, col->pos);
-						s = align_random_write(tbl, col->pos);
-						toc = clock();
-						debug("align without ghostvalue comsumed %lf\n", (double)(toc -tic) * 1000.0 / CLOCKS_PER_SEC);
-					}
+							// s = align_after_partition(tbl, col->pos);
+							// s = align_test_col(tbl, col->pos);
+							s = align_random_write(tbl, col->pos);
+							toc = clock();
+							debug("align without ghostvalue comsumed %lf\n", (double)(toc -tic) * 1000.0 / CLOCKS_PER_SEC);
+						}
 					#else
-					#ifdef GHOST_VALUE
-					s = nWayPartition(tbl, col, part_inst);
-					#else
-					s = nWayPartition(col, part_inst);
-					#endif /* GHOST_VALUE */
+						#ifdef GHOST_VALUE
+							s = nWayPartition(tbl, col, part_inst);
+						#else
+							s = nWayPartition(col, part_inst);
+						#endif /* GHOST_VALUE */
 					#endif /* SWAPLATER */
 					debug("partitionCount %zu\n", col->partitionCount);
+					tbl->primary_indexed_col = col;
 					free(part_inst);
 					part_inst = NULL;
 					free_frequency_model(freq_model);
@@ -290,10 +293,13 @@ uint search_partition_pivots(void *from, size_t p_count, int key) {
 status physicalPartition_fast(Column *col, Partition_inst *inst) {
 	status s;
 	DArray_INT *old_arr = col->data;
+	col->partitionCount = inst->p_count;
 	uint *part_idc = malloc(sizeof(uint) * inst->p_count);
+	col->part_size = malloc(sizeof(int) * inst->p_count);
+	memcpy(col->part_size, inst->part_sizes, sizeof(int) * inst->p_count);
 	#ifdef GHOST_VALUE
 	uint total_gv = 0;
-	for (uint i = 0; i < p_count; i++) {
+	for (uint i = 0; i < inst->p_count; i++) {
 		total_gv += inst->ghost_count[i];
 	}
 	DArray_INT *new_arr = darray_create(old_arr->length + total_gv);
@@ -337,7 +343,11 @@ status physicalPartition_fast(Column *col, Partition_inst *inst) {
 	new_arr->length = old_arr->length;
 	darray_destory(old_arr);
 	col->data = new_arr;
-	free(part_idc);
+	col->p_pos = part_idc;
+	for (int i = 0; i < inst->p_count; i++) {
+		col->p_pos[i]--;
+	}
+	// free(part_idc);
 	s.code = CMD_DONE;
 	return s;
 }

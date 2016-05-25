@@ -36,6 +36,7 @@
 // Here, we allow for a global of DSL COMMANDS to be shared in the program
 dsl** dsl_commands;
 
+
 /**
  * parse_command takes as input the send_message from the client and then
  * parses it into the appropriate query. Stores into send_message the
@@ -172,7 +173,6 @@ bool handle_client(int client_socket) {
 	int done = 0;
 	int length = 0;
 	bool ret = false;
-
 	log_info("Connected to socket: %d.\n", client_socket);
 
 	// Create two messages, one from which to read and one from which to receive
@@ -184,21 +184,27 @@ bool handle_client(int client_socket) {
 	// 2. Handle request if appropriate
 	// 3. Send status of the received message (OK, UNKNOWN_QUERY, etc)
 	// 4. Send response of request.
+	struct timespec tic, toc; 
 	do {
 		length = recv(client_socket, &recv_message, sizeof(message), 0);
 		if (length < 0) {
 			log_err("Client connection closed!\n");
 			exit(1);
 		} else if (length == 0) {
-			log_err("length = 0 close!\n");
+			// log_err("length = 0 close!\n");
 			done = 1;
+			ret = true;
 		}
-
 		if (!done) {
 			char recv_buffer[recv_message.length];
 			length = recv(client_socket, recv_buffer, recv_message.length,0);
 			recv_message.payload = recv_buffer;
 			recv_message.payload[recv_message.length] = '\0';
+
+			// ######################################
+			// Timing the program
+			clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &tic);
+			// ######################################
 
 			// 1. Parse command
 			db_operator* dbO = parse_command(&recv_message, &send_message);
@@ -221,6 +227,12 @@ bool handle_client(int client_socket) {
 				send_message.length = 0;
 				send_message.payload = NULL;
 			}
+
+			// ######################################
+			// Timing the program
+			clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &toc);
+			program_total = clock_timeadd(program_total, clock_timediff(tic, toc));
+			// ######################################
 
 			// 3. Send status of the received message (OK, UNKNOWN_QUERY, etc)
 			if (send(client_socket, &(send_message), sizeof(message), 0) == -1) {
@@ -312,6 +324,20 @@ int main(int argc, char const *argv[])
 	// Populate the global dsl commands
 	dsl_commands = dsl_commands_init();
 
+
+	program_total.tv_sec = 0;
+	program_total.tv_nsec = 0;
+	pq_total.tv_sec = 0;
+	pq_total.tv_nsec = 0;
+	rq_total.tv_sec = 0;
+	rq_total.tv_nsec = 0;
+	in_total.tv_sec = 0;
+	in_total.tv_nsec = 0;
+	de_total.tv_sec = 0;
+	de_total.tv_nsec = 0;
+	up_total.tv_sec = 0;
+	up_total.tv_nsec = 0;
+
 	Db *default_db = NULL;
 	OpenFlags flags = LOAD;
 	data_path = malloc(sizeof(char) * 15);
@@ -352,9 +378,17 @@ int main(int argc, char const *argv[])
 			close(client_socket);
 		}
 
-		if (NULL != default_db)
-			sync_db(default_db);
+		// TODO: for testing purpose, we do not sync the changes made from operations
+		// if (NULL != default_db)
+		// 	sync_db(default_db);
 	}
+	
+	fprintf(stderr, "%ld.%ld\n", program_total.tv_sec, program_total.tv_nsec);
+	fprintf(stderr, "%ld.%ld\n", pq_total.tv_sec, pq_total.tv_nsec);
+	fprintf(stderr, "%ld.%ld\n", rq_total.tv_sec, rq_total.tv_nsec);
+	fprintf(stderr, "%ld.%ld\n", in_total.tv_sec, in_total.tv_nsec);
+	fprintf(stderr, "%ld.%ld\n", de_total.tv_sec, de_total.tv_nsec);
+	fprintf(stderr, "%ld.%ld\n", up_total.tv_sec, up_total.tv_nsec);
 	free(data_path);
 	free(dbinfo);
 	return 0;

@@ -5,6 +5,24 @@
 // #define LOG_ERR
 // #define LOG_INFO
 
+struct timespec program_total;
+struct timespec pq_total;
+struct timespec rq_total;
+struct timespec in_total;
+struct timespec de_total;
+struct timespec up_total;
+
+#define BILLION 1000000000
+struct timespec clock_timeadd(struct timespec t1, struct timespec t2)
+{
+    long sec = t2.tv_sec + t1.tv_sec;
+    long nsec = t2.tv_nsec + t1.tv_nsec;
+    if (nsec >= BILLION) {
+        nsec -= BILLION;
+        sec++;
+    }
+    return (struct timespec){ .tv_sec = sec, .tv_nsec = nsec };
+}
 
 struct timespec clock_timediff(struct timespec start, struct timespec end)
 {

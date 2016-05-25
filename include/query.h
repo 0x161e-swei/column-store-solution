@@ -23,15 +23,18 @@ status load_column4disk(Column *col, size_t len);
 status col_point_query(Column *col, int val, Result **r);
 status col_range_query(Column *col, int low, int high, Result **r);
 status delete_with_pos(Table *tbl, Result *pos);
-status update_with_pos(Column *col, int val, Result *pos);
+status update_with_pos(Table *tbl, Column *col, int val, Result *pos);
 
 #ifdef GHOST_VALUE
 status delete_other_cols(Table *tbl, pos_t *from, pos_t *to, uint total_delete);
 status insert_other_cols(Table *tbl, int *vals, size_t partition_to_insert, size_t partition_to_steal);
+status update_other_cols(Table *tbl, pos_t *from, pos_t *to, uint total_update, size_t partition_to_update, size_t partition_to_insert, size_t partition_to_steal);
 #else
 status delete_other_cols(Table *tbl, pos_t *from, pos_t *to, uint total_delete, size_t partition_to_delete);
 status insert_other_cols(Table *tbl, int *vals, size_t partition_to_insert);
+status update_other_cols(Table *tbl, pos_t *from, pos_t *to, uint total_update, size_t partition_to_update, size_t partition_to_insert);
 #endif
+
 
 size_t binary_search_pivots(int *pivots, size_t len, int val);
 /**

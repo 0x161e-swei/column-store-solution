@@ -485,9 +485,9 @@ status parse_dsl(const char* str, dsl* d, db_operator* op)
 		// TODO: make create_index a db operator?
 		ret = create_index(tmp_tbl, tmp_col, PARTI, w);
 		
-		if (op_type) free(op_type);
-		if (num1) free(num1);
-		if (num2) free(num2);
+		// if (op_type) free(op_type);
+		// if (num1) free(num1);
+		// if (num2) free(num2);
 		// Free the str_cpy
 		free(str_cpy);
 		str_cpy = NULL;

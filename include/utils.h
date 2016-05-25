@@ -18,6 +18,15 @@
 #define ANSI_COLOR_BLUE		"\x1b[34m"
 #define ANSI_COLOR_RESET	"\x1b[0m"
 
+
+extern struct timespec program_total;
+extern struct timespec pq_total;
+extern struct timespec rq_total;
+extern struct timespec in_total;
+extern struct timespec de_total;
+extern struct timespec up_total;
+
+struct timespec clock_timeadd(struct timespec t1, struct timespec t2);
 struct timespec clock_timediff(struct timespec start, struct timespec end);
 
 // cs165_log(out, format, ...)
