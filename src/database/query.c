@@ -606,6 +606,7 @@ status query_execute(db_operator* op, Result** results) {
 		}
 		case DELETE_POS: {
 			log_info("going to exec delete_pos\n");
+			// TODO: if it is the primary column
 			if (0 != op->tables[0]->length) {
 				for (size_t i = 0; i < op->tables[0]->col_count; i++) {
 					if (NULL == (op->tables[0])->cols[i]->data) {
@@ -662,6 +663,7 @@ status query_execute(db_operator* op, Result** results) {
  * val: the integet to qualify
  * Return ture if val is qualified
  */
+ // TODO: make it branchless
  bool compare(comparator *f, int val){
 	bool res = false, undone = true, cur_res;
 	Junction pre_junc = NONE;
@@ -1136,92 +1138,122 @@ status delete_with_pos(Table *tbl, Result *pos) {
 	status s;
 	size_t partition_to_delete = 0;
 	uint total_delete = pos->num_tuples;
+	pos_t delete_vec_tail = total_delete - 1;
+	pos_t delete_vec_head = 0;
+	uint delete_item_count = 0;
+		
+
 	pos_t *swap_position_record_from = malloc(sizeof(pos_t) * total_delete);
 	pos_t *swap_position_record_to = malloc(sizeof(pos_t) * total_delete);
+
 	Column *partitionedCol = tbl->primary_indexed_col;
-	DArray_INT *arr = partitionedCol->data;
-	// Find the partition to perform the deletion
-	if (pos->token[pos->num_tuples - 1].pos >= arr->length) {
-		log_err("delete array boundary verflow!\n");
-		s.code = ERROR;
-		return s;
-	}
-	while (partition_to_delete < partitionedCol->partitionCount 
-		&& partitionedCol->p_pos[partition_to_delete] < pos->token[0].pos) {
-		partition_to_delete++;
-	}
 
-	log_info("deletion in partition %zu\n", partition_to_delete);
-	pos_t head = 0;
-	// pos_t beg = (partition_to_delete == 0)? 0: partitionedCol->p_pos[partition_to_delete - 1] + 1;
-	#ifdef GHOST_VALUE
-	pos_t end = partitionedCol->p_pos[partition_to_delete] - partitionedCol->ghost_count[partition_to_delete];
-	#else
-	pos_t end = partitionedCol->p_pos[partition_to_delete];
-	#endif
-	pos_t last_item_to_delete = total_delete - 1;
-	uint delete_item_count = 0;
-
-	// move the data specified by pos to the end of the partition
-	while (delete_item_count < total_delete) {
-		while (end == pos->token[last_item_to_delete].pos && delete_item_count < total_delete) {
-			#ifdef GHOST_VALUE
-			arr->content[end] = NON_QUALIFYING_INT;
-			#endif
-			// no need to swap, yet mark it for other columns
-			swap_position_record_from[delete_item_count] = end;
-			swap_position_record_to[delete_item_count] = end;
-			end--;
-			last_item_to_delete--;
-			delete_item_count++;
+	if (partitionedCol) {
+		DArray_INT *arr = partitionedCol->data;
+		// Find the partition to perform the deletion
+		if (pos->token[pos->num_tuples - 1].pos >= arr->length) {
+			log_err("delete array boundary overflow!\n");
+			s.code = ERROR;
+			return s;
 		}
-		if (delete_item_count < total_delete) {
-			arr->content[pos->token[head].pos] = arr->content[end];
-			#ifdef GHOST_VALUE
-			arr->content[end] = NON_QUALIFYING_INT;
-			#endif
-			swap_position_record_from[delete_item_count] = end;
-			swap_position_record_to[delete_item_count] = pos->token[head].pos;
-			end--;
-			head++;
-			delete_item_count++;
+		while (partition_to_delete < partitionedCol->partitionCount 
+			&& partitionedCol->p_pos[partition_to_delete] < pos->token[0].pos) {
+			partition_to_delete++;
 		}
-	}
-	#ifdef GHOST_VALUE
-	partitionedCol->ghost_count[partition_to_delete] += total_delete;
-	delete_other_cols(tbl, swap_position_record_from, swap_position_record_to, total_delete);
-	#else // GHOST_VALUE NOT DEFINED
-	// Move data from other partitions
-	int *dst = &(arr->content[partitionedCol->p_pos[partition_to_delete] - total_delete + 1]);
-	int *src = NULL;
-	size_t i = partition_to_delete;
-	for (; i < partitionedCol->partitionCount - 1; i++) {
-		int num_cpy = total_delete;
-		int dest_inc = partitionedCol->p_pos[i + 1] - partitionedCol->p_pos[i];
-		if (dest_inc < num_cpy){
-			num_cpy = dest_inc;
+		log_info("deletion in partition %zu\n", partition_to_delete);
+		
+		// pos_t beg = (partition_to_delete == 0)? 0: partitionedCol->p_pos[partition_to_delete - 1] + 1;
+		#ifdef GHOST_VALUE
+		pos_t end_of_partition = partitionedCol->p_pos[partition_to_delete] - partitionedCol->ghost_count[partition_to_delete];
+		#else
+		pos_t end_of_partition = partitionedCol->p_pos[partition_to_delete];
+		#endif
+		
+		// move the data specified by pos to the end of the partition
+		while (delete_item_count < total_delete) {
+			while (delete_item_count < total_delete && end_of_partition == pos->token[delete_vec_tail].pos) {
+				#ifdef GHOST_VALUE
+				arr->content[end_of_partition] = NON_QUALIFYING_INT;
+				#endif
+				// no need to swap, yet mark it for other columns
+				swap_position_record_from[delete_item_count] = end_of_partition;
+				swap_position_record_to[delete_item_count] = end_of_partition;
+				end_of_partition--;
+				delete_vec_tail--;
+				delete_item_count++;
+			}
+			if (delete_item_count < total_delete) {
+				arr->content[pos->token[delete_vec_head].pos] = arr->content[end_of_partition];
+				#ifdef GHOST_VALUE
+				arr->content[end_of_partition] = NON_QUALIFYING_INT;
+				#endif
+				swap_position_record_from[delete_item_count] = end_of_partition;
+				swap_position_record_to[delete_item_count] = pos->token[delete_vec_head].pos;
+				end_of_partition--;
+				delete_vec_head++;
+				delete_item_count++;
+			}
 		}
-		// TODO: may trigger bug when a partition is empty, i.e. num_cpy = 0.. depends on how memcpy behaves when n = 0
-		src = &(arr->content[partitionedCol->p_pos[i + 1] - num_cpy + 1]);
-		memmove(dst, src, sizeof(int) * num_cpy);
-		// move the holes to next partition
-		dst += dest_inc;
-		// decrease the boundary of the current partition
+		#ifdef GHOST_VALUE
+		partitionedCol->ghost_count[partition_to_delete] += total_delete;
+		delete_other_cols(tbl, swap_position_record_from, swap_position_record_to, total_delete);
+		#else // GHOST_VALUE NOT DEFINED
+		// Move data from other partitions
+		int *dst = &(arr->content[partitionedCol->p_pos[partition_to_delete] - total_delete + 1]);
+		int *src = NULL;
+		size_t i = partition_to_delete;
+		for (; i < partitionedCol->partitionCount - 1; i++) {
+			int num_cpy = total_delete;
+			int dest_inc = partitionedCol->p_pos[i + 1] - partitionedCol->p_pos[i];
+			if (dest_inc < num_cpy){
+				num_cpy = dest_inc;
+			}
+			// TODO: may trigger bug when a partition is empty, i.e. num_cpy = 0.. depends on how memcpy behaves when n = 0
+			src = &(arr->content[partitionedCol->p_pos[i + 1] - num_cpy + 1]);
+			memmove(dst, src, sizeof(int) * num_cpy);
+			// move the holes to next partition
+			dst += dest_inc;
+			// decrease the boundary of the current partition
+			partitionedCol->p_pos[i] -= total_delete;
+		}
+		// decrease the boundary of last partition
 		partitionedCol->p_pos[i] -= total_delete;
+		// decrease the size of the whole array
+		arr->length -= total_delete;
+		delete_other_cols(tbl, swap_position_record_from, swap_position_record_to, total_delete, partition_to_delete);
+		#endif /* GHOST_VALUE */
+		debug("partition %zu after deletion:\n", partition_to_delete);
+		size_t k = partition_to_delete == 0? 0: partitionedCol->p_pos[partition_to_delete - 1] + 1;
+		for (; k <= partitionedCol->p_pos[partition_to_delete]; k++) {
+			printf("rid %zu: ", k);
+			for (size_t j = 0; j < tbl->col_count; j++) 
+				printf("%d ", tbl->cols[j]->data->content[k]);
+			printf("\n");
+		}
 	}
-	// decrease the boundary of last partition
-	partitionedCol->p_pos[i] -= total_delete;
-	// decrease the size of the whole array
-	arr->length -= total_delete;
-	delete_other_cols(tbl, swap_position_record_from, swap_position_record_to, total_delete, partition_to_delete);
-	#endif /* GHOST_VALUE */
-	debug("partition %zu after deletion:\n", partition_to_delete);
-	size_t k = partition_to_delete == 0? 0: partitionedCol->p_pos[partition_to_delete - 1] + 1;
-	for (; k <= partitionedCol->p_pos[partition_to_delete]; k++) {
-		printf("rid %zu: ", k);
-		for (size_t j = 0; j < tbl->col_count; j++) 
-			printf("%d ", tbl->cols[j]->data->content[k]);
-		printf("\n");
+	else { // deleting table that is not primarily indexed
+		DArray_INT *arr = tbl->cols[0]->data;
+		pos_t end_of_table = tbl->length - 1;
+		while (delete_item_count < total_delete) {
+			// deleting this tuple at the end of the column
+			while (delete_item_count < total_delete && end_of_table == pos->token[delete_vec_tail].pos) {
+				swap_position_record_from[delete_item_count] = end_of_table;
+				swap_position_record_to[delete_item_count] = end_of_table;
+				end_of_table--;
+				delete_item_count++;
+				delete_vec_tail--;
+			}
+			// this tuple is not at the end of the column
+			if (delete_item_count < total_delete) {
+				// moving data at the end of the column to the pos to delete
+				arr->content[pos->token[delete_vec_head].pos] = arr->content[end_of_table];
+				swap_position_record_from[delete_item_count] = end_of_table;
+				swap_position_record_to[delete_item_count] = pos->token[delete_vec_head].pos;
+				end_of_table--;
+				delete_item_count++;
+				delete_vec_head++;
+			}
+		}
 	}
 	tbl->length -= total_delete;
 	s.code = OK;

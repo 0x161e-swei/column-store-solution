@@ -346,23 +346,13 @@ static void phys_part_func(struct cmdsocket *cmdsocket , struct command *command
 	        memset(demo_dsl, 0, sizeof(char) * 150); 
 		sprintf(demo_dsl, "partition(foo.tb1.a)");
 		exec_dsl(cmdsocket, demo_dsl);
-		if (part_inst->pivots) {
-			free(part_inst->pivots);
-		}
-		#ifdef GHOST_VALUE
-		if (part_inst->ghost_count) {
-			free(part_inst->ghost_count);
-		}
-		#endif
-		free(part_inst);
-		free(demo_dsl);
+		if (demo_dsl) free(demo_dsl);
 	}
 	else {
 		evbuffer_add_printf(cmdsocket->buffer, "{\"event\": \"message\",");
 		evbuffer_add_printf(cmdsocket->buffer, "\"msg\":\"NO partition instruction found!\""); // error msg
 		evbuffer_add_printf(cmdsocket->buffer, "}\n");
 		flush_cmdsocket(cmdsocket);
-
 	}
 }
 
