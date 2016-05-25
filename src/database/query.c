@@ -640,7 +640,7 @@ status query_execute(db_operator* op, Result** results) {
 		}
 		case UPDATE: {
 			log_info("going to exec update\n");
-			if (NULL == (op->domain).cols[0] && 0 != op->tables[0]->length) {
+			if (NULL == (op->domain).cols[0]->data && 0 != op->tables[0]->length) {
 				load_column4disk((op->domain).cols[0], op->tables[0]->length);
 			}
 			s = update_with_pointQuery((op->domain).cols[0], op->value1[0], op->value2[0]);
@@ -1254,6 +1254,7 @@ status delete_with_pos(Table *tbl, Result *pos) {
 				delete_vec_head++;
 			}
 		}
+		// delete_other_cols(tbl, swap_position_record_from, swap_position_record_to, total_delete, partition_to_delete);
 	}
 	tbl->length -= total_delete;
 	s.code = OK;
@@ -1324,108 +1325,117 @@ status insert_tuple(Table *tbl, int *vals) {
 	// do the insert afterwards on other Columns, could be in parallel
 	status s;
 	Column *partitionedCol = tbl->primary_indexed_col;
-	DArray_INT *arr = partitionedCol->data;
-	size_t partitionedCol_index = 0;
-	for (; partitionedCol_index < tbl->col_count; partitionedCol_index++) {
-		if (tbl->cols[partitionedCol_index] == partitionedCol) break;
-	}
-	// Find the partition to insert
-	size_t partition_to_insert = 0;
-	for (; partition_to_insert < partitionedCol->partitionCount; partition_to_insert++)
-		if (partitionedCol->pivots[partition_to_insert] >= vals[partitionedCol_index]) break;
 
-	log_info("insertion in partition %zu\n", partition_to_insert);
-	#ifdef GHOST_VALUE
-	// stealing values if necessary, breadth first search
-	size_t *search_queue = malloc(sizeof(size_t) * 5);
-	int head = 0, tail = 0;
-	bool reach_end = false;
-	size_t current_par = partition_to_insert;
-	while (0 == partitionedCol->ghost_count[current_par]) {
-		// add the left partition
-		if (current_par <= partition_to_insert && current_par > 0) {
-			search_queue[tail++] = current_par - 1;
-			tail %= 5;
+	if (partitionedCol) {
+		DArray_INT *arr = partitionedCol->data;
+		size_t partitionedCol_index = 0;
+		for (; partitionedCol_index < tbl->col_count; partitionedCol_index++) {
+			if (tbl->cols[partitionedCol_index] == partitionedCol) break;
 		}
-		// add the right partition
-		if (current_par >= partition_to_insert && current_par < partitionedCol->partitionCount - 1) {
-			search_queue[tail++] = current_par + 1;
-			tail %= 5;
-		} else if (current_par == partitionedCol->partitionCount - 1) {	// hits the last partition
-			reach_end = true;
-			break;
-		}
-		current_par = search_queue[head++];
-		head %= 5;
-	}
-	free(search_queue);
-	// hit the last partition and no ghost value in it
-	if (reach_end) {
-		darray_push(arr, 0);	// add a single hole into the array
-		partitionedCol->ghost_count[current_par] += 1; 
-		partitionedCol->p_pos[current_par] += 1;
-	}
-	// start stealing 
-	size_t partition_to_steal = current_par;
-	if (current_par >= partition_to_insert) {
-		// insert_pos points to the first ghost value in the current_partition
-		pos_t insert_pos = partitionedCol->p_pos[current_par] - partitionedCol->ghost_count[current_par] + 1;
-		partitionedCol->ghost_count[current_par]--;
-		// following while will not execute if no need to steal, i.e. current_par == partition_to_insert
-		while (current_par > partition_to_insert) {		// steal the hole forwards
-			// from points to the fisrt number in current_partition
-			pos_t from = ++partitionedCol->p_pos[current_par - 1];
-			// move data from the head to the end, then the head becomes the end of the left partition
-			arr->content[insert_pos] = arr->content[from];
-			current_par--;
-			insert_pos = from;
-		}
-		arr->content[insert_pos] = vals[partitionedCol_index];
-	}
-	else { 
-		// insert_pos points to the last ghost value in the current_partition
-		pos_t insert_pos = partitionedCol->p_pos[current_par]--;
-		partitionedCol->ghost_count[current_par]--;
-		while (current_par < partition_to_insert) { 	// steal the hole backwards
-			// from points to the end of the current_partition
-			pos_t from = partitionedCol->p_pos[current_par + 1]--;
-			// move data from the end to the head, then the end becomes the head of the right partition
-			arr->content[insert_pos] = arr->content[from];
-			current_par++;
-			insert_pos = from;
-		}
-		// insert at the end of this partition
-		arr->content[insert_pos] = vals[partitionedCol_index];
-		partitionedCol->p_pos[current_par]++;
-	}
-	insert_other_cols(tbl, vals, partition_to_insert, partition_to_steal);
-	#else
-	darray_push(arr, 0);	// make sure there is enough space
-	// insert_pos points to the hole(end) in the partition i
-	uint i = partitionedCol->partitionCount - 1;
-	pos_t insert_pos = ++partitionedCol->p_pos[i];
-	for (; i > partition_to_insert; i--) {
-		// from points to the fisrt number in partition i
-		pos_t from = ++partitionedCol->p_pos[i - 1];
-		// move the data at the head to the end, thus the head becomes a hole
-		arr->content[insert_pos] = arr->content[from];
-		insert_pos = from;
-	}
-	arr->content[insert_pos] = vals[partitionedCol_index];
-	// insert vals in other Columns
-	insert_other_cols(tbl, vals, partition_to_insert);
-	#endif /* GHOST_VALUE */
-	tbl->length += 1;
+		// Find the partition to insert
+		size_t partition_to_insert = 0;
+		for (; partition_to_insert < partitionedCol->partitionCount; partition_to_insert++)
+			if (partitionedCol->pivots[partition_to_insert] >= vals[partitionedCol_index]) break;
 
-	debug("partition %zu after insertion:\n", partition_to_insert);
-	size_t k = partition_to_insert == 0? 0: partitionedCol->p_pos[partition_to_insert - 1] + 1;
-	for (; k <= partitionedCol->p_pos[partition_to_insert]; k++) {
-		printf("rid %zu: ", k);
-		for (size_t j = 0; j < tbl->col_count; j++) 
-			printf("%d ", tbl->cols[j]->data->content[k]);
-		printf("\n");
-	}
+		log_info("insertion in partition %zu\n", partition_to_insert);
+		#ifdef GHOST_VALUE
+			// stealing values if necessary, breadth first search
+			size_t *search_queue = malloc(sizeof(size_t) * 5);
+			int head = 0, tail = 0;
+			bool reach_end = false;
+			size_t current_par = partition_to_insert;
+			while (0 == partitionedCol->ghost_count[current_par]) {
+				// add the left partition
+				if (current_par <= partition_to_insert && current_par > 0) {
+					search_queue[tail++] = current_par - 1;
+					tail %= 5;
+				}
+				// add the right partition
+				if (current_par >= partition_to_insert && current_par < partitionedCol->partitionCount - 1) {
+					search_queue[tail++] = current_par + 1;
+					tail %= 5;
+				} else if (current_par == partitionedCol->partitionCount - 1) {	// hits the last partition
+					reach_end = true;
+					break;
+				}
+				current_par = search_queue[head++];
+				head %= 5;
+			}
+			free(search_queue);
+			// hit the last partition and no ghost value in it
+			if (reach_end) {
+				darray_push(arr, 0);	// add a single hole into the array
+				partitionedCol->ghost_count[current_par] += 1;
+				partitionedCol->p_pos[current_par] += 1;
+			}
+			// start stealing
+			size_t partition_to_steal = current_par;
+			if (current_par >= partition_to_insert) {
+				// insert_pos points to the first ghost value in the current_partition
+				pos_t insert_pos = partitionedCol->p_pos[current_par] - partitionedCol->ghost_count[current_par] + 1;
+				partitionedCol->ghost_count[current_par]--;
+				// following while will not execute if no need to steal, i.e. current_par == partition_to_insert
+				while (current_par > partition_to_insert) {		// steal the hole forwards
+					// from points to the fisrt number in current_partition
+					pos_t from = ++partitionedCol->p_pos[current_par - 1];
+					// move data from the head to the end, then the head becomes the end of the left partition
+					arr->content[insert_pos] = arr->content[from];
+					current_par--;
+					insert_pos = from;
+				}
+				arr->content[insert_pos] = vals[partitionedCol_index];
+			}
+			else {
+				// insert_pos points to the last ghost value in the current_partition
+				pos_t insert_pos = partitionedCol->p_pos[current_par]--;
+				partitionedCol->ghost_count[current_par]--;
+				while (current_par < partition_to_insert) { 	// steal the hole backwards
+					// from points to the end of the current_partition
+					pos_t from = partitionedCol->p_pos[current_par + 1]--;
+					// move data from the end to the head, then the end becomes the head of the right partition
+					arr->content[insert_pos] = arr->content[from];
+					current_par++;
+					insert_pos = from;
+				}
+				// insert at the end of this partition
+				arr->content[insert_pos] = vals[partitionedCol_index];
+				partitionedCol->p_pos[current_par]++;
+			}
+			insert_other_cols(tbl, vals, partition_to_insert, partition_to_steal);
+		#else
+			darray_push(arr, 0);	// make sure there is enough space
+			// insert_pos points to the hole(end) in the partition i
+			uint i = partitionedCol->partitionCount - 1;
+			pos_t insert_pos = ++partitionedCol->p_pos[i];
+			for (; i > partition_to_insert; i--) {
+				// from points to the fisrt number in partition i
+				pos_t from = ++partitionedCol->p_pos[i - 1];
+				// move the data at the head to the end, thus the head becomes a hole
+				arr->content[insert_pos] = arr->content[from];
+				insert_pos = from;
+			}
+			arr->content[insert_pos] = vals[partitionedCol_index];
+			// insert vals in other Columns
+			insert_other_cols(tbl, vals, partition_to_insert);
+		#endif /* GHOST_VALUE */
+		tbl->length += 1;
 
+		debug("partition %zu after insertion:\n", partition_to_insert);
+		size_t k = partition_to_insert == 0? 0: partitionedCol->p_pos[partition_to_insert - 1] + 1;
+		for (; k <= partitionedCol->p_pos[partition_to_insert]; k++) {
+			printf("rid %zu: ", k);
+			for (size_t j = 0; j < tbl->col_count; j++)
+				printf("%d ", tbl->cols[j]->data->content[k]);
+			printf("\n");
+		}
+	}
+	else {
+		for (uint i = 0; i < tbl->col_count; i++) {
+			DArray_INT *arr = tbl->cols[i]->data;
+			darray_push(arr, vals[i]);
+		}
+		tbl->length += 1;
+	}
 	s.code = OK;
 	return s;
 }
