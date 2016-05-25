@@ -450,7 +450,7 @@ status parse_dsl(const char* str, dsl* d, db_operator* op)
 		// }
 		// lineCount++;
 		
-		// // The following lines commented out are used for workload pre-processing for front-end server
+		// The following lines commented out are used for workload pre-processing for front-end server
 		// printf("parse done \n");
 		// doSomething(op_type, num1, num2, lineCount);
 
