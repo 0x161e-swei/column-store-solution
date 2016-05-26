@@ -1622,9 +1622,7 @@ status insert_tuple(Table *tbl, int *vals) {
 			if (tbl->cols[partitionedCol_index] == partitionedCol) break;
 		}
 		// Find the partition to insert
-		size_t partition_to_insert = 0;
-		for (; partition_to_insert < partitionedCol->partitionCount; partition_to_insert++)
-			if (partitionedCol->pivots[partition_to_insert] >= vals[partitionedCol_index]) break;
+		size_t partition_to_insert = binary_search_pivots(partitionedCol->pivots, partitionedCol->partitionCount, vals[partitionedCol_index]);
 
 		log_info("insertion in partition %zu\n", partition_to_insert);
 		#ifdef GHOST_VALUE
@@ -1691,7 +1689,7 @@ status insert_tuple(Table *tbl, int *vals) {
 				partitionedCol->p_pos[current_par]++;
 			}
 			insert_other_cols(tbl, vals, partition_to_insert, partition_to_steal);
-		#else
+		#else /* NO GHOST_VALUE */
 			darray_push(arr, 0);	// make sure there is enough space
 			// insert_pos points to the hole(end) in the partition i
 			uint i = partitionedCol->partitionCount - 1;
@@ -1782,6 +1780,7 @@ status insert_other_cols(Table *tbl, int *vals, size_t partition_to_insert)
 			arr->content[insert_pos] = vals[k];
 		}
 		#else
+		darray_push(arr, 0);
 		for (size_t i = partitionedCol->partitionCount - 1; i > partition_to_insert; i--) {
 			arr->content[partitionedCol->p_pos[i]] = arr->content[partitionedCol->p_pos[i - 1]];
 		}
