@@ -193,7 +193,7 @@ bool handle_client(int client_socket) {
 		} else if (length == 0) {
 			// log_err("length = 0 close!\n");
 			done = 1;
-			ret = true;
+			// ret = true;
 		}
 		if (!done) {
 			char recv_buffer[recv_message.length];
