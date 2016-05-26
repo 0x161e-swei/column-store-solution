@@ -14,11 +14,11 @@
 
 
 #ifdef DEMO
-status parse_command_string(struct cmdsocket *cmdSoc, const char* str, dsl** commands, db_operator* op)
+status parse_command_string(struct cmdsocket *cmdSoc, const char* str, dsl** d_commands, db_operator* op)
 #else
 // Finds a possible matching DSL command by using regular expressions.
 // If it finds a match, it calls parse_command to actually process the dsl.
-status parse_command_string(const char* str, dsl** commands, db_operator* op)
+status parse_command_string(const char* str, dsl** d_commands, db_operator* op)
 #endif
 {
 	log_info("Parsing: %s\n", str);
@@ -33,7 +33,8 @@ status parse_command_string(const char* str, dsl** commands, db_operator* op)
 
 	for (int i = 0; i < NUM_DSL_COMMANDS; ++i) {
 		regex_t regex;
-		dsl* d = commands[i];
+		// regex_t *regex = malloc(sizeof(regex_t));
+		dsl* d = d_commands[i];
 		if (regcomp(&regex, d->c, REG_EXTENDED) != 0) {
 			log_err("Could not compile regex %s\n", d->c);
 		}
@@ -42,7 +43,10 @@ status parse_command_string(const char* str, dsl** commands, db_operator* op)
 		ret = regexec(&regex, str, n_matches, &m, 0);
 
 		// If we have a match, then figure out which one it is!
-		regfree(&regex);
+		if (ret == 0) {
+			regfree(&regex);
+		}
+
 		if (ret == 0) {
 			log_info("Found Command: %d\n", i);
 			// Here, we actually strip the command as appropriately
