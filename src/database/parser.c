@@ -300,6 +300,7 @@ status parse_dsl(const char* str, dsl* d, db_operator* op)
 		clear_res_list();
 		// TODO: for testing purpose we do not sync the database
 		// ret = sync_db(NULL);
+		ret.code = OK;
 		if (OK != ret.code) {
 			log_err("failed to sync database!\n");
 		}

@@ -198,7 +198,10 @@ status create_index(Table *tbl, Column *col, IndexType type, Workload w) {
 							toc = clock();
 							debug("partition with ghostvalue comsumed %lf\n", (double)(toc -tic) * 1000.0 / CLOCKS_PER_SEC);
 
-							free(part_inst->ghost_count);
+							if (part_inst->ghost_count) {
+								free(part_inst->ghost_count);
+								part_inst->ghost_count = NULL;
+							}
 						#else
 							tic = clock();
 							col->pivot_tree = malloc(sizeof(int) * part_inst->p_count);
@@ -211,7 +214,6 @@ status create_index(Table *tbl, Column *col, IndexType type, Workload w) {
 							debug("partition without ghostvalue comsumed %lf\n", (double)(toc -tic) * 1000.0 / CLOCKS_PER_SEC);
 					
 						#endif /* GHOST_VALUE */
-						free(part_inst->pivots);
 						if (CMD_DONE == s.code) {
 							tic = clock();
 
@@ -220,6 +222,14 @@ status create_index(Table *tbl, Column *col, IndexType type, Workload w) {
 							s = align_random_write(tbl, col->pos);
 							toc = clock();
 							debug("align without ghostvalue comsumed %lf\n", (double)(toc -tic) * 1000.0 / CLOCKS_PER_SEC);
+						}
+						if (part_inst->pivots) {
+							free(part_inst->pivots);
+							part_inst->pivots = NULL;
+						}
+						if (part_inst->part_sizes) {
+							free(part_inst->part_sizes);
+							part_inst->part_sizes = NULL;
 						}
 					#else
 						#ifdef GHOST_VALUE
@@ -230,8 +240,10 @@ status create_index(Table *tbl, Column *col, IndexType type, Workload w) {
 					#endif /* SWAPLATER */
 					fprintf(stderr, "partitionCount %zu\n", col->partitionCount);
 					tbl->primary_indexed_col = col;
-					free(part_inst);
-					part_inst = NULL;
+					if (part_inst) {
+						free(part_inst);
+						part_inst = NULL;
+					}
 					free_frequency_model(freq_model);
 					if (freq_model) free(freq_model);
 					freq_model = NULL;	
