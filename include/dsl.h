@@ -13,7 +13,7 @@
 
 // Currently we have 4 DSL commands to parse.
 // TODO(USER): you will need to increase this to track the commands you support.
-#define NUM_DSL_COMMANDS (22)
+#define NUM_DSL_COMMANDS (21)
 
 // This helps group similar DSL commands together.
 // For example, some queries can be parsed together:
