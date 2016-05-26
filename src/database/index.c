@@ -228,7 +228,7 @@ status create_index(Table *tbl, Column *col, IndexType type, Workload w) {
 							s = nWayPartition(col, part_inst);
 						#endif /* GHOST_VALUE */
 					#endif /* SWAPLATER */
-					debug("partitionCount %zu\n", col->partitionCount);
+					fprintf(stderr, "partitionCount %zu\n", col->partitionCount);
 					tbl->primary_indexed_col = col;
 					free(part_inst);
 					part_inst = NULL;

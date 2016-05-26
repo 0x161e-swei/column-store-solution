@@ -298,7 +298,8 @@ status parse_dsl(const char* str, dsl* d, db_operator* op)
 	else if (QUIT_CMD == d->g || SHUTDOWN_CMD == d->g) {
 		status ret;
 		clear_res_list();
-		ret = sync_db(NULL);
+		// TODO: for testing purpose we do not sync the database
+		// ret = sync_db(NULL);
 		if (OK != ret.code) {
 			log_err("failed to sync database!\n");
 		}
