@@ -59,3 +59,4 @@ testtool/*
 !testtool/dataGen.py
 !testtool/workGen.py
 /RUM_Visual_Front_bak/*
+src/frequencymodel_bak/*

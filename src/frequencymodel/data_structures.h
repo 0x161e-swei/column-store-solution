@@ -55,7 +55,7 @@ typedef struct partition_inst_aos {
 #ifdef GHOST_VALUE
 	int ghost_count;
 #endif
-} partition_inst_aof;
+} partition_inst_aos;
 
 typedef struct _partition_inst{
 	// pivot count
