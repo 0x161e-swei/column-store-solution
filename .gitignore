@@ -58,4 +58,5 @@ testtool/*
 !testtool/gen.cfg
 !testtool/dataGen.py
 !testtool/workGen.py
+!testtool/dataGen_dbinfo.py
 /RUM_Visual_Front_bak/*
