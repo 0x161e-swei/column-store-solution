@@ -59,8 +59,11 @@ lib_libdarray_a_SOURCES = $(DARRAY)
 ###########################################
 
 FREQUENCYMODEL = \
+	src/frequencymodel/customsort/custom_comparators.c \
+	src/frequencymodel/customsort/custom_swappers.c \
 	src/frequencymodel/customsort/custom_sort.c \
-	src/frequencymodel/frequency_model.c
+	src/frequencymodel/frequency_model.c \
+	src/frequencymodel/partition_data.c 
 	
 
 lib_libfrequencymodel_a_CFLAGS = $(AM_CFLAGS)

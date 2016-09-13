@@ -5,7 +5,7 @@
 #include "column.h"
 #include "table.h"
 #include "db.h"
-#include "../src/frequencymodel/frequency_model.h"
+#include "../src/frequencymodel/partition_data.h"
 
 #define BINARY_SEARCH
 
