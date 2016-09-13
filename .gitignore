@@ -33,6 +33,7 @@ bin/*
 /client
 /demo_opt_part_server
 /opt_part_server
+/workload_gen_server
 configure
 
 #ide stuff
@@ -60,3 +61,4 @@ testtool/*
 !testtool/workGen.py
 !testtool/dataGen_dbinfo.py
 /RUM_Visual_Front_bak/*
+src/frequencymodel_bak/*
