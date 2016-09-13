@@ -32,19 +32,19 @@ status parse_command_string(const char* str, dsl** d_commands, db_operator* op)
 	regmatch_t m;
 
 	for (int i = 0; i < NUM_DSL_COMMANDS; ++i) {
-		regex_t regex;
-		// regex_t *regex = malloc(sizeof(regex_t));
+		// regex_t regex;
+		regex_t *regex = malloc(sizeof(regex_t));
 		dsl* d = d_commands[i];
-		if (regcomp(&regex, d->c, REG_EXTENDED) != 0) {
+		if (regcomp(regex, d->c, REG_EXTENDED) != 0) {
 			log_err("Could not compile regex %s\n", d->c);
 		}
 
 		// Bind regular expression associated with the string
-		ret = regexec(&regex, str, n_matches, &m, 0);
+		ret = regexec(regex, str, n_matches, &m, 0);
 
 		// If we have a match, then figure out which one it is!
 		if (ret == 0) {
-			regfree(&regex);
+			regfree(regex);
 		}
 
 		if (ret == 0) {
