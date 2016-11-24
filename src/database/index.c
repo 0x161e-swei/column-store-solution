@@ -5,7 +5,8 @@
 
 
 Partition_inst *part_inst = NULL;
-frequency_model *freq_model = NULL;
+void *freq_model = NULL;
+// frequency_model *freq_model = NULL;
 
 #ifdef DEMO
 status do_physical_partition(struct cmdsocket *cmdSoc, Table *tbl, Column *col)
