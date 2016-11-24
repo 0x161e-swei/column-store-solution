@@ -1,0 +1,2 @@
+# nWayPartition
+n- way Partition 

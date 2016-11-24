@@ -1,0 +1,33 @@
+#! /bin/bash 
+
+echo '{'
+echo '"result1":{"name":"k-ary-tree",'
+echo '"numbers":['
+for run in {1..5}
+do
+	./compare 1
+	echo ','
+done
+echo ']}\n'
+
+echo '"result2":{"name":"binary-search",'
+echo '"numbers":['
+
+for run in {1..5}
+do
+	./compare 3
+	echo ','
+done
+echo ']}'
+
+
+echo '"result3":{"name":"b-tree",'
+echo '"numbers":['
+for run in {1..5}
+do
+	./compare 4 
+	echo ','
+done
+echo ']}'
+
+echo '}'
