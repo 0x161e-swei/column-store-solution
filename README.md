@@ -1,4 +1,6 @@
-# RUM system used for partitioning experiments
+# Column Store Database System with functionality of range partitioning
+
+Code based on skeleton from Harvard CS165.
 
 This should be filled with a workflow.
 
@@ -29,6 +31,10 @@ and edit `gen.cfg` file to customize your test
 
 then move the b_* folder and the workload file into the `data` folder for tests
 
+The workload generated is in ascii format, for partition decision function to work, 
+you need to genereate parsed past workload through the db server, function doSomething
+in file src/utils/utils.c does this job.
+
 ---
 To partition the dataset currently in database according to a specific workload
 
@@ -50,3 +56,7 @@ To execute many workload commands in one command, feed the client binary:
 To print the results for partitioned table, feed client binary:
 
 > `show_tbl(<col_var>)`
+
+
+More db operations can be found under folder src/database/dsl.c
+
